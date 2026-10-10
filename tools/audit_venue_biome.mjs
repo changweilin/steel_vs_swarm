@@ -185,6 +185,7 @@ const JUDGED_AXES = [
 // lists **which gap kinds** are accepted per entry; new kinds still go red.
 const ACCEPTED = {
   blackforest: { kinds: ['built:high'], why: '錨點 = 鎮上(要路網);宣告描述的是黑森林' },
+  kyoto: { kinds: ['built:high'], why: '錨點 = 右京梅津(要路網);宣告描述的是嵐山竹林寺町' },
 };
 /** Subtract roster-pardoned kinds from the gap list ⇒ whatever remains is "unseen by anyone" and MUST go red */
 function unaccepted(id, notes) {

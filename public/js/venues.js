@@ -197,7 +197,7 @@ export const VENUES = [
   // ---- 綠地 ×6----
   V({ id: 'matamata',   name: '紐西蘭・哈比屯綠丘草原', country: '🇳🇿', base: '綠地', variant: 'plain',  type: '綠地', ll: [-37.872000, 175.683000], bearing: 260, relief: null }),
   V({ id: 'interlaken', name: '瑞士・因特拉肯山谷', country: '🇨🇭', base: '綠地', variant: 'light',  type: '綠地', ll: [46.686000, 7.863000], bearing: 100, scen: [], relief: null }),
-  V({ id: 'kyoto',        name: '京都・嵐山竹林寺町', country: '🇯🇵', base: '綠地', variant: 'mixed',  type: '綠地', ll: [35.010032, 135.710095], bearing: 90, relief: 8 }),
+  V({ id: 'kyoto',        name: '京都・嵐山竹林寺町', country: '🇯🇵', base: '綠地', variant: 'mixed',  type: '綠地', ll: [35.010032, 135.710095], bearing: 90, relief: 8, forest: { dominantSpecies: 'forestBamboo', dominantWeight: 10, woodlandF: 0.70 } }),
   V({ id: 'taroko',       name: '太魯閣・燕子口',     country: '🇹🇼', base: '綠地', variant: 'rugged', type: '綠地', ll: [24.171200, 121.556000], bearing: 262, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 }),
   V({ id: 'mekong',       name: '越南・湄公河三角洲水鄉', country: '🇻🇳', base: '綠地', variant: 'swamp',  type: '綠地', ll: [10.355000, 106.350000], bearing: 140, scen: [], relief: null }),
   V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.397000, 5.240000], bearing: 250, scen: [], relief: null }),
@@ -212,7 +212,7 @@ export const VENUES = [
   { id: 'taipei101',  name: '台北・101 信義計畫區', country: '🇹🇼', type: '市區', story: true, ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 }, scen: ['underBridge', 'highGround'], relief: 34 },
   { id: 'shibuya',    name: '東京・澀谷十字路口',   country: '🇯🇵', type: '市區', story: true, ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 }, scen: ['underBridge'], relief: 14 },
   { id: 'giza',       name: '開羅・吉薩金字塔群',   country: '🇪🇬', type: '裸露地', story: true, ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 }, scen: ['underBridge', 'highGround'], relief: 36 },
-  { id: 'blackforest', name: '德國・黑森林',        country: '🇩🇪', type: '綠地', story: true, ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 }, scen: ['crossing'], relief: 26 },
+  { id: 'blackforest', name: '德國・黑森林',        country: '🇩🇪', type: '綠地', story: true, ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 }, scen: ['crossing'], relief: 26, forest: { woodlandF: 0.85 } },
   { id: 'manhattan',  name: '紐約・曼哈頓中城',     country: '🇺🇸', type: '市區', story: true, ll: [40.754938, -73.984047], bearing: 30,  mix: { urban: 0.85, green: 0.15 }, relief: 2 },
   { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', story: true, ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 }, scen: ['highGround'], relief: 32 },
 ];
@@ -526,7 +526,7 @@ function venueFrameConfig(venue, teamSize, mapA, useNatural = false) {
     // cfg —— ①在地文字語域的備援(`biomes.js` 的 `localeOf(cfg.venue?.country)`,**這一行
     // 2026-08-13 之前一直讀到 undefined**:VENUES 有這一欄而 venueConfig 沒帶下來);
     // ②國旗物件的「地圖國」那 30%(flags.js 的 FLAG_MIX)。自訂地圖沒有這一欄 ⇒ 兩者各自降級。
-    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country, base: venue.base || null, variant: venue.variant || null, ampF: venue.ampF ?? 1 },
+    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country, base: venue.base || null, variant: venue.variant || null, ampF: venue.ampF ?? 1, forest: venue.forest || null },
     placeName: venue.name,
     // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
     // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。
@@ -609,7 +609,7 @@ function venueStoryConfig(venue, L, mapA, plan) {
     // cfg —— ①在地文字語域的備援(`biomes.js` 的 `localeOf(cfg.venue?.country)`,**這一行
     // 2026-08-13 之前一直讀到 undefined**:VENUES 有這一欄而 venueConfig 沒帶下來);
     // ②國旗物件的「地圖國」那 30%(flags.js 的 FLAG_MIX)。自訂地圖沒有這一欄 ⇒ 兩者各自降級。
-    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country, base: venue.base || null, variant: venue.variant || null, ampF: venue.ampF ?? 1 },
+    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country, base: venue.base || null, variant: venue.variant || null, ampF: venue.ampF ?? 1, forest: venue.forest || null },
     placeName: venue.name,
     // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
     // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。

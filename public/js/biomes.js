@@ -342,6 +342,19 @@ function classify(rgb, h, mix, rnd) {
   return c;
 }
 
+function venueDryBiomeAt(terrain, x, z, observation) {
+  const raw = evidenceDryBiome(observation);
+  if (raw === 'urban' && terrain.venue && terrain.venue.base !== '市區') {
+    const urbanF = terrain.mix?.urban || 0;
+    if (urbanF > 0) {
+      const rndU = mulberry32(forestSeed(Math.floor(x / 16), Math.floor(z / 16), 0x555242))();
+      if (rndU < urbanF) return 'urban';
+    }
+    return terrain.venue.base === '綠地' ? 'green' : 'bare';
+  }
+  return raw || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null);
+}
+
 // ---- Vegetation geometry (low-poly; key='foliage'/'conifer'/'grass' recolors by season) ----
 const cyl = (r1, r2, h, n = 5) => new THREE.CylinderGeometry(r1, r2, h, n);
 const cone = (r, h, n = 5) => new THREE.ConeGeometry(r, h, n);
@@ -10894,8 +10907,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     environmentAt: (x, z) => ({ ...forestEnvironmentAt(terrain, x, z), latitude: regionCenter.lat,
       altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) }),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
-    zoneAt: (x, z, area, observation) => area?.zone || evidenceDryBiome(observation)
-      || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
+    zoneAt: (x, z, area, observation) => area?.zone
+      || venueDryBiomeAt(terrain, x, z, observation),
   });
   // 舊緩衝區的林塊／岩塊／聚落／島礁與遠景假山已收入 edgewall 權威障礙環。
   // 不再於圖界外發射無碰撞布景，緩衝裙只保留容納邊界障礙的深度。
@@ -12444,8 +12457,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const landField = await buildLandField({
     terrain, center, roads: roadInput, rails: osmData?.rails || [], waters: osmData?.waters || [],
     areas: osmData?.areas || [], covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
-    classifyPureAt: (x, z) => evidenceDryBiome(terrain.evidenceAt?.(x, z))
-      || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
+    classifyPureAt: (x, z) => venueDryBiomeAt(terrain, x, z, terrain.evidenceAt?.(x, z)),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z), projectAt: llToWorld,
     seed: gseed, onProgress,
   });

@@ -196,7 +196,7 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     let zi = ec === 1 ? 0 : ec === 2 ? 1 : labels[mg.face[k]];
     const observation = terrain.evidenceAt?.(x, z);
     if (ec === 0) {
-      const dry = polyZone[k] >= 0 ? LAND_ZONES[polyZone[k]] : evidenceDryBiome(observation);
+      const dry = polyZone[k] >= 0 ? LAND_ZONES[polyZone[k]] : (typeof classifyPureAt === 'function' ? classifyPureAt(x, z) : evidenceDryBiome(observation));
       if (dry && dry !== 'water' && dry !== 'wet') zi = LAND_ZONES.indexOf(dry);
       if (slope[k] > .75) zi = 6;
       else if (slope[k] > .28 && zi !== 1) zi = 3;
@@ -216,7 +216,8 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(patch * 255);
     data[o + 3] = roadMask[k] || polyZone[k] === 4 ? 255 : 0;
     const habitat = habitatAt(observation, LAND_ZONES[zi], polys[polyOwner[k]]?.tags,
-      Number.isFinite(terrain.waterY) ? terrain.waterY - h : null);
+      Number.isFinite(terrain.waterY) ? terrain.waterY - h : null,
+      { ...terrain.forestEnv, x, z });
     if (habitat) { appearance.set(habitat.color, o); appearance[o + 3] = 255; }
   }
   const bounds = { minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ };

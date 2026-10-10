@@ -19,6 +19,12 @@ export function habitatAt(sample, zone, tags = {}, depth = null, environment = {
   if (!key) return null;
   const observed = !!sample?.confidence;
   if (observed && zone === 'green') key = vegetation[sample.code] || key;
+  if (zone === 'green' && key === 'meadow' && environment.woodlandF != null) {
+    const patch = Number.isFinite(environment.x) && Number.isFinite(environment.z)
+      ? habitatPatch(environment.seed || 0, environment.x, environment.z)
+      : 0.5;
+    if (patch < environment.woodlandF) key = 'woodland';
+  }
   if (zone === 'green') {
     if (tags.natural === 'wood' || tags.natural === 'oasis' || tags.landuse === 'forest') key = 'woodland';
     else if (tags.natural === 'scrub' || tags.natural === 'heath') key = 'scrub';
@@ -97,7 +103,7 @@ export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt
     const waterAvailability = dry && ec === 0 && [16, 32].some(d =>
       [[d, 0], [-d, 0], [0, d], [0, -d]].some(([dx, dz]) => envCodeAt(x + dx, z + dz) === 1));
     const habitat = habitatAt(observation, zone, area?.tags, depthAt?.(x, z),
-      { ...environment, waterAvailability: environment.waterAvailability === true || waterAvailability });
+      { ...environment, x, z, waterAvailability: environment.waterAvailability === true || waterAvailability });
     return habitat && { ...habitat, ry: area?.ry || 0, landuse: area?.landuse || 'unknown' };
   };
   sampleAt.contains = ({ x, z, r }) => {
