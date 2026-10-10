@@ -47,9 +47,12 @@ export function treeDistribution(latitude, altitude, mix = 0.5, environment = {}
   if (!Number.isFinite(latitude) || !Number.isFinite(altitude)) return [];
   const lat = Math.min(90, Math.abs(latitude));
   const blend = Number.isFinite(mix) ? Math.max(0, Math.min(1, mix)) : 0.5;
+  const dominant = environment.dominantSpecies;
+  const dominantWeight = Number.isFinite(environment.dominantWeight) ? environment.dominantWeight : 10;
   const rows = Object.entries(TREE_SPECIES).map(([type, spec]) => ({ type,
     weight: treeHabitatWeight(type, lat, altitude, environment)
-      * (spec.share[0] + (spec.share[1] - spec.share[0]) * blend),
+      * (spec.share[0] + (spec.share[1] - spec.share[0]) * blend)
+      * (dominant && type === dominant ? dominantWeight : 1),
   })).filter(row => row.weight > 0);
   const sum = rows.reduce((n, row) => n + row.weight, 0);
   return rows.map(row => ({ type: row.type, weight: row.weight / sum }));

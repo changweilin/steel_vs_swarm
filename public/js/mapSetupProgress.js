@@ -212,11 +212,15 @@ export async function startPresetWarmup(items) {
     if (isMapPrepared(it.cfg)) continue;
     show(`處理中:${it.name}`);
     try {
-      await prepareMapCreation(it.cfg, () => {});
+      await prepareMapCreation(it.cfg, (label) => {
+        show(`處理中:${it.name} (${label})`);
+      });
     } catch (err) {
       console.warn('預設地圖預熱略過:', it.name, err);
     }
     done++;
+    // Yield to the browser scheduler between maps so the UI event loop remains responsive
+    await new Promise((r) => setTimeout(r, 100));
   }
   show('✅ 所有預設地圖圖資已處理並記憶');
   if (_userActive === 0) {

@@ -5,6 +5,8 @@
 // with a fixed, non-obscuring narrative text box where prose scrolls upward smoothly.
 
 import { CHAPTER_SCENES } from './chapterScenes.js';
+import { markChapterAnimSeen, hasSeenChapterAnim } from './story.js';
+export { markChapterAnimSeen, hasSeenChapterAnim };
 
 export const PROLOGUE_SCENES = [
   {
@@ -166,9 +168,8 @@ function isLandscape() {
 }
 
 function calcCameraTransform(camGroup, t) {
-  // 運鏡只動框內照片：邊界框本身不動，照片在框內做中幅平移 + 明顯推拉。
-  // 位移 ±3.2% / ±2.6%，縮放 1.06~1.22；框體 inset -3% 安全邊內永不露邊。
-  // 文字捲速由 autoScrollSpeed 單獨控制，此處只改幅度、不動速度。
+  // In-frame camera pan/tilt and dolly zoom with safe-margin bounds.
+  // Translates up to ±7.2% / ±6.5% with scale 1.05~1.28 within inset -8% frame margin.
   const cam = camGroup?.[isLandscape() ? 'landscape' : 'portrait'];
   if (!cam) return 'none';
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -186,9 +187,9 @@ function calcCameraTransform(camGroup, t) {
     x = lerp(cam.mid.x, cam.end.x, p);
     y = lerp(cam.mid.y, cam.end.y, p);
   }
-  const s = clamp(scale, 1.06, 1.22).toFixed(3);
-  const tx = clamp(x * 0.22, -3.2, 3.2).toFixed(2);
-  const ty = clamp(y * 0.18, -2.6, 2.6).toFixed(2);
+  const s = clamp(scale, 1.05, 1.28).toFixed(3);
+  const tx = clamp(x * 0.70, -7.2, 7.2).toFixed(2);
+  const ty = clamp(y * 0.62, -6.5, 6.5).toFixed(2);
   return `translate3d(${tx}%, ${ty}%, 0) scale(${s})`;
 }
 
@@ -309,7 +310,9 @@ export class PrologueIntroController {
     if (!this.content) return;
 
     const endNote = this.isPrologue ? '—— 序幕終曲・歷史檔案解密完畢 ——' : '—— 戰役檔案解密完畢 ——';
-    const finishBtnText = this.isPrologue ? '▶ 進入戰術終端' : '▶ 返回戰區簡報';
+    const finishBtnText = this.isPrologue
+      ? '▶ 進入戰術終端'
+      : (this.options.finishBtnText || '▶ 返回戰區簡報');
 
     this.content.innerHTML = this.scenes.map((sc, idx) => `
       <section class="prologue-crawl-section" data-idx="${idx}" id="prologue-crawl-${sc.id}">
@@ -647,17 +650,23 @@ export function playPrologueIntro({ onFinished, force = false, startIdx = 0 } = 
 }
 
 /** Entry function to play a specific chapter cinematic intro. */
-export function playChapterIntro({ chId, side, startIdx = 0, onFinished } = {}) {
+export function playChapterIntro({ chId, side, startIdx = 0, finishBtnText, onFinished } = {}) {
   const scenes = CHAPTER_SCENES[chId]?.[side];
   if (!scenes || !scenes.length) {
+    if (side && chId) markChapterAnimSeen(side, chId);
     onFinished?.();
     return null;
   }
   const controller = new PrologueIntroController({
     scenes,
     isPrologue: false,
-    onFinished,
+    finishBtnText,
+    onFinished: () => {
+      if (side && chId) markChapterAnimSeen(side, chId);
+      onFinished?.();
+    },
   });
+  if (side && chId) markChapterAnimSeen(side, chId);
   controller.play(startIdx);
   return controller;
 }
