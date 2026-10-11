@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 
 def cultural_trace(asset, node, structure, material, size=1):
@@ -59,6 +59,9 @@ def fan_geometry(asset, node, weapon, intent):
     pressure = '氣浪' in text
     staff = '長棍' in text
     fragments = '破片' in text
+    lattice = '電漿矩陣' in text
+    flechette = '箭彈' in text
+    drum = '彈鼓' in text
     half = weapon['arc']
     bins = weapon['bins']
     for i, reach in enumerate(bins):
@@ -70,30 +73,68 @@ def fan_geometry(asset, node, weapon, intent):
             return (math.sin(angle) * math.cos(elevation) * distance,
                     math.sin(elevation) * distance, math.cos(angle) * math.cos(elevation) * distance)
         elevation = math.acos(min(1, math.cos(half) / math.cos(mid)))
-        edge = [point(lo, 0), point(mid, elevation), point(hi, 0), point(mid, -elevation)]
-        asset.mesh('Authority sub-cone', node, [(0, 0, 0), *edge], [(0, 1, 2), (0, 2, 3), (0, 3, 4), (0, 4, 1)], 'fx_membrane')
-        # Thin ribbons terminate on the same spherical per-bin boundary as settlement.
-        for fraction in ([.4, .7, 1] if pressure or staff else [.65, 1]):
-            a, b, c = [point(angle, 0, reach * fraction) for angle in [lo, mid, hi]]
-            width = .004
-            asset.mesh('Frost fracture' if icy else 'Cudgel shock crescent' if staff else 'Pressure front' if pressure else 'Denial fragment chord',
-                       node, [a, b, c, (c[0], c[1] + width, c[2]), (b[0], b[1] + width, b[2]), (a[0], a[1] + width, a[2])],
-                       [(0, 1, 4, 5), (1, 2, 3, 4)], 'fx_accent')
-        if icy or fragments:
-            p = point(mid, 0, reach * .8)
-            asset.mesh('Ice shard' if icy else 'Tungsten fragment', node,
-                       [(p[0] - .008, p[1], p[2] - .04), (p[0] + .008, p[1], p[2] - .04), (p[0], p[1] + .03, p[2])], [(0, 1, 2)], 'fx_core')
+        span = (hi - lo) * .24
+        if pressure or staff:
+            for j, fraction in enumerate([.28, .56, .86] if pressure else [.62, .82, .98]):
+                skew = 0 if pressure else (i / max(1, len(bins) - 1) - .5) * .13
+                a, b, c = [point(angle, skew, reach * fraction) for angle in [lo, mid, hi]]
+                inner = .93 if pressure else .98
+                asset.mesh('Compression front' if pressure else 'Swept staff blade', node,
+                           [a, b, c, *[tuple(v * inner for v in p) for p in [a, b, c]]],
+                           [(0, 1, 4, 3), (1, 2, 5, 4)], 'fx_color' if j == 1 else 'fx_accent')
+            if staff:
+                path = [point(mid + span * (-1 if j % 2 else 1), 0, reach * f)
+                        for j, f in enumerate([.18, .34, .48, .64])]
+                for a, b in zip(path, path[1:]):
+                    asset.strut('Cudgel ground fissure', node, a, b, .002, 'fx_core')
+        elif lattice:
+            for j in range(2):
+                near, far = reach * (.28 + j * .3), reach * (.52 + j * .3)
+                for side in [-1, 1]:
+                    asset.strut('Crossed plasma cell', node,
+                                point(mid - span, side * elevation * .48, near),
+                                point(mid + span, -side * elevation * .48, far), .002, 'fx_color')
+                asset.strut('Plasma transverse rung', node,
+                            point(lo, 0, far), point(hi, 0, far), .0025, 'fx_accent')
+        elif icy:
+            for j in range(3):
+                fraction = .42 + j * .19 + (i % 3) * .025
+                rise = min(elevation * .65, .08 + j * .035)
+                asset.mesh('Radial ice fracture prism', node,
+                           [point(mid - span, 0, reach * fraction), point(mid + span, 0, reach * fraction),
+                            point(mid, rise, reach * (fraction + .10)), point(mid, -rise * .25, reach * (fraction + .04))],
+                           [(0, 1, 2), (0, 3, 1), (0, 2, 3), (1, 3, 2)], 'fx_core' if j == 1 else 'fx_color')
+        elif fragments:
+            for j in range(4):
+                fraction = .38 + j * .15 + (i % 2) * .035
+                rise = elevation * (-.65 + j * .42)
+                asset.mesh('Separated tungsten denial plate', node,
+                           [point(mid - span, rise, reach * fraction), point(mid + span, rise, reach * fraction),
+                            point(mid + span, rise + .025, reach * (fraction + .07)),
+                            point(mid - span, rise + .025, reach * (fraction + .07))], [(0, 1, 2, 3)],
+                           'fx_core' if j % 2 else 'fx_accent')
         else:
-            span = (hi - lo) * .18
-            asset.mesh('Sub-cone pressure core', node,
-                       [point(mid - span, 0, .10), point(mid + span, 0, .10),
-                        point(mid + span, 0, .42), point(mid - span, 0, .42)], [(0, 1, 2, 3)], 'fx_core')
+            for j in range(2 if flechette else 3 if drum else 4):
+                fraction = (.45 if flechette else .2) + j * (.22 if flechette else .16) + (i % 3) * .025
+                rise = elevation * ((j % 3 - 1) * .45)
+                length = .18 if flechette else .035 if drum else .075
+                asset.mesh('Long tungsten flechette' if flechette else 'Separated buckshot streak', node,
+                           [point(mid - span * .35, rise, reach * fraction),
+                            point(mid + span * .35, rise, reach * fraction),
+                            point(mid, rise, reach * (fraction + length))], [(0, 1, 2)],
+                           'fx_core' if j % 2 else 'fx_accent')
         for obj in asset.parts[begin:]:
             obj['fan_bin'] = i
+    bpy.context.view_layer.update()
     for obj in asset.parts[start:]:
         index = obj['fan_bin']
         lo = -half + index * 2 * half / len(bins)
         hi = -half + (index + 1) * 2 * half / len(bins)
+        # Struts carry local rotations; clipping their unbaked vertices would move the wrong angular bin.
+        transform = obj.matrix_basis.copy()
+        for vertex in obj.data.vertices:
+            vertex.co = transform @ vertex.co
+        obj.matrix_basis = Matrix.Identity(4)
         for vertex in obj.data.vertices:
             x, y, z = vertex.co.x, vertex.co.z, max(0, -vertex.co.y)
             length = math.sqrt(x * x + y * y + z * z)
@@ -113,7 +154,17 @@ def fan_geometry(asset, node, weapon, intent):
     for obj in asset.parts[start:]:
         obj.data.calc_loop_triangles()
         vertex_bins.setdefault(obj['region'], []).extend([obj['fan_bin']] * (len(obj.data.loop_triangles) * 3))
-    return {'count': len(bins), 'vertexBins': vertex_bins}
+    motion = 'pressure' if pressure else 'sweep' if staff else 'lattice' if lattice else 'freeze' if icy else 'curtain' if fragments else 'pellets'
+    radius_keys = ([[0, .08], [.14, .35], [.5, 1], [1, 1]] if motion == 'pellets'
+                   else [[0, .15], [.2, .5], [.65, 1], [1, 1]] if motion == 'pressure'
+                   else [[0, .65], [.16, 1], [1, 1]] if motion == 'sweep'
+                   else [[0, .7], [.35, 1], [1, 1]] if motion == 'freeze'
+                   else [[0, 1], [1, 1]])
+    opacity_keys = ([[0, .2], [.1, 1], [.35, .4], [.5, .85], [.75, .25], [1, 0]] if motion == 'lattice'
+                    else [[0, .1], [.22, 1], [.72, .8], [1, 0]] if motion in ['freeze', 'curtain']
+                    else [[0, 1], [.35, .75], [1, 0]])
+    return {'count': len(bins), 'vertexBins': vertex_bins, 'motion': motion,
+            'radiusKeys': radius_keys, 'opacityKeys': opacity_keys}
 
 
 def reset(asset):
@@ -234,14 +285,13 @@ def construct(asset, intent, xyz):
     def track(slot, name, channel, axis, keys):
         clips[slot]['tracks'].append({'node': name, 'channel': channel, 'axis': axis, 'keys': keys})
 
-    def pulse(slot, name, delay=0, strength=1):
+    def pulse(slot, name, delay=0, strength=1, curve=None):
         keys = [[0, .001], [delay, .001]] if delay > 0 else [[0, .001]]
         keys += [[delay + .04, strength], [.72, strength * .55], [1, .001]]
+        if curve is not None:
+            keys = [[time, max(.001, value * strength)] for time, value in curve]
         for axis in 'xyz':
             track(slot, name, 'scale', axis, keys)
-
-    def ring(name, radius, material, segments=12, at=(0, 0, 0)):
-        asset.tube('Combat compression annulus', name, radius, radius * .90, .025, at, material, segments=segments)
 
     guard = joint('guard', None, center)
     sectors = 6 + intent['variant'] % 5 * 2
@@ -266,16 +316,70 @@ def construct(asset, intent, xyz):
     for slot, weapon in intent['weapons'].items():
         muzzle = asset.spec['rig']['wpn'][slot]['muzzle']
         radius = height * (.045 if slot == 'light' else .075)
-        node = joint(slot + '_flash', muzzle)
-        asset.loft('White hot muzzle core', node, [(0, radius * 1.1, radius * 1.1), (radius * 2, .01, .01)], 'fx_core', axis='z')
-        pulse(slot, node, strength=1)
-        wake = joint(slot + '_wake', muzzle)
-        if not compact:
-            ring(wake, radius * 2, 'fx_accent')
-        pulse(slot, wake, .025, 1.4)
-        track(slot, wake, 'position', 'z', [[0, 0], [.2, radius], [1, height * .45]])
         type = weapon['type']
         text = weapon['description']
+        acoustic = '音波' in text
+        microwave = '微波' in text
+        scan = '掃描' in text or '偵蒐' in text
+        phase = '相控' in text
+        suppressed = '微聲' in text or '消音' in text
+        rotary = '旋轉' in text or '六旋翼' in text or '轉輪' in text or '轉膛' in text
+        twin = '雙聯' in text or '雙管' in text
+        bow = '磁軌弓' in text
+        coil = '高斯' in text or '線圈' in text
+        cold = '冷發射' in text
+        envelope = ([[0, .08], [.08, 1], [.22, .1], [.34, .85], [.48, .08], [1, 0]] if rotary or twin
+                    else [[0, .08], [.09, .35], [.28, 1], [.58, .9], [.8, .2], [1, 0]] if acoustic or microwave
+                    else [[0, .05], [.18, .25], [.3, 1], [.42, .1], [.72, .03], [1, 0]] if type == 'rail'
+                    else [[0, .1], [.1, 1], [.24, .45], [.52, .08], [1, 0]] if type in ['launcher', 'missile']
+                    else [[0, .12], [.06, 1], [.18, .3], [.38, .04], [1, 0]])
+        clips[slot]['envelope'] = envelope
+        node = joint(slot + '_flash', muzzle)
+        if type == 'beam':
+            for side in [-1, 1]:
+                asset.strut('Optical focus jaw', node, (side * radius, -radius * .6, 0),
+                            (side * radius * .35, radius * .6, radius), radius * .10, 'fx_core')
+        elif type == 'rail':
+            for side in [-1, 1]:
+                asset.strut('Released bowstring' if bow else 'Acceleration fork', node,
+                            (side * radius * (3 if bow else 1.3), 0, 0),
+                            (0, 0, radius * (1.4 if bow else 3)), radius * .09, 'fx_core')
+        elif type in ['launcher', 'missile']:
+            asset.loft('Ignition jet', node, [(0, radius * .7, radius * .7), (-radius * 4, radius * 1.8, radius * 1.1)], 'fx_core', axis='z')
+        else:
+            for i in range(2 if suppressed else 6 if rotary else 4 if weapon['fan'] else 3):
+                angle = i * math.tau / (2 if suppressed else 6 if rotary else 4 if weapon['fan'] else 3)
+                length = radius * (.65 if suppressed else 2)
+                asset.mesh('Muzzle gas petal', node,
+                           [(0, 0, 0), (math.cos(angle) * radius * .3, math.sin(angle) * radius * .3, length * .2),
+                            (math.cos(angle) * radius, math.sin(angle) * radius, length)], [(0, 1, 2)], 'fx_core')
+        pulse(slot, node, curve=envelope)
+        if rotary:
+            track(slot, node, 'rotation', 'z', [[0, 0], [.4, math.pi], [1, math.tau]])
+        wake = joint(slot + '_wake', muzzle)
+        if not compact:
+            if acoustic:
+                for side in [-1, 1]:
+                    path = [(side * radius * (1 + i * .2), math.sin(i * .7) * radius, i * radius * .3) for i in range(9)]
+                    for a, b in zip(path, path[1:]):
+                        asset.strut('Resonator standing wave', wake, a, b, radius * .08, 'fx_accent')
+            elif type == 'beam' or type == 'rail':
+                for side in [-1, 1]:
+                    asset.strut('Collapsing capacitor bracket', wake, (side * radius * 2, -radius, 0),
+                                (side * radius * 2, radius, 0), radius * .15, 'fx_accent')
+            elif type in ['launcher', 'missile']:
+                asset.loft('Cold ejection vapour' if cold else 'Backblast wedge', wake,
+                           [(-radius, radius, radius), (-radius * 5, radius * 3, radius * 2)], 'fx_muted', axis='z')
+            else:
+                for side in [-1, 1]:
+                    asset.strut('Suppressed gas slip' if suppressed else 'Lateral muzzle brake jet', wake,
+                                (side * radius * .5, 0, 0), (side * radius * (1 if suppressed else 3), radius * .3, -radius),
+                                radius * .12, 'fx_muted' if suppressed else 'fx_accent')
+        pulse(slot, wake, curve=envelope)
+        if type == 'beam' or type == 'rail':
+            track(slot, wake, 'scale', 'x', [[0, .8], [.24, .22], [.34, 1], [.7, .4], [1, .001]])
+        else:
+            track(slot, wake, 'position', 'z', [[0, 0], [.2, -radius], [1, -height * .16]])
         if type in ['launcher', 'missile']:
             rocket = joint(slot + '_rocket', muzzle)
             cannon = '加農' in text or '無後座力' in text
@@ -289,35 +393,77 @@ def construct(asset, intent, xyz):
                 asset.mesh('Missile stabilizer', rocket, [(0, 0, -radius * 3), (x, y, -radius * 4),
                            (x, y, -radius), (0, 0, -radius)], [(0, 1, 2, 3)], 'fx_accent')
             asset.loft('Layered rocket exhaust', rocket, [(-radius * 8, .01, .01), (-radius * 3, radius * 1.5, radius * 1.5)], 'fx_accent', axis='z')
-            pulse(slot, rocket, .04)
+            pulse(slot, rocket, curve=envelope)
             track(slot, rocket, 'position', 'z', [[0, 0], [.12, 0], [.7, height * .8], [1, height]])
         elif weapon['fan']:
             ion = joint(slot + '_ion', muzzle)
             fans[slot] = fan_geometry(asset, ion, weapon, intent)
-            pulse(slot, ion, .02)
+            pulse(slot, ion, curve=envelope)
         elif type == 'beam':
             beam = joint(slot + '_beam', muzzle)
-            asset.loft('Focused beam core', beam, [(0, radius * .4, radius * .4), (height * .85, radius * .20, radius * .20)], 'fx_core', axis='z')
-            asset.loft('Beam corona', beam, [(0, radius, radius), (height * .85, radius * .55, radius * .55)], 'fx_color', axis='z')
-            acoustic = '聲' in text or '諧振' in text
-            phase = '相位' in text or '相控' in text or '微波' in text
-            for i in range(7 if acoustic else 5 if phase else 3):
-                ring(beam, radius * (1.4 if acoustic else 1.1) * (1 - i * .06), 'fx_accent',
-                     segments=16 if acoustic else 8 if phase else 24, at=(0, 0, i * height * (.10 if acoustic else .14)))
-            pulse(slot, beam, .03)
+            length = height * .85
+            asset.loft('Coherent axial core', beam, [(0, radius * .12, radius * .12), (length, radius * .08, radius * .08)], 'fx_core', axis='z')
+            if acoustic:
+                for side in [-1, 1]:
+                    path = [(math.sin(i * math.pi / 3) * radius, side * radius * .22, i / 24 * length) for i in range(25)]
+                    for a, b in zip(path, path[1:]):
+                        asset.strut('Acoustoelectric sinusoidal ribbon', beam, a, b, radius * .12, 'fx_color')
+                for i in range(5):
+                    asset.strut('Wave antinode', beam, (-radius, 0, length * (i + .5) / 5),
+                                (radius, 0, length * (i + .5) / 5), radius * .055, 'fx_accent')
+            elif microwave or phase:
+                for i in range(6):
+                    z = length * (i + .5) / 6
+                    if microwave:
+                        asset.mesh('Rectangular microwave lobe', beam,
+                                   [(-radius, -radius * .5, z), (radius, -radius * .5, z),
+                                    (radius, radius * .5, z + length * .035), (-radius, radius * .5, z + length * .035)],
+                                   [(0, 1, 2, 3)], 'fx_color')
+                    else:
+                        side = -1 if i % 2 else 1
+                        asset.strut('Alternating phased aperture', beam, (-radius, side * radius * .5, z),
+                                    (radius, -side * radius * .5, z + length * .07), radius * .08, 'fx_accent')
+            elif scan or '脈衝' in text:
+                for i in range(8):
+                    z = length * i / 8
+                    asset.strut('Range-coded optical packet', beam, (-radius * .6, 0, z),
+                                (radius * .6, 0, z + length * .025), radius * .12, 'fx_accent')
+            elif '星相' in text:
+                for side in [-1, 1]:
+                    asset.mesh('Star instrument focusing blade', beam,
+                               [(side * radius, 0, 0), (side * radius * .2, 0, length * .55), (0, 0, length)], [(0, 1, 2)], 'fx_color')
+                    asset.mesh('Orthogonal star focusing blade', beam,
+                               [(0, side * radius, 0), (0, side * radius * .2, length * .55), (0, 0, length)], [(0, 1, 2)], 'fx_accent')
+            else:
+                for side in [-1, 1]:
+                    asset.strut('Optical spear edge' if '長矛' in text else 'Precision sight rail', beam,
+                                (side * radius * .7, 0, 0), (0, 0, length), radius * .035, 'fx_accent')
+            pulse(slot, beam, curve=envelope)
         else:
             bullet = joint(slot + '_bullet', muzzle)
             asset.loft('Kinetic penetrator' if type == 'rail' else 'Ballistic tracer body', bullet,
                        [(-radius * 4, .01, .01), (0, radius * .4, radius * .4), (radius * 3, .01, .01)], 'fx_core', axis='z')
             if type == 'rail':
-                for i in range(3):
-                    ring(bullet, radius * (1 + i * .3), 'fx_color', 12, (0, 0, -radius * i * 1.5))
+                if bow:
+                    for side in [-1, 1]:
+                        asset.mesh('Rail arrow fletching', bullet,
+                                   [(0, 0, -radius * 4), (side * radius, 0, -radius * 3), (0, 0, -radius)], [(0, 1, 2)], 'fx_accent')
+                elif coil:
+                    for i in range(5):
+                        z = -radius * i
+                        asset.strut('Sequential induction tooth', bullet, (-radius, -radius * .4, z),
+                                    (radius, radius * .4, z + radius * .3), radius * .12, 'fx_color')
+                else:
+                    for side in [-1, 1]:
+                        asset.mesh('Split rail sabot', bullet,
+                                   [(side * radius * .2, 0, radius), (side * radius * 1.6, 0, -radius * 3),
+                                    (side * radius * .3, radius * .4, -radius * 2)], [(0, 1, 2)], 'fx_color')
                 if '長矛' in text:
                     asset.mesh('Electromagnetic spear blade', bullet, [(-radius, 0, 0), (0, radius, radius * 5),
                                (radius, 0, 0), (0, -radius, radius * 5)], [(0, 1, 2), (0, 2, 3)], 'fx_accent')
             elif '微聲' in text or '消音' in text:
                 asset.loft('Suppressed needle wake', bullet, [(-radius * 6, .008, .008), (radius * 2, .008, .008)], 'fx_accent', axis='z')
-            pulse(slot, bullet, .01)
+            pulse(slot, bullet, curve=envelope)
             track(slot, bullet, 'position', 'z', [[0, 0], [.07, radius * 3], [.4, height * .9], [1, height * 1.3]])
 
     dish = asset.spec['motion']['cast'][0]['node']

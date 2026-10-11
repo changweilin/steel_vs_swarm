@@ -28,6 +28,12 @@ all animated vertices and particle drift inside it. Fans use the shared spherica
 ranges and clip each ray against obstacles. Each triangle, fragment and bright core belongs
 to one angular bin; adjacent bins share only their boundary and apex. Exported ownership and
 convex half-space checks prevent overlapping interiors after aiming, clipping and fading.
+The cone is a validation envelope rather than a filled effect mesh. Shotgun streaks,
+pressure fronts, plasma cells, frost prisms, staff fissures and denial plates retain
+different silhouettes. Sampled radial and opacity curves drive their presentation;
+the staff sweep travels by brightness through owned bins so it cannot rotate outside
+the clipped cone. Optical and rail hardpoints use focus jaws and acceleration forks
+instead of sharing a muzzle annulus with ballistic weapons.
 The showcase changes camera distance rather
 than shrinking those footprints.
 
@@ -45,7 +51,7 @@ Blender add-on; `BLENDER_MCP_BIN` selects the installed MCP server executable. T
 The runtime audit requires the existing optional Playwright runtime and uses `THREE_MODULE`
 for an available offline dependency copy. No authoring dependency belongs in the runtime package.
 
-The audit writes runtime measurements and action, field-layer and fan contact sheets under `out/combat_reference/`.
+The audit writes runtime measurements and action, weapon-cycle, field-layer and fan contact sheets under `out/combat_reference/`.
 It checks every character and morph form, every event channel, front clearance, unique shield
 textures, independently loaded GLBs, field bounds, disjoint fan bins, resource limits and repeated GPU teardown. Visual acceptance
 uses those exact rendered exports and remains a user review decision.

@@ -15,6 +15,7 @@ import { UNITS, WEAPONS, BALLISTIC, shotFlightS, lanceR, fanArcHalf, fanBinOf, f
 import { Pool } from './pool.js';
 import { registerStreamTex } from './tex.js';
 import { COMBAT_ASSETS } from './forge/combatAssets.js';
+import { sampleCombatKeys } from './forge/combatKeys.js';
 
 // Decorative effects yield under load without suppressing projectiles or hit reports.
 const crowded = (effects) => effects.length >= (lowPower() ? 90 : 180);
@@ -655,11 +656,12 @@ function combatDischarge(scene, effects, from, to, def, family, radius, ttl) {
   group.scale.set(radius, radius, distance);
   group.userData.authoredDischarge = { ch: def.ch, slot, family };
   scene.add(group);
+  const envelope = asset.combat.clips[slot].envelope;
   effects.push({ obj: group, ttl, fade(o, f) {
-    o.scale.x = o.scale.y = radius * (.3 + .7 * f);
+    const weight = sampleCombatKeys(envelope, 1 - f);
+    o.scale.x = o.scale.y = radius * (.15 + .85 * weight);
     for (let i = 0; i < o.children.length; i++) {
-      o.children[i].material.opacity = alpha[i] * f;
-      if (family === 'ion') o.children[i].rotation.z = (1 - f) * Math.PI * 2;
+      o.children[i].material.opacity = alpha[i] * weight;
     }
   } });
   starburst(scene, effects, to.x, to.y, to.z, radius * .5, asset.combat.intent.accent);
@@ -691,7 +693,7 @@ export function fanDischarge(scene, effects, from, direction, def, { range = def
   if (!ownership || parts.some(part => ownership.vertexBins[part.material]?.length !== part.positions.length / 3)) return false;
   const half = fanArcHalf(def), span = half * 2 / fanSubs(def);
   const orientation = new THREE.Quaternion().setFromUnitVectors(_FWD, direction.clone().normalize());
-  const group = new THREE.Group(), alpha = [];
+  const group = new THREE.Group(), alpha = [], sweeps = [];
   const local = new THREE.Vector3(), endpoint = new THREE.Vector3();
   for (const part of parts) {
     const positions = part.positions.slice();
@@ -723,7 +725,14 @@ export function fanDischarge(scene, effects, from, direction, def, { range = def
     geometry.setIndex(part.indices);
     geometry.userData.fanBins = owners;
     const desc = asset.materials[part.material];
-    const mesh = new THREE.Mesh(geometry, energyMat(desc.color, desc.opacity));
+    const material = energyMat(desc.color, desc.opacity);
+    if (ownership.motion === 'sweep') {
+      const colors = new THREE.Float32BufferAttribute(new Float32Array(owners.length * 3).fill(1), 3);
+      geometry.setAttribute('color', colors);
+      material.vertexColors = true;
+      sweeps.push({ colors, owners });
+    }
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.noOutline = true;
     mesh.userData.presentationEffect = true;
     mesh.raycast = () => {};
@@ -733,8 +742,19 @@ export function fanDischarge(scene, effects, from, direction, def, { range = def
   group.userData.authoredFan = { ch: def.ch, slot, range, arc: def.arc };
   scene.add(group);
   effects.push({ obj: group, ttl, fade(o, f) {
-    o.scale.setScalar(.3 + .7 * f);
-    for (let i = 0; i < o.children.length; i++) o.children[i].material.opacity = alpha[i] * f;
+    const time = 1 - f;
+    o.scale.setScalar(ownership.radiusKeys ? sampleCombatKeys(ownership.radiusKeys, time) : .3 + .7 * f);
+    const opacity = ownership.opacityKeys ? sampleCombatKeys(ownership.opacityKeys, time) : f;
+    for (let i = 0; i < o.children.length; i++) o.children[i].material.opacity = alpha[i] * opacity;
+    // Brightness travels through owned bins; rotating a sweep would cross the clipped damage cone.
+    for (const { colors, owners } of sweeps) {
+      for (let i = 0; i < owners.length; i++) {
+        const beat = owners[i] / Math.max(1, ownership.count - 1) * .55;
+        const weight = Math.max(.06, 1 - Math.abs(time - beat - .12) / .22);
+        colors.setXYZ(i, weight, weight, weight);
+      }
+      colors.needsUpdate = true;
+    }
   } });
   return true;
 }

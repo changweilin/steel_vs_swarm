@@ -50,7 +50,8 @@ def recipe(profile):
         contact = [[(.2, .6, 0), (0, .04, .2), (-.2, .04, -.3)]]; mode = 'chase'
     elif key == 'sky_orchestra':
         tell = [[(-.8, .55, z), (.8, .55, z)] for z in [-.3, -.15, 0, .15, .3]]
-        release = [arch(x, -.15, .2, .75) for x in [-.5, 0, .5]]
+        release = [[(x,.45,.3),(x-.22,.45,-.05),(x-.06,.45,.02),(x,.45,-.25),
+                    (x+.06,.45,.02),(x+.22,.45,-.05),(x,.45,.3)] for x in [-.5,0,.5]]
         contact = [feather(x, .35, side) for x in [-.45, 0, .45] for side in [-1, 1]]; mode = 'lift'
     elif key == 'tempered_reforge':
         tell = [[(-.65, .03, .3), (.65, .03, .3), (.25, .03, 0), (.15, .03, -.3), (-.3, .03, -.3), (-.25, .03, 0), (-.65, .03, .3)]]
@@ -59,7 +60,9 @@ def recipe(profile):
     elif key == 'world_crucible':
         tell = [arc(.35, .25), [(-.35,.04,0),(-.25,.3,0),(.25,.3,0),(.35,.04,0)]]
         release = [[(0,.06,0),(.3*math.cos(a),.04,.3*math.sin(a)),(.8*math.cos(a),.04,.8*math.sin(a))] for a in [i*math.tau/6 for i in range(6)]]
-        contact = [arch(.55*math.cos(a),.55*math.sin(a),.07,.3) for a in [i*math.tau/6 for i in range(6)]]; mode = 'flow'
+        contact = [[(x-.1,.04,z),(x-.1,.32,z),(x+.1,.32,z),(x+.1,.04,z),
+                    (x-.1,.04,z),(x+.1,.20,z),(x-.1,.20,z)]
+                   for x,z in [(.55*math.cos(a),.55*math.sin(a)) for a in [i*math.tau/6 for i in range(6)]]]; mode = 'flow'
     elif key == 'silent_lobes':
         tell = [arc(.25,.6,cx=x) for x in [-.3,.3]]
         release = [[(x,.05,-.65),(x,.05,.65)] for x in [-.12,-.04,.04,.12]]
@@ -90,7 +93,10 @@ def recipe(profile):
         contact = [[(-.6,.5,-.3),(0,.35,0),(.4,.6,.4)]]; mode = 'stitch'
     elif key == 'undying_phalanx':
         tell = [[(-.1,.1,0),(-.1,.7,0),(.35,.7,0),(.3,.45,0),(-.1,.45,0)]]
-        release = [arch(x,z,.12,.65) for x,z in [(-.55,-.35),(0,-.1),(.55,.15),(-.3,.45)]]
+        release = [[(x-.12,.08,z),(x-.16,.4,z),(x-.1,.55,z),(x+.1,.55,z),(x+.16,.4,z),
+                    (x+.12,.08,z),(x,.02,z),(x-.12,.08,z),(x+.12,.4,z),
+                    (x+.2,.1,z),(x+.2,.72,z),(x+.16,.64,z),(x+.24,.64,z),(x+.2,.72,z)]
+                   for x,z in [(-.55,-.35),(0,-.1),(.55,.15),(-.3,.45)]]
         contact = [[(x,.35,z),(x+.25,.4,z+.15),(x+.4,.2,z+.2)] for x,z in [(-.5,-.3),(0,0),(.3,.3)]]; mode = 'lock'
     elif key == 'causal_proof':
         tell = [[(-.7,.05,-.4),(.4,.05,.55)],[(-.5,.05,.6),(.7,.05,-.35)]]
@@ -102,8 +108,12 @@ def recipe(profile):
         contact = [[(-.6,.1,-.4),(.6,.1,.4)],[(-.5,.1,.5),(.5,.1,-.5)]]; mode = 'fold'
     elif key == 'angel_dropship':
         tell = [[(0,.04,0),(0,.85,0)]]
-        release = [box(x,z,.07,.1,.55) for x,z in [(-.25,0),(.25,0),(0,.25)]]
-        contact = [arch(x,z,.06,.35) for x,z in [(-.3,-.3),(.3,-.3),(-.3,.3),(.3,.3)]]; mode = 'drop'
+        release = [[(x-.1,.65,z),(x,.8,z),(x+.1,.65,z),(x+.1,.4,z),(x,.32,z),
+                    (x-.1,.4,z),(x-.1,.65,z)] for x,z in [(-.25,0),(.25,0),(0,.25)]]
+        contact = [[(x-.05,.05,z),(x-.05,.16,z),(x-.15,.16,z),(x-.15,.26,z),(x-.05,.26,z),
+                    (x-.05,.38,z),(x+.05,.38,z),(x+.05,.26,z),(x+.15,.26,z),
+                    (x+.15,.16,z),(x+.05,.16,z),(x+.05,.05,z),(x-.05,.05,z)]
+                   for x,z in [(-.3,-.3),(.3,-.3),(-.3,.3),(.3,.3)]]; mode = 'drop'
     elif key == 'krakow_bells':
         tell = [[(-.25,.5,-.15),(-.18,.8,-.15),(.18,.8,-.15),(.25,.5,-.15),(-.25,.5,-.15)],[(0,.55,-.15),(.12,.3,-.15)]]
         release = [arc(.65,.65,.2,start=a,end=a+.6,steps=6) + [(0,.2,0)] for a in [i*math.tau/8 for i in range(8)]]
@@ -179,7 +189,10 @@ def recipe(profile):
     elif key == 'industrial_descent':
         tell = [box(0,0,.65,.45,.65),[(0,.65,0),(0,.3,0),(.15,.3,0)]]
         release = [box(x,z,.15,.25,.3) for x,z in [(-.4,-.2),(0,.1),(.4,-.2)]]
-        contact = [arch(x,.4,.2,.45) for x in [-.45,.45]]; mode = 'drop'
+        contact = [path for x in [-.45,.45] for path in [
+                   [(x-.2,.04,.4),(x-.2,.55,.4),(x+.2,.55,.4),(x+.2,.04,.4)],
+                   [(x-.13,.12,.4),(x+.13,.12,.4),(x+.1,.25,.4),(x-.1,.25,.4),(x-.13,.12,.4)],
+                   [(x,.25,.4),(x,.25,.65)]]]; mode = 'drop'
     elif key == 'cloud_somersault':
         tell = [[(-.65,.05,-.5),(-.3,.05,-.3),(.2,.05,-.4),(.6,.05,-.2)]]
         release = [[(math.sin(i/16*math.tau)*.35,.12,-.75+i/16*1.5) for i in range(17)]]
@@ -206,7 +219,7 @@ def recipe(profile):
         contact = [box(0,0,.65,.3,.2)]; mode = 'flow'
     elif key == 'martyrs_elegy':
         tell = [[(-.65,.04,z),(-.4,.12,z+.2),(-.1,.08,z-.1),(.3,.12,z+.15),(.65,.04,z)] for z in [-.25,.25]]
-        release = [arch(x,.3,.15,.5) for x in [-.4,0,.4]]
+        release = [[(x,.03,.3),(x,.6,.3),(x+.18,.55,.3),(x+.12,.4,.3),(x,.43,.3)] for x in [-.4,0,.4]]
         contact = [arrow(x,.65,.55,.045,.1) for x in [-.4,0,.4]]; mode = 'advance'
     elif key == 'missile_black_rain':
         tell = [[(-.75,.7,z),(-.3,.8,z),(.2,.7,z),(.7,.75,z)] for z in [-.3,0,.3]]
@@ -227,7 +240,10 @@ def recipe(profile):
     elif key == 'veteran_muster':
         tell = [[(0,.06,-.55),(x,.06,.45)] for x in [-.25,0,.25]]
         release = [box(x,z,.07,.12) for x in [-.4,0,.4] for z in [-.3,.1,.5]]
-        contact = [arch(x,.35,.06,.35) for x in [-.5,-.25,0,.25,.5]]; mode = 'advance'
+        contact = [[(x-.07,.03,.35),(x-.04,.2,.35),(x-.09,.3,.35),(x-.04,.36,.35),
+                    (x-.04,.44,.35),(x+.04,.44,.35),(x+.04,.36,.35),(x+.1,.3,.35),
+                    (x+.17,.3,.35),(x+.17,.35,.35),(x+.04,.3,.35),(x+.04,.2,.35),(x+.07,.03,.35)]
+                   for x in [-.5,-.25,0,.25,.5]]; mode = 'advance'
     elif key == 'firefly_spectrum':
         tell = [p for x,z in [(-.6,-.3),(-.2,.4),(.2,-.3),(.6,.4)] for p in spark(x,z,.2,.035)]
         release = [[(-.6,.2,-.3),(-.2,.3,.4),(.2,.2,-.3),(.6,.3,.4)],[(-.6,.2,-.3),(.6,.3,.4)]]
@@ -249,7 +265,8 @@ def recipe(profile):
         release = [[(-.65,.05,z),(-.3,.2,z),(.2,.12,z),(.65,.25,z)] for z in [-.35,0,.35]]
         contact = [[(-.65,.05,0),(-.3,.2,0),(0,.3,0),(.35,.1,0),(.65,.05,0)]]; mode = 'slam'
     elif key == 'cornerstone_oath':
-        tell = [arch(x,z,.1,.55) for x,z in [(-.5,-.5),(.5,-.5),(-.5,.5),(.5,.5)]]
+        tell = [[(x-.1,.04,z),(x-.1,.55,z),(x+.1,.55,z),(x+.1,.04,z),(x-.1,.04,z)]
+                for x,z in [(-.5,-.5),(.5,-.5),(-.5,.5),(.5,.5)]]
         release = [box(0,0,.5,.5,.1),box(0,0,.4,.4,.2)]
         contact = [[(-.2,.55,0),(0,.3,0),(.2,.55,0),(-.2,.55,0)]]; mode = 'lock'
     elif key == 'alpine_spring':
@@ -275,17 +292,21 @@ def recipe(profile):
     elif key == 'thunder_judgement':
         tell = [box(x,0,.22,.35,.7) for x in [-.45,0,.45]]
         release = [[(x,.8,z),(x-.08,.5,z),(x+.06,.3,z),(x,.03,z)] for x,z in [(-.5,-.3),(0,-.5),(.5,-.3),(-.5,.3),(0,.5),(.5,.3)]]
-        contact = [arch(0,0,.3,.5),[(-.3,.3,0),(.3,.3,0)]]; mode = 'slam'
+        contact = [[(-.3,.04,0),(-.3,.55,0),(.3,.55,0),(.3,.04,0)],
+                   [(-.3,.2,.15),(-.3,.35,.15),(.3,.35,.15),(.3,.2,.15)],
+                   [(-.25,.1,.15),(-.25,.1,.3)],[(.25,.1,.15),(.25,.1,.3)]]; mode = 'slam'
     elif key == 'carnival_vanguard':
         tell = [[(x,.02,z),(0,.5,0)] for x,z in [(-.6,-.3),(.6,-.3),(0,.6)]]
-        release = [arc(.35,.35,.5),arch(0,0,.35,.6)]
+        release = [arc(.35,.35,.5),arc(.35,.35,.25)] + [[(x,.25,z),(x,.5,z)]
+                   for x,z in [(-.35,0),(.35,0),(0,-.35),(0,.35)]]
         contact = [arrow(x,.6,.5,.05,.12) for x in [-.4,0,.4]]; mode = 'drop'
     elif key == 'helicopter_carnival':
         tell = [box(0,0,.65,.45)] + [[(x,.04,-.45),(x,.04,.45)] for x in [-.4,-.2,0,.2,.4]]
         release = [[(x-.15,y,z),(x+.15,y,z),(x,y,z),(x,y,z-.15),(x,y,z+.15)] for x,y,z in [(-.4,.3,-.2),(0,.5,0),(.4,.7,.2)]]
         contact = [feather(x,z,side,.25) for x,z in [(-.4,-.3),(.4,.3)] for side in [-1,1]]; mode = 'lift'
     elif key == 'border_dome':
-        tell = [arch(.65*math.cos(a),.65*math.sin(a),.045,.35) for a in [i*math.tau/6 for i in range(6)]]
+        tell = [[(x-.045,.04,z),(x-.045,.35,z),(x+.045,.35,z),(x+.045,.04,z),(x-.045,.04,z)]
+                for x,z in [(.65*math.cos(a),.65*math.sin(a)) for a in [i*math.tau/6 for i in range(6)]]]
         release = [[(.7*math.cos(a),.03,.7*math.sin(a)),(.65*math.cos(a),.5,.65*math.sin(a)),(0,.75,0)] for a in [i*math.tau/6 for i in range(6)]]
         contact = [[(.55,.1,0),(.55,.45,0)]]; mode = 'stitch'
     elif key == 'total_exclusion':
@@ -384,8 +405,14 @@ def cast_geometry(asset, intent, joint, track):
                         [peak+.08,.85],[peak+.12,.15],[peak+.16,.7],[end,.001],[1,.001]]
             for axis in 'xyz':
                 curve = keys
-                if stage == 1 and mode in ['inward','shrink','fold','close','erase']:
-                    curve = [[time, value * (.95 if time <= peak else .45)] for time,value in keys]
+                if stage == 1 and mode in ['drop','slam','lift','advance','march','return']:
+                    # Transported silhouettes retain their anatomy instead of zooming out of a point.
+                    curve = [[0,.001],[start,.001],[start+.012,1],[end-.025,1],[end,.001],[1,.001]]
+                elif stage == 1 and mode in ['inward','shrink','fold','close','erase']:
+                    target = .12 if axis == 'x' else .85
+                    curve = [[0,.001],[start,.001],[peak,.95],[end-.02,target],[end,.001],[1,.001]]
+                elif stage == 1 and mode in ['stab','forward','blink'] and axis != 'z':
+                    curve = [[0,.001],[start,.001],[start+.012,1],[end-.025,1],[end,.001],[1,.001]]
                 add(name,'scale',axis,curve)
             if stage == 1:
                 if mode in ['chase','rewind','inward']:
