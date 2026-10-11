@@ -209,7 +209,7 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
         const sx = i * cell + (k % 2) * slot, sz = j * cell + Math.floor(k / 2) * slot;
         const localSeed = forestSeed(sx, sz, seed ^ 0x494e46), rnd = mulberry32(localSeed);
         for (let attempt = 0; attempt < HABITAT_SCENE.INFILL_TRIES; attempt++) {
-          const x = sx + (.38 + rnd() * .24) * slot, z = sz + (.38 + rnd() * .24) * slot;
+          let x = sx + (.38 + rnd() * .24) * slot, z = sz + (.38 + rnd() * .24) * slot;
           if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
           const habitat = sampleAt(x, z), fill = HABITAT_FILL[habitat?.key];
           if (!fill || !habitat.plant) continue;
@@ -224,8 +224,12 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
               && ((j % stride + stride) % stride) === Math.floor(macro() * stride) && k === 0) kind = 'planter';
           }
           const radiusScale = kind === 'scrub' ? .8 : kind === 'stone' ? .5 : .6;
-          const room = Math.min(x - sx, sx + slot - x, z - sz, sz + slot - z) - HABITAT_SCENE.DETAIL_GAP_M / 2;
           const carpet = kind === 'grass' || kind === 'understory';
+          // Carpet cover pulls its centre toward the slot middle so its (still disjoint) disc fills the slot;
+          // full jitter shrinks the admissible radius and leaves bare ground between patches. Jitter is
+          // compressed, not removed: retry attempts must still land on distinct positions.
+          if (carpet) { x = sx + slot / 2 + (x - sx - slot / 2) * .25; z = sz + slot / 2 + (z - sz - slot / 2) * .25; }
+          const room = Math.min(x - sx, sx + slot - x, z - sz, sz + slot - z) - HABITAT_SCENE.DETAIL_GAP_M / 2;
           const size = Math.min(carpet ? 16 : 1.2 + rnd() * .6, room / radiusScale), r = radiusScale * size;
           if (!(size >= .7) || x - r < minX || x + r > maxX || z - r < minZ || z + r > maxZ
             || !fits({ x, z, r }, habitat.zone)) continue;
@@ -246,10 +250,13 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
               })) continue;
           }
           const ry = rnd() * Math.PI * 2;
-          available.push({ kind, x, y, z, r, height: h, size, ry: kind === 'crop' ? habitat.ry || 0 : ry,
+          const cover = clamp(habitat.density * (.65 + patch * .5), .04, 1);
+          available.push({ kind, x, y, z, r, height: h, size, ry: kind === 'crop' ? habitat.ry || 0 : carpet ? 0 : ry,
             groundX, groundZ, environment: habitat.environment,
             coverSize: carpet ? size <= 2 ? 2 : size <= 6 ? 6 : 16 : 0,
-            cover: clamp(habitat.density * (.65 + patch * .5), .04, 1),
+            cover,
+            // Blade-count fraction: nearest COVER_LEVELS entry to cover, never below the first (the floor).
+            coverDensity: carpet ? HABITAT_SCENE.COVER_LEVELS.reduce((best, level) => Math.abs(level - cover) < Math.abs(best - cover) ? level : best) : 1,
             variant: Math.floor(rnd() * HABITAT_SCENE.VARIANTS), seed: localSeed, habitat: habitat.key,
             color: habitat.color, rank: rnd(), target: Math.min(fill[1], fill[0] + Math.floor(patch * (fill[1] - fill[0] + 1))) });
           break;
