@@ -68,7 +68,8 @@ assert.equal(JSON.stringify(sources), before, 'config assembly never mutates a b
 cfg.motherLanes[0][1][0] = original;
 
 assert(mixedRoadFrame(venue('madrid')), 'the newly verified complete Madrid mother is usable');
-assert.equal(mixedRoadFrame(venue('taroko')), null, 'unqualified natural geometry remains pending');
+assert(mixedRoadFrame(venue('taroko')), 'the newly qualified natural Taroko mother is usable');
+assert.equal(mixedRoadFrame(venue('giza')), null, 'unqualified geometry remains pending');
 assert.equal(mixedMapConfig([]), null);
 assert.equal(mixedMapConfig([sources[0], sources[1], { ...sources[2], roadCount: 0 }]), null);
 assert.equal(mixedMapConfig([sources[0], sources[1], { ...sources[2], id: sources[0].id }]), null);

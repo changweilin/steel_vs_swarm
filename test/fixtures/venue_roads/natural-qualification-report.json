@@ -3,7 +3,7 @@
   "reports": [
     {
       "id": "taroko",
-      "status": "pending",
+      "status": "qualified",
       "source": {
         "provider": "https://api.openstreetmap.org/api/0.6/map.json",
         "version": "osm-map-json-0.6",
@@ -550,7 +550,7 @@
     },
     {
       "id": "todra",
-      "status": "pending",
+      "status": "qualified",
       "source": {
         "provider": "https://api.openstreetmap.org/api/0.6/map.json",
         "version": "osm-map-json-0.6",
