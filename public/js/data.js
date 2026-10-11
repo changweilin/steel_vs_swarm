@@ -5635,10 +5635,10 @@ export function clampHeroSpawn(bx, bz, x, z) {
   const t = d < lo ? lo / d : d > hi ? hi / d : 1;
   return [bx + dx * t, bz + dz * t];
 }
-// 助攻賞金半徑(唯一推導處,MUST NOT 手寫):狙擊模式視野 ×1.25,全角色統一取最大值。
-// 狙擊視野 = UNITS[kind].sight × GAME.AIM_SIGHT_MULT;現值 270 = 135(drone,最大)×1.6×1.25。
+// 助攻賞金半徑(唯一推導處,MUST NOT 手寫):全機體狙擊視野 ×1.25 取平均,全機體/全遊戲情境固定同一值。
+// 狙擊視野 = UNITS[kind].sight × GAME.AIM_SIGHT_MULT;現值 250 = (135+120+120)/3×1.6×1.25。
 // MUST 排在 COMBAT_SCALE 統一縮放之後:UNITS.sight 縮放後才是遊戲空間尺度,排前面會大一倍。
-ECON.ASSIST.R_M = Math.max(UNITS.drone.sight, UNITS.robot.sight, UNITS.morph.sight)
+ECON.ASSIST.R_M = (UNITS.drone.sight + UNITS.robot.sight + UNITS.morph.sight) / 3
   * GAME.AIM_SIGHT_MULT * 1.25;
 
 // ---- 持續 DPS 的唯一量法(彈匣週期;**MUST NOT 在任何消費端手抄這兩行**)----

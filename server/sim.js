@@ -6612,7 +6612,7 @@ export class BattleSim {
       if (!t.neutral) by.kn = addBattleScore(by.kn, battleScoreGain(t.kind, !!t.hero));
     }
     // 助攻:曾對死者造成傷害的其他英雄,賞金 × ASSIST.F(1/4)。純傷害永久制 + 範圍限制:
-    // 只要 _damage 唯一縫蓋過戳記就算,但擊殺當下貢獻者須在 ASSIST.R_M(狙擊視野×1.25取最大)內;
+    // 只要 _damage 唯一縫蓋過戳記就算,但擊殺當下貢獻者須在 ASSIST.R_M(全機體狙擊視野×1.25取平均,全機體/全情境固定)內;
     // 擊殺者本人拿全額不重複領。
     if (t.asst) {
       const bounty = this._bounty(t);
@@ -6621,7 +6621,7 @@ export class BattleSim {
         const a = this.heroes.get(pid);
         if (!a || a.side === t.side) continue;
         const effR = Math.max(ECON.ASSIST.R_M, weaponMaxHoriz(ECON.ASSIST.R_M, (t.hero ? (t.y || 0) : 0) - (a.y || 0)));
-        if (dist2d(a.x, a.z, t.x, t.z) > effR) continue;   // 範圍限制:狙擊視野×1.25,高空依錐形包絡展開
+        if (dist2d(a.x, a.z, t.x, t.z) > effR) continue;   // 範圍限制:全機體狙擊視野×1.25取平均,高空依錐形包絡展開
         // 戰鬥分數:助攻 +1(硬目標 ×5)。**與賞金脫鉤** —— 賞金 0 的目標(如砲塔)一樣算戰績,
         // 舊制的 `if (!bounty) break` 只該擋錢,擋到分數就是「拆塔的助攻不計分」。
         if (!t.neutral) a.kn = addBattleScore(a.kn, battleScoreGain(t.kind, !!t.hero, true));
