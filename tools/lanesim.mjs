@@ -747,6 +747,7 @@ function ultDetonate(M, A, cx, cy, frac, nImp, t, foes, ctx) {
       if (e.tower || e.vehicle) continue;   // 工事免疫(對齊 sim heroCast emp 分支)
       if (Math.hypot(e.x - cx, e.y - cy) > A.r) continue;
       e.empUntil = Math.max(e.empUntil || 0, t + A.dur);
+      if (A.dmg > 0) e.hp -= A.dmg;
     }
   } else if (A.fx === 'summon') {
     ctx?.spawnSummon?.(M.side, A, nImp ?? A.count, cx);

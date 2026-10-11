@@ -8457,8 +8457,8 @@ export class BattleClient {
       const hitEnt = ent || (missileId == null ? this._aimTarget(rng) : null);
       // 射程誠實閘:瞄到射程外的目標 = 脫靶 —— 曳光照樣畫(槍有開火),但落點不爆、
       // 不送 hit/missile、不跳命中回饋、不廣播 hit=1 誤導他人畫面。
-      const hitFoe = hitEnt && hitEnt.side !== this.side && !hitEnt.neutral && !hitEnt.dead
-        && this._inHitRange(def, muzzle, hitEnt);
+      const hitFoe = (hitEnt && hitEnt.side !== this.side && !hitEnt.neutral && !hitEnt.dead
+        && this._inHitRange(def, muzzle, hitEnt)) ? hitEnt : null;
       const hitMis = missileId != null && this._inMissileRange(def, muzzle, point);
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: (hitFoe || hitMis) ? 1 : 0 });
       // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
