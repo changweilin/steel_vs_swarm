@@ -50,6 +50,15 @@ export function resetReferenceShieldPose(shield) {
   for (const track of shield?.pose || []) track.node.quaternion.copy(track.rest);
 }
 
+/** Hidden morph trees do not advance the event clock, but must release canceled presentation channels. */
+export function resetReferenceMotion(rig) {
+  const motion = rig?.referenceMotion;
+  if (!motion) return;
+  for (const tracks of [motion.fire, motion.charge, motion.cast]) {
+    for (const track of tracks) track.node[track.channel][track.axis] = track.rest;
+  }
+}
+
 /** Reapply presentation after a morph pose without advancing its shared clock twice. */
 export function poseReferenceShield(shield, posture = 1) {
   if (!shield) return;

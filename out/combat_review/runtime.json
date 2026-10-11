@@ -3,10 +3,10 @@
   "showcasePlays": 128,
   "unitKinds": 14,
   "unitShowcasePlays": 28,
-  "unitPeakCalls": 9,
-  "peakCalls": 6,
+  "unitPeakCalls": 7,
+  "peakCalls": 4,
   "memory": {
-    "geometries": 215,
+    "geometries": 131,
     "textures": 2
   }
 }

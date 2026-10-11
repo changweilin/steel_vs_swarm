@@ -2,8 +2,20 @@ import { createHash } from 'node:crypto';
 import { CHARACTERS, heroWeapon, heroAbility, aoeClass, lanceR, fanArcHalf, fanSubs, fanBinRangeF } from '../../public/js/data.js';
 import { characterCombatStyle } from '../../public/js/characterStyle.js';
 
-/** Pre: complete art_gen tables. Post: prose owns art direction; shared definitions own every combat measure. */
-export function combatIntent(source) {
+/** Pre: complete art_gen and ability-direction rosters. Post: prose owns presentation; shared definitions own combat measures. */
+export function combatIntent(source, abilitySource) {
+  const directions = new Map();
+  for (const line of abilitySource.split(/\r?\n/)) {
+    if (!line.startsWith('| `')) continue;
+    const [profileId, beat, totem, palette] = line.split('|').slice(1, -1).map(value => value.replace(/`/g, '').trim());
+    const match = /^([stm]\d{2})\.(def|atk)\.[a-z_]+$/.exec(profileId);
+    if (!match || !CHARACTERS[match[1]] || !beat || !totem || !palette) throw new Error(`Invalid ability direction: ${profileId}`);
+    const key = `${match[1]}.${match[2]}`;
+    if (directions.has(key)) throw new Error(`Repeated ability direction: ${key}`);
+    directions.set(key, { profileId, beat, totem, palette });
+  }
+  if (directions.size !== Object.keys(CHARACTERS).length * 2) throw new Error('Incomplete ability direction roster');
+  const directionHash = createHash('sha256').update(abilitySource).digest('hex');
   const rows = new Map();
   let headers = [];
   const clean = value => value.replace(/<br\s*\/?\s*>/gi, '\n').replace(/\*\*|`/g, '').trim();
@@ -37,7 +49,8 @@ export function combatIntent(source) {
     }));
     const abilities = Object.fromEntries(['def', 'atk'].map(slot => [slot, {
       ...heroAbility(id, slot), description: row[slot === 'def' ? '守招' : '攻招'],
+      direction: directions.get(`${id}.${slot}`),
     }]));
-    return [id, { ...characterCombatStyle(id), artHash, art, weapons, abilities }];
+    return [id, { ...characterCombatStyle(id), artHash, directionHash, art, weapons, abilities }];
   }));
 }

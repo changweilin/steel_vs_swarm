@@ -127,7 +127,8 @@ export function buildReferenceAsset(asset, spec) {
     rig.shield.posture = spec.form === 'flight' ? 0 : 1;
     rig.shield.pose = (shield.pose || []).map(track => ({
       node: nodeOf(track.node),
-      rest: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rest)),
+      // A folded flight joint must recover its authored endpoint, not the standing shield rest.
+      rest: new THREE.Quaternion().setFromEuler(new THREE.Euler(...(form?.transforms[track.node]?.rotation || track.rest))),
       deploy: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rotation)),
     }));
     for (const hinge of rig.shield.hinges) hinge.node.rotation[hinge.axis] = hinge.rest;

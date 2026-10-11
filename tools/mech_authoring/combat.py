@@ -1,5 +1,9 @@
 """Presentation geometry and sampled action tracks attached to existing rigid driver joints."""
 import math
+import importlib
+import ability
+import hashlib
+from pathlib import Path
 
 import bpy
 from mathutils import Vector
@@ -112,131 +116,6 @@ def fan_geometry(asset, node, weapon, intent):
     return {'count': len(bins), 'vertexBins': vertex_bins}
 
 
-def cast_geometry(asset, intent, joint, track):
-    fields = {}
-    for slot, ability in intent['abilities'].items():
-        text = ability['description']
-        fx = ability['fx']
-        nodes = [joint(slot + '_field_' + layer, None) for layer in ['tell', 'release', 'contact']]
-        tell, release, contact = nodes
-        cultural_trace(asset, tell, intent['structure'], 'fx_accent')
-        if ability['r'] > 0:
-            asset.tube('Settled effect boundary', tell, 1, .997, .002, (0, 0, 0), 'fx_accent', axis='y', segments=32)
-        pulling = ability.get('add', {}).get('fx') == 'pull' if ability.get('add') else False
-        bash = ability.get('shieldBash') or fx == 'shield_bash'
-        jump = ability.get('defJump', 0) > 0
-        shield = ability.get('shieldExpand') or fx in ['cube', 'reflect', 'intercept'] or '防衛領域' in text or '承傷減免' in text
-        count = 4 + intent['variant'] % 5
-        for i in range(count):
-            angle = i * math.tau / count
-            if pulling:
-                path = [(math.cos(angle + j * .3) * (.85 - j * .11), j * .035,
-                         math.sin(angle + j * .3) * (.85 - j * .11)) for j in range(7)]
-            elif '分身' in text or '化身' in text:
-                side = -1 if i % 2 else 1
-                x = side * .45
-                path = [(x, .02, -.25), (x, .35, 0), (x - .18, .55, 0), (x, .75, 0),
-                        (x + .18, .55, 0), (x, .35, 0), (x, .02, .25)]
-            elif '重箭' in text:
-                x = (i / (count - 1) - .5) * .08
-                path = [(x, .12, -.8), (x, .12, .55), (x - .08, .12, .45), (x, .12, .8), (x + .08, .12, .45)]
-            elif '拓撲破片' in text:
-                path = [(math.cos(angle) * .8, .02, math.sin(angle) * .8),
-                        (math.cos(angle + 1.9) * .65, .5, math.sin(angle + 1.9) * .65),
-                        (math.cos(angle + .8) * .7, .02, math.sin(angle + .8) * .7),
-                        (math.cos(angle) * .8, .02, math.sin(angle) * .8)]
-            elif '狂雷' in text:
-                x, z = math.cos(angle) * .65, math.sin(angle) * .65
-                path = [(x, .85, z), (x - .08, .6, z), (x + .09, .4, z), (x, .02, z), (x * .7, .02, z * .7)]
-            elif '巡飛彈' in text or '自爆蜂群' in text:
-                x, z = math.cos(angle) * .65, math.sin(angle) * .65
-                path = [(x - .25, .75, z - .2), (x - .12, .4, z - .1), (x, .02, z), (x + .06, .07, z + .05)]
-            elif '雪崩齊射' in text:
-                x, z = math.cos(angle) * .65, math.sin(angle) * .65
-                path = [(x, .85, z), (x, .02, z), (x + .08, .02, z + .05), (x - .08, .02, z + .12), (x + .12, .02, z + .2)]
-            elif '架設' in text:
-                x, z = math.cos(angle) * .6, math.sin(angle) * .6
-                path = [(x * .4, .5, z * .4), (x, .1, z), (x, .02, z), (x * .8, .02, z * .8)]
-            elif bash or jump:
-                x = (i / (count - 1) - .5) * 1.1
-                path = [(x, .05, -.6), (x, .25 if jump else .05, .1), (x * .6, .05, .65)]
-            elif fx in ['stealth', 'phaseshift', 'fog', 'decoy_beacon']:
-                path = [(-.7, i * .055, -.55 + i / count), (-.2, .35, -.2 + i / count), (.7, .05, -.5 + i / count)]
-            elif fx == 'heal':
-                path = [(math.cos(angle) * .8, 0, math.sin(angle) * .8), (math.cos(angle) * .35, .45, math.sin(angle) * .35), (0, .2, 0)]
-            elif fx == 'summon':
-                x = (i / (count - 1) - .5) * 1.2
-                path = [(x - .07, .05, -.65), (x, .3, -.45), (x + .07, .05, -.65), (x, .05, .65)]
-            elif fx == 'intercept':
-                path = [(math.cos(angle) * math.cos(j / 6 * math.pi / 2) * .85,
-                         math.sin(j / 6 * math.pi / 2) * .85,
-                         math.sin(angle) * math.cos(j / 6 * math.pi / 2) * .85) for j in range(7)]
-            elif shield and slot == 'atk' and ability['target'] == 'team':
-                x, z = math.cos(angle) * .7, math.sin(angle) * .7
-                path = [(x - .12, .02, z), (x - .12, .55, z), (x, .7, z), (x + .12, .55, z), (x + .12, .02, z)]
-            elif shield:
-                path = [(math.cos(angle) * .8, 0, math.sin(angle) * .8), (math.cos(angle) * .8, .4, math.sin(angle) * .8), (math.cos(angle) * .4, .7, math.sin(angle) * .4)]
-            elif fx == 'emp' and '神龍' in text:
-                z = -.7 + i / (count - 1) * 1.4
-                path = [(-.7 + j * .14, .12 + math.sin(j * 1.2 + i * .4) * .06, z) for j in range(11)]
-            elif fx == 'emp' and '神經共振' in text:
-                path = [(math.cos(angle) * .8, .02, math.sin(angle) * .8), (math.cos(angle + .6) * .5, .25, math.sin(angle + .6) * .5),
-                        (0, .15, 0), (math.cos(angle + 2) * .8, .02, math.sin(angle + 2) * .8)]
-            elif fx in ['emp', 'recon', 'vision', 'rally']:
-                path = [(math.cos(angle) * .15, .15, math.sin(angle) * .15), (math.cos(angle) * .7, .25, math.sin(angle) * .7), (math.cos(angle) * .8, .05, math.sin(angle) * .8)]
-            elif fx == 'strike':
-                x, z = math.cos(angle) * .65, math.sin(angle) * .65
-                path = [(x, .75, z), (x * .9, .4, z * .9), (x, .02, z), (x * .7, .02, z * .7)]
-            else:
-                path = [(math.cos(angle) * .6, .05, math.sin(angle) * .6), (math.cos(angle + .3) * .8, .35, math.sin(angle + .3) * .8), (math.cos(angle + .6) * .6, .6, math.sin(angle + .6) * .6)]
-            for a, b in zip(path, path[1:]):
-                direction = Vector(b) - Vector(a)
-                transverse = direction.cross(Vector((0, 1, 0)))
-                if transverse.length < .00001:
-                    transverse = direction.cross(Vector((1, 0, 0)))
-                transverse.normalize()
-                transverse *= .008
-                vertical = direction.normalized().cross(transverse)
-                vertices = [tuple(Vector(point) + sign * offset)
-                            for offset in [transverse, vertical] for point, sign in [(a, -1), (a, 1), (b, 1), (b, -1)]]
-                asset.mesh('Inward gravity streamline' if pulling else text.split('\n')[0], release,
-                           vertices, [(0, 1, 2, 3), (4, 5, 6, 7)], 'fx_color')
-            p = path[-1]
-            asset.loft('Contact keystone', contact, [(p[1], .045, .045), (p[1] + .09, .008, .008)], 'fx_core', at=(p[0], 0, p[2]))
-        tracks = []
-        traits = intent['art']['traits']
-        tempo = .85 if '沉穩' in traits or '極簡動作' in traits else 1.15 if '高APM' in traits or '靈動' in traits else 1
-        for index, name in enumerate(nodes):
-            delay = [.0, .16, .34][index] / tempo
-            keys = [[0, .001]] + ([[delay, .001]] if delay else []) + [[delay + .08 / tempo, 1], [.72, .8], [1, .001]]
-            for axis in 'xyz':
-                entry = {'node': name, 'channel': 'scale', 'axis': axis, 'keys': keys}
-                tracks.append(entry)
-                track(slot, name, 'scale', axis, keys)
-        if pulling:
-            entry = {'node': release, 'channel': 'rotation', 'axis': 'y', 'keys': [[0, 0], [1, -math.pi * .5]]}
-            tracks.append(entry)
-            track(slot, release, 'rotation', 'y', entry['keys'])
-        bpy.context.view_layer.update()
-        # Normalize the complete 3D envelope, including ribbon thickness, before any event-radius scaling.
-        extent = 0
-        for obj in asset.parts:
-            if obj.parent.name not in nodes:
-                continue
-            for vertex in obj.data.vertices:
-                extent = max(extent, (obj.matrix_local @ vertex.co).length)
-        for obj in asset.parts:
-            if obj.parent.name not in nodes:
-                continue
-            obj.location /= extent
-            for vertex in obj.data.vertices:
-                vertex.co /= extent
-        fields[slot] = {'nodes': nodes, 'tracks': tracks, 'duration': .95 if slot == 'def' else 1.35,
-                        'follows': ability['r'] <= 0 and fx not in ['summon', 'strike'],
-                        'description': text, 'radius': ability['r'], 'fx': fx}
-    return fields
-
-
 def reset(asset):
     for name, _, _ in asset.combat['joints']:
         asset.nodes[name].scale = (.001,) * 3
@@ -268,6 +147,7 @@ def pose(asset, clip, time):
             radius = field['radius'] or asset.spec['height'] * .6
             for name in field['nodes']:
                 asset.nodes[name].scale *= radius
+                asset.nodes[name].location *= radius
         weapons = asset.combat['intent']['weapons']
         if slot in weapons:
             weapon = weapons[slot]
@@ -318,7 +198,9 @@ def construct(asset, intent, xyz):
     for name, color, opacity, emission in [('fx_color', intent['color'], .7, 2),
                                             ('fx_accent', intent['accent'], .8, 3),
                                             ('fx_core', 0xffffff, .9, 4),
-                                            ('fx_membrane', intent['color'], .12, .8)]:
+                                            ('fx_membrane', intent['color'], .12, .8),
+                                            ('fx_muted', intent['color'], .18, .15),
+                                            ('fx_ink', 0x090d16, .82, 0)]:
         desc = {'color': '#%06x' % color, 'opacity': opacity, 'emission': emission}
         asset.spec['materials'][name] = desc
         material = bpy.data.materials.new(name)
@@ -441,11 +323,12 @@ def construct(asset, intent, xyz):
     dish = asset.spec['motion']['cast'][0]['node']
     for slot in ['def', 'atk']:
         tell = joint(slot + '_tell', dish)
-        ring(tell, height * .11, 'fx_accent' if compact else 'fx_color', 12)
-        ring(tell, height * .15, 'fx_accent', 12)
-        pulse(slot, tell, strength=1.3)
-        track(slot, tell, 'rotation', 'z', [[0, 0], [1, math.pi * (1 if slot == 'def' else -1)]])
-    fields = cast_geometry(asset, intent, joint, track)
+        paths, _ = ability.recipe(intent['abilities'][slot]['direction']['profileId'])
+        for a, b in zip(paths[0][0], paths[0][0][1:]):
+            asset.strut('Hardpoint ability contour', tell, tuple(v * height * .12 for v in a),
+                        tuple(v * height * .12 for v in b), height * .003, 'fx_accent')
+        pulse(slot, tell)
+    fields = importlib.reload(ability).cast_geometry(asset, intent, joint, track)
     for slot, motion in [('light', 'fire'), ('heavy', 'charge'), ('def', 'cast'), ('atk', 'cast')]:
         for source in asset.spec['motion'][motion]:
             if source.get('trigger') == 'heavy':
@@ -467,6 +350,7 @@ def construct(asset, intent, xyz):
         discharges[slot] = {'node': name, 'radialScale': weapon['lanceRadius'] / radial,
                             'lengthScale': weapon['range'] / (high - low), 'origin': low}
     asset.combat = {'intent': intent, 'joints': joints, 'clips': clips, 'discharges': discharges, 'fans': fans,
+                    'abilityHash': hashlib.sha256(Path(ability.__file__).read_bytes()).hexdigest(),
                     'transported': transported, 'fields': fields,
                     'shield': {'node': guard, 'center': center, 'halfWidth': width, 'halfHeight': shield_height, 'clearance': gap}}
     asset.combat_parts = asset.parts[start:]

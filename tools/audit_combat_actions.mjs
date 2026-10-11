@@ -1,5 +1,5 @@
 // Combat presentation: complete roster, joint attachments, shield clearance, transported shot ownership,
-// independent GLB loading, finite event clocks and disposal. Existing project resource limits stay binding.
+// independent GLB loading, sampled spherical bounds, phase draw budgets and disposal. Existing resource limits stay binding.
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -19,8 +19,12 @@ assert(ids.every(id => roster.includes(id)), 'Unknown combat asset');
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
 const sha = value => createHash('sha256').update(value).digest('hex');
 const codeHash = sha(await readFile('tools/mech_authoring/combat.py'));
+const abilityHash = sha(await readFile('tools/mech_authoring/ability.py'));
 const builderHash = sha(await readFile('tools/mech_authoring/build.py'));
-const intents = JSON.parse(JSON.stringify(combatIntent(await readFile('docs/art_gen.md', 'utf8'))));
+const intents = JSON.parse(JSON.stringify(combatIntent(await readFile('docs/art_gen.md', 'utf8'),
+  await readFile('docs/ability-vfx-direction.md', 'utf8'))));
+const profiles = new Set([...readSrc('public', 'js', 'castfx.js').matchAll(/'([stm]\d{2}\.(?:def|atk)\.[a-z_]+)'/g)].map(match => match[1]));
+assert.deepEqual([...profiles].sort(), Object.values(intents).flatMap(intent => Object.values(intent.abilities).map(ability => ability.direction.profileId)).sort(), 'Direction and compositor profiles disagree');
 const identities = {};
 const integration = {};
 for (const file of ['game.js', 'vfx.js', 'unitMotion.js', 'locomotion.js', 'charPreview.js', 'castfx.js',
@@ -32,9 +36,19 @@ assert.equal(new Set(roster.map(id => characterCombatStyle(id).shieldForm)).size
 for (const id of ids) {
   const asset = COMBAT_ASSETS[id], style = characterCombatStyle(id);
   assert.equal(asset.source.combat, codeHash, `${id}: stale combat recipe`);
+  assert.equal(asset.combat.abilityHash, abilityHash, `${id}: stale ability recipe`);
   assert.equal(asset.source.builder, builderHash, `${id}: stale builder`);
   assert.deepEqual(asset.combat.intent, intents[id], `${id}: stale art or authority measures`);
   for (const key of ['color', 'accent', 'frame', 'shieldForm', 'variant']) assert.equal(asset.combat.intent[key], style[key], `${id}: stale ${key}`);
+  for (const slot of ['def', 'atk']) {
+    const field = asset.combat.fields[slot];
+    assert.equal(field.profileId, intents[id].abilities[slot].direction.profileId, `${id}/${slot}: wrong profile`);
+    assert.equal(new Set(field.nodes).size, field.nodes.length, `${id}/${slot}: repeated phase node`);
+    assert(field.beats.length === 3 && field.beats.every((time, i) => time > 0 && time < 1 && (!i || time > field.beats[i - 1])));
+  }
+  const silhouette = slot => sha(JSON.stringify(asset.meshes.filter(part => asset.combat.fields[slot].nodes.includes(part.parent)).map(part => part.positions)));
+  assert.notEqual(silhouette('def'), silhouette('atk'), `${id}: Q/E differ only by material`);
+  assert.notDeepEqual(asset.combat.fields.def.beats, asset.combat.fields.atk.beats, `${id}: repeated Q/E timing`);
   assert.deepEqual(Object.keys(asset.combat.clips), slots);
   for (const clip of Object.values(asset.combat.clips)) {
     assert(clip.duration > 0 && Number.isFinite(clip.duration));
@@ -102,6 +116,7 @@ try {
     const { spawnCastFx } = await import('/public/js/castfx.js');
     const { characterShieldTexture } = await import('/public/js/castfx.js');
     const { characterCombatStyle } = await import('/public/js/characterStyle.js');
+    const { COMBAT_ASSETS } = await import('/public/js/forge/combatAssets.js');
     const createShield = new Function('THREE', 'makeShieldMaterial', 'characterCombatStyle', 'characterShieldTexture',
       `return ({${shieldFactory}})._createFrontShieldMesh`)(T, makeShieldMaterial, characterCombatStyle, characterShieldTexture);
     const check = (ok, message) => { if (!ok) throw new Error(message); };
@@ -118,6 +133,11 @@ try {
     });
     const fieldSheets = Array.from({ length: 4 }, () => {
       const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 8 * 264;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return { canvas, ctx };
+    });
+    const cycleSheets = Array.from({ length: 8 }, () => {
+      const canvas = document.createElement('canvas'); canvas.width = 2400; canvas.height = 8 * 264;
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       return { canvas, ctx };
     });
@@ -302,7 +322,12 @@ try {
         spawnCastFx(scene, effects, { ch: id, slot, fx: a.fx, at, r: radius, dur: a.dur, scale: 20 });
         const field = effects.find(effect => effect.obj.userData.authoredCast);
         check(field?.obj.userData.authoredCast.radius === radius, `${id}/${slot}: field ignores event radius`);
-        for (const fraction of [1, .92, .7, .4, 0]) {
+        const phaseTimes = COMBAT_ASSETS[id].combat.fields[slot].beats;
+        const [tell, release, contact] = phaseTimes;
+        const cycleTimes = [0, tell / 2, tell, release, (release + contact) / 2, contact, Math.min(.98, contact + .12), 1];
+        const samples = [...new Set([...Array.from({ length: 33 }, (_, i) => i / 32), ...phaseTimes, ...cycleTimes])].sort((a, b) => a - b);
+        for (const time of samples) {
+          const fraction = 1 - time;
           field.fade(field.obj, fraction); field.obj.updateWorldMatrix(true, true);
           field.obj.traverse(mesh => {
             if (!mesh.isMesh) return;
@@ -312,15 +337,25 @@ try {
               check(vertex.distanceTo(at) <= radius * 1.0001, `${id}/${slot}: animated field exceeds settled radius`);
             }
           });
-          const beat = [.92, .7, .4].indexOf(fraction);
-          if (radius === (a.r || 4) && beat >= 0) {
+          const beat = phaseTimes.indexOf(time);
+          const frame = cycleTimes.indexOf(time);
+          if (radius === (a.r || 4) && (beat >= 0 || frame >= 0)) {
             camera.far = Math.max(1000, radius * 5); camera.updateProjectionMatrix();
             camera.position.copy(at).add(new T.Vector3(.65, .5, 1).normalize().multiplyScalar(radius * 3.2));
             camera.lookAt(at); renderer.render(scene, camera);
-            const sheet = fieldSheets[Math.floor(index / 8)], row = index % 8, col = (slot === 'def' ? 0 : 3) + beat;
-            sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
-            sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
-            sheet.ctx.fillText(`${id} ${slot} ${['tell', 'release', 'contact'][beat]} r=${radius}m`, col * 300 + 8, row * 264 + 257);
+            check(renderer.info.render.calls <= (slot === 'def' ? 2 : 4), `${id}/${slot}: field leaves no draw-call budget for its hardpoint cue`);
+            if (beat >= 0) {
+              const sheet = fieldSheets[Math.floor(index / 8)], row = index % 8, col = (slot === 'def' ? 0 : 3) + beat;
+              sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
+              sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+              sheet.ctx.fillText(`${id} ${slot} ${['tell', 'release', 'contact'][beat]} r=${radius}m`, col * 300 + 8, row * 264 + 257);
+            }
+            if (frame >= 0) {
+              const move = index * 2 + (slot === 'atk' ? 1 : 0), sheet = cycleSheets[Math.floor(move / 8)], row = move % 8;
+              sheet.ctx.drawImage(renderer.domElement, frame * 300, row * 264);
+              sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+              sheet.ctx.fillText(`${id} ${slot} t=${time.toFixed(3)}`, frame * 300 + 8, row * 264 + 257);
+            }
           }
         }
         for (const effect of effects) { scene.remove(effect.obj); effect.dispose ? effect.dispose() : disposeTree(effect.obj); }
@@ -358,15 +393,18 @@ try {
     return { measures, fanBounds, uniquePatterns: patterns.size, peakCalls,
       fanSheet: fanSheet.toDataURL('image/png'),
       sheets: sheets.map(sheet => sheet.canvas.toDataURL('image/png')),
-      fieldSheets: fieldSheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
+      fieldSheets: fieldSheets.map(sheet => sheet.canvas.toDataURL('image/png')),
+      cycleSheets: cycleSheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
   }, { ids, slots, limits: contract.limits, shieldFactory });
   assert.deepEqual(errors, [], 'Browser or shader errors');
   for (let i = 0; i < result.sheets.length; i++) await writeFile(`${output}/actions-${i + 1}.png`, Buffer.from(result.sheets[i].split(',')[1], 'base64'));
   for (let i = 0; i < result.fieldSheets.length; i++) await writeFile(`${output}/fields-${i + 1}.png`, Buffer.from(result.fieldSheets[i].split(',')[1], 'base64'));
+  for (let i = 0; i < result.cycleSheets.length; i++) await writeFile(`${output}/ability-cycle-${i + 1}.png`, Buffer.from(result.cycleSheets[i].split(',')[1], 'base64'));
   await writeFile(`${output}/fans.png`, Buffer.from(result.fanSheet.split(',')[1], 'base64'));
   delete result.fanSheet;
   delete result.sheets;
   delete result.fieldSheets;
+  delete result.cycleSheets;
   await writeFile(`${output}/runtime-validation.json`, JSON.stringify({ identities, integration, ...result, browserErrors: errors }, null, 2));
   for (const id of ids) {
     const path = `${output}/${id}/validation.json`, report = JSON.parse(await readFile(path, 'utf8'));

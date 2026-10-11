@@ -12,7 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
-import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose } from './unitMotion.js';
+import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose, resetReferenceMotion } from './unitMotion.js';
 import { stepAuthoredCombat, clearMorphCombatShield } from './forge/combatAsset.js';
 import { resetAnatomicalPose, stepAnatomicalPose } from './anatomicalPose.js';
 
@@ -91,7 +91,12 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
     walk.timeScale = L.ts;
   }
   if (!rig) return;
-  if (rig.kind === 'biped') resetReferenceShieldPose(rig.shield);
+  if (mesh.userData.morph) {
+    const morph = mesh.userData.morph;
+    resetReferenceShieldPose(morph.ground.shield);
+    resetReferenceShieldPose(morph.air.shield);
+    resetReferenceMotion(rig === morph.ground ? morph.air : morph.ground);
+  } else if (rig.kind === 'biped') resetReferenceShieldPose(rig.shield);
   if (rig.kind === 'biped') stepBiped(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'aerial') stepAerial(L, rig, dt, now, vFwd, vLat, yawRate);
   else if (rig.kind === 'quad' && rig.cephalopod) stepCephalopod(L, rig, dt, now, speed, yawRate);
@@ -1722,13 +1727,21 @@ function stepCastPose(L, rig, ent, dt, now) {
     if (!air) R(rig.torso, 'x', -0.16 * env);
     if (!air && rig.kind !== 'quad') { R(rig.armL, 'x', -0.55 * env); R(rig.armR, 'x', -0.55 * env); }
     if (rig.trunk) { R(rig.trunk, 'x', -0.8 * env); R(rig.trunkTip, 'x', -0.5 * env); }
-    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += 0.08 * env * (1 + i * 0.25); });
+    // Cephalopod tail slots are empty compatibility joints, without a gait owner to restore them.
+    if (rig.tailSegs && !rig.cephalopod) rig.tailSegs.forEach((t, i) => { t.rotation.x += 0.08 * env * (1 + i * 0.25); });
   } else if (arch === 'stomp') {
     // 跺腳(雙足:抬腿踏地;四足:人立刨擊)—— 蓄勢抬起、揮出落地全身下沉
     if (rig.kind === 'quad') {
       R(rig.spine, 'x', -0.3 * lift + 0.1 * hit);
-      R(rig.legFL, 'x', -(0.95 * lift + 0.15 * hit));
-      R(rig.legFR, 'x', -(0.75 * lift + 0.1 * hit));
+      if (rig.insectLegs) {
+        for (const leg of rig.insectLegs) {
+          if (leg.key === 'FL') R(leg.lift, 'z', leg.side * (0.95 * lift + 0.15 * hit));
+          if (leg.key === 'FR') R(leg.lift, 'z', leg.side * (0.75 * lift + 0.1 * hit));
+        }
+      } else {
+        R(rig.legFL, 'x', -(0.95 * lift + 0.15 * hit));
+        R(rig.legFR, 'x', -(0.75 * lift + 0.1 * hit));
+      }
       R(rig.neck, 'x', 0.22 * lift);                    // 長頸反屈:人立時頭仍看向前方
       if (rig.spine) rig.spine.position.y -= 0.14 * hit;
     } else {
@@ -1897,18 +1910,23 @@ function stepJumpPose(L, rig, ent, dt) {
 
   if (rig.kind === 'quad') {
     // 四足:騰空 = 飛撲伸展(前肢前伸、後肢後蹬),下墜前收準備觸地;落地脊背下沉
-    R(rig.legFL, 'x', -(0.5 * up + 0.25 * fall));
-    R(rig.legFR, 'x', -(0.45 * up + 0.3 * fall));
-    R(rig.legHL, 'x', 0.5 * up - 0.2 * fall);
-    R(rig.legHR, 'x', 0.45 * up - 0.25 * fall);
+    if (rig.insectLegs) {
+      // Sprawled limbs fold on their gait-owned femur hinges; coxal X is not reset by insect locomotion.
+      for (const leg of rig.insectLegs) R(leg.lift, 'z', leg.side * (0.5 * up + 0.3 * fall));
+    } else {
+      R(rig.legFL, 'x', -(0.5 * up + 0.25 * fall));
+      R(rig.legFR, 'x', -(0.45 * up + 0.3 * fall));
+      R(rig.legHL, 'x', 0.5 * up - 0.2 * fall);
+      R(rig.legHR, 'x', 0.45 * up - 0.25 * fall);
+    }
     R(rig.spine, 'x', -0.09 * up + 0.06 * fall + 0.1 * landK);
     if (rig.spine) rig.spine.position.y -= 0.2 * landK;
     if (rig.chFL) {                                       // 分節:頂點收肢、下墜收爪、落地載荷屈曲
       for (const ch of [rig.chFL, rig.chFR, rig.chHL, rig.chHR]) {
-        if (ch?.[0]) ch[0].g.rotation.x += ch[0].k * (0.5 * fall + 0.55 * landK + 0.6 * floatF);
+        if (ch?.[0]) ch[0].g.rotation[ch[0].axis || 'x'] += ch[0].k * (0.5 * fall + 0.55 * landK + 0.6 * floatF);
       }
     }
-    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall) * (1 + i * 0.2); });
+    if (rig.tailSegs && !rig.cephalopod) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall) * (1 + i * 0.2); });
   } else {
     // 雙足 / morph 地面型:蹬伸腿後直 → **頂點收腿抱團(floatF)** → 下墜雙腿前收屈膝、
     // 雙臂揚起平衡 → 落地深蹲緩衝。收腿是大跳與小跳的分水嶺:小跳幾乎沒有滯空可收,

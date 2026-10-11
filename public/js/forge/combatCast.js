@@ -19,6 +19,10 @@ function geometryOf(part) {
 export function spawnAuthoredCast(scene, effects, P, ch, slot) {
   const asset = COMBAT_ASSETS[ch], field = asset?.combat.fields?.[slot];
   if (!field) return false;
+  if (field.profileId !== P.profileId) {
+    if (globalThis.__DEV__ || globalThis.location?.search.includes('debug')) throw new Error(`Stale authored cast: ${ch}.${slot}`);
+    return false;
+  }
   const radius = P.r > 0 ? P.r : P.scale * .6;
   if (!Number.isFinite(radius) || radius <= 0 || !P.at?.isVector3) return true;
   const group = new THREE.Group(), nodes = new Map();
@@ -32,7 +36,8 @@ export function spawnAuthoredCast(scene, effects, P, ch, slot) {
     if (!node) continue;
     const desc = asset.materials[part.material];
     const mesh = new THREE.Mesh(geometryOf(part), new THREE.MeshBasicMaterial({ color: desc.color,
-      transparent: true, opacity: desc.opacity, blending: THREE.AdditiveBlending,
+      transparent: true, opacity: desc.opacity,
+      blending: part.material === 'fx_ink' || part.material === 'fx_muted' ? THREE.NormalBlending : THREE.AdditiveBlending,
       depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true }));
     mesh.userData.noOutline = true;
     mesh.userData.presentationEffect = true;
@@ -52,6 +57,7 @@ export function spawnAuthoredCast(scene, effects, P, ch, slot) {
     const anchor = field.follows ? P.casterPos?.() : null;
     object.position.copy(anchor || P.at);
     for (const track of tracks) track.target[track.channel][track.axis] = sampleCombatKeys(track.keys, 1 - fraction);
+    for (const node of nodes.values()) node.visible = Math.max(node.scale.x, node.scale.y, node.scale.z) > .002;
   };
   update(group, 1);
   scene.add(group);

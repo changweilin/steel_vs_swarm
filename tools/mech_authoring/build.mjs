@@ -31,7 +31,8 @@ const flags = args.filter((value, i) => value !== '--mcp'
 if (combat) {
   const directory = path.join(root, 'out/combat_reference');
   mkdirSync(directory, { recursive: true });
-  const intent = combatIntent(readFileSync(path.join(root, 'docs/art_gen.md'), 'utf8'));
+  const intent = combatIntent(readFileSync(path.join(root, 'docs/art_gen.md'), 'utf8'),
+    readFileSync(path.join(root, 'docs/ability-vfx-direction.md'), 'utf8'));
   const file = path.join(directory, 'intent.json');
   writeFileSync(file, JSON.stringify(intent));
   flags.push('--combat-data', file);
