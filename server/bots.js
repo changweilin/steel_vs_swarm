@@ -329,7 +329,7 @@ export class BotBrain {
   _target(h) {
     let t = this._tid ? this.sim.ents.get(this._tid) : null;
     if (t && (t.hp <= 0 || t.side === h.side || t.neutral || t.gar
-      || (t.hero && (t.dead || (t.stealthUntil || 0) > this.sim.t)))) { t = null; this._tid = 0; }
+      || (t.hero && t.dead) || (t.stealthUntil || 0) > this.sim.t)) { t = null; this._tid = 0; }
     if (t && Math.hypot(h.x - t.x, h.z - t.z) > this._targetGun(h).range * 1.15) { t = null; this._tid = 0; }
     if (!this._op('scan')) return t;                  // APM/scan interval not reached: keep current target
     const nt = this._acquire(h);
@@ -877,7 +877,7 @@ export class BotBrain {
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.gar || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙/駐守兵
       if (this.sim.siegeLocked(t)) continue;   // 攻堅順序未到的建築完全免傷 ⇒ 不當目標(唯一縫 sim.siegeLocked)
-      if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
+      if ((t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤者鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       // BOSS 守備主動性:敵人在據點活動圈內(或射程內)即納入警戒,具備全向防衛能力
       const inBossZone = bossHold && Math.hypot(t.x - bossHold.x, t.z - bossHold.z) <= bossHold.r * 1.1;

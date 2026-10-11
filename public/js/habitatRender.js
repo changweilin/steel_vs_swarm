@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HABITAT_SCENE } from './habitatCatalog.js';
-import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, planHabitatPathEdges } from './habitat.js';
+import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, planHabitatPathEdges, bakeCoverGrid } from './habitat.js';
 import { groundPlantParts, groundCoverParts } from './scenePlantParts.js';
 import { compileSceneParts } from './scenePropModels.js';
 import { envMat } from './toon.js';
@@ -171,5 +171,6 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     models: buckets.size + furnitureKinds.size + shore.batches, walkway: { ...walkway, pathAnchors: pathEdges.length },
     shoreline: { ...shore, anchors: shoreAnchors.length,
       types: Object.fromEntries([...new Set(shoreAnchors.map(a => a.type))].map(type => [type, shoreAnchors.filter(a => a.type === type).length])) },
-    recipe: 'evidence-habitat-v2' };
+    recipe: 'evidence-habitat-v2',
+    bakeCover: () => bakeCoverGrid({ bounds, rows: plan.rows, sampleAt }) };
 }

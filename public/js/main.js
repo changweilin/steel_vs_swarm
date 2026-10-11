@@ -3501,7 +3501,10 @@ async function enterLoading(cfg) {
       const roofs = [...(app.terrain.mapBuildings?.values() || [])].flatMap(r => r.platforms.map(p => ({
         buildingKey:r.key, y:p.y, outer:p.outer.map(q=>[q[0],-q[1]]), holes:(p.holes || []).map(h=>h.map(q=>[q[0],-q[1]])),
       })));
-      app.net?.send({ t: 'world', occ, cor, roofs, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
+      // cover = grass/woodland grid (data.js coverEnc): server cover stealth. A failed bake just omits it.
+      let cover = null;
+      try { cover = ud.bakeCover?.() || null; } catch { cover = null; }
+      app.net?.send({ t: 'world', occ, cor, roofs, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain), cover });
     }
     app.net?.send({ t: 'loaded' });
     fatal.localLoaded = true;

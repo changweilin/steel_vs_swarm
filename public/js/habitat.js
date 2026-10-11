@@ -7,6 +7,7 @@ import { areaSurfaceRows, pointInProjectedArea, projectedAreaContainsDisk, proje
 import { areaLayoutAngle } from './osmAreaLayout.js';
 import { walkwaySides, walkwayWidth, walkwaySurface, groundWalkway, mappedWalkwayFurniture } from './walkway.js';
 import { WALKWAY_FURNITURE, WALKWAY_DETAIL } from './walkwayCatalog.js';
+import { GRASS_H, COVER_STEALTH, coverEnc } from './data.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fallback = { green: 'meadow', urban: 'built', bare: 'exposed', alpine: 'alpine', cliff: 'cliff', wet: 'marsh' };
@@ -238,6 +239,7 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
           const y = heightAt(x, z);
           if (!Number.isFinite(y)) continue;
           const h = kind === 'stone' ? .12 + rnd() * .28 : kind === 'planter' ? .9
+            : kind === 'grass' && habitat.zone === 'green' ? GRASS_H.lo + rnd() * (GRASS_H.hi - GRASS_H.lo)
             : habitat.height * (carpet ? .7 + rnd() * .6 : size);
           let groundX = 0, groundZ = 0;
           if (carpet) {
@@ -275,6 +277,43 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
   rows.length = Math.min(rows.length, maxDetails);
   for (const row of rows) counts[row.habitat] = (counts[row.habitat] || 0) + 1;
   return { rows, counts, cell };
+}
+
+/**
+ * Cover grid for server stealth, sim frame (x = three x, z = -three z; same as bakeWetGrid).
+ * Pre: rows from planHabitatDetails (three frame); sampleAt = the sampler that produced them.
+ * Post: { minX, minZ, cell, cols, rows, data } with coverEnc cells; grass cells carry the tallest rendered
+ * tile covering the cell centre, woodland cells are FOREST. Absent/unclassifiable cells stay NONE.
+ */
+export function bakeCoverGrid({ bounds, rows, sampleAt }) {
+  const { minX, maxX, minZ, maxZ } = bounds || {};
+  if (![minX, maxX, minZ, maxZ].every(Number.isFinite) || maxX <= minX || maxZ <= minZ) return null;
+  const spanX = maxX - minX, spanZ = maxZ - minZ;
+  const cell = Math.max(COVER_STEALTH.GRID_M, Math.max(spanX, spanZ) / COVER_STEALTH.GRID_MAX);
+  const cols = Math.max(1, Math.ceil(spanX / cell)), nz = Math.max(1, Math.ceil(spanZ / cell));
+  const gh = new Float32Array(cols * nz), gd = new Float32Array(cols * nz);   // three-frame cells, origin (minX, minZ)
+  for (const row of rows) {
+    if (row.kind !== 'grass' || HABITATS[row.habitat]?.zone !== 'green') continue;
+    const i0 = Math.max(0, Math.ceil((row.x - row.r - minX) / cell - .5)), i1 = Math.min(cols - 1, Math.floor((row.x + row.r - minX) / cell - .5));
+    const j0 = Math.max(0, Math.ceil((row.z - row.r - minZ) / cell - .5)), j1 = Math.min(nz - 1, Math.floor((row.z + row.r - minZ) / cell - .5));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      if (row.height > gh[j * cols + i]) { gh[j * cols + i] = row.height; gd[j * cols + i] = row.cover; }
+    }
+  }
+  const simMinZ = -maxZ;
+  let data = '';
+  for (let i = 0; i < nz; i++) {
+    const tz = -(simMinZ + (i + .5) * cell);
+    const j = Math.min(nz - 1, Math.max(0, Math.floor((tz - minZ) / cell)));
+    for (let c = 0; c < cols; c++) {
+      const tx = minX + (c + .5) * cell;
+      const k = j * cols + c;
+      if (sampleAt(tx, tz)?.key === 'woodland') data += coverEnc(COVER_STEALTH.FOREST, 1, 0);
+      else if (gh[k] > 0) data += coverEnc(COVER_STEALTH.GRASS, gd[k], gh[k]);
+      else data += coverEnc(COVER_STEALTH.NONE, 0, 0);
+    }
+  }
+  return { minX: Math.round(minX * 10) / 10, minZ: Math.round(simMinZ * 10) / 10, cell: Math.round(cell * 100) / 100, cols, rows: nz, data };
 }
 
 /** OSM direction is measured from roads; directional RGB contrast supplies no road bearing. */
