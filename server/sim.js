@@ -22,7 +22,7 @@ import {
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
-   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR, TARGET_H,
+   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR, TARGET_H, COVER_STEALTH, coverDec,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, npcAaRangeF, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
@@ -360,6 +360,7 @@ export class BattleSim {
     if (cor.length) this._pruneCorridors(cor);
     this._ingestSlabs(w);
     this._ingestHgt(w);
+    this._ingestCover(w);
     this._rebuildLosGrid();
     this._registerMapBuildings(w.roofs);
   }
@@ -451,6 +452,85 @@ export class BattleSim {
     const a = d[j0 * g.cols + i0], b = d[j0 * g.cols + i1];
     const c = d[j1 * g.cols + i0], e = d[j1 * g.cols + i1];
     return (a + (b - a) * tx) * (1 - tz) + (c + (e - c) * tx) * tz;
+  }
+
+  /**
+   * Cover grid (main.js world upload `cover`; habitat.js bakeCoverGrid; codec = data.js coverDec).
+   * Absent or malformed => no grid => no cover stealth (degrade by omission, behavior bit-identical to before).
+   */
+  _ingestCover(w) {
+    const m = w?.cover;
+    if (!m || typeof m.data !== 'string') return;
+    const cols = m.cols | 0, rows = m.rows | 0, cell = +m.cell, minX = +m.minX, minZ = +m.minZ;
+    const cap = (COVER_STEALTH.GRID_MAX + 10) ** 2;
+    if (cols <= 0 || rows <= 0 || cols * rows > cap || !(cell > 0) || ![minX, minZ].every(Number.isFinite)
+      || m.data.length < cols * rows * 3) return;
+    for (let k = 0; k < cols * rows; k++) {
+      const kind = m.data.charCodeAt(k * 3) - 48;
+      if (kind < 0 || kind > COVER_STEALTH.FOREST) return;   // corrupt => reject whole grid
+    }
+    this._coverGrid = { minX, minZ, cell, cols, rows, data: m.data };
+  }
+
+  /** Cover at a sim point: { kind, density, h } or null (no grid / outside / NONE). */
+  _coverAt(x, z) {
+    const g = this._coverGrid;
+    if (!g) return null;
+    const j = Math.floor((x - g.minX) / g.cell), i = Math.floor((z - g.minZ) / g.cell);
+    if (i < 0 || j < 0 || i >= g.rows || j >= g.cols) return null;
+    const c = coverDec(g.data, i * g.cols + j);
+    return c.kind === COVER_STEALTH.NONE ? null : c;
+  }
+
+  /**
+   * One body's cover verdict. true = hides, false = visible, null = abstains (airborne).
+   * Idle = time held within MOVE_EPS_M of an anchor with no shot fired; any move/shot restarts it.
+   * Forest hides at once; grass hides only a body shorter than the grass (hitH < h), after
+   * GRASS_T_MAX * (1 - density) seconds, so the sparsest grass costs the full wait.
+   */
+  _coverHides(e, dt) {
+    const C = COVER_STEALTH;
+    if ((e.y || 0) > 0.5 || this._airborne(e)) { e._cvX = undefined; return null; }
+    if (e._cvX === undefined || Math.hypot(e.x - e._cvX, e.z - e._cvZ) > C.MOVE_EPS_M) { e._cvX = e.x; e._cvZ = e.z; e._cvIdle = 0; }
+    else e._cvIdle += dt;
+    if (!e.hero) {   // heroes reset in _gateFire; NPC cd only ever rises on a shot
+      const cd = e.cd || 0;
+      if (cd > (e._cvCd || 0)) e._cvIdle = 0;
+      e._cvCd = cd;
+    }
+    const c = this._coverAt(e.x, e.z);
+    if (!c) return false;
+    const need = c.kind === C.FOREST ? C.FOREST_T : hitH(e) < c.h ? C.GRASS_T_MAX * (1 - c.density) : Infinity;
+    return e._cvIdle >= need;
+  }
+
+  /** Refresh or drop the cover-owned part of stealthUntil without cutting a longer skill stealth. */
+  _coverApply(tgt, st, hides, until) {
+    if (hides) { tgt.stealthUntil = Math.max(tgt.stealthUntil || 0, until); st._cvUntil = until; return; }
+    if (!st._cvUntil) return;
+    if ((tgt.stealthUntil || 0) <= st._cvUntil) tgt.stealthUntil = 0;
+    st._cvUntil = 0;
+  }
+
+  _tickCoverStealth(dt) {
+    if (!this._coverGrid) return;
+    const until = this.t + COVER_STEALTH.GRACE_S;
+    for (const e of this.ents.values()) {
+      if (e.hero || e.hp <= 0 || e.decoy || e.kami || e.hyper || e.isTree || e.isMoon || e.isSlab || e.isHoloDecoy
+        || e.gar || e.kind === 'tower' || e.kind === 'base' || e.kind === 'mapbuilding' || !UNITS[e.kind]) continue;
+      this._coverApply(e, e, this._coverHides(e, dt) === true, until);
+    }
+    for (const sq of this.squads.values()) {
+      let voters = 0, all = true;
+      for (const b of sq.bodies) {
+        if (b.dead || b.hp <= 0) continue;
+        const v = this._coverHides(b, dt);
+        if (v === null) continue;
+        voters++;
+        if (!v) all = false;
+      }
+      this._coverApply(sq.ps, sq, voters > 0 && all, until);
+    }
   }
 
   /**
@@ -2178,6 +2258,7 @@ export class BattleSim {
       h.alphaArm = 0;
     }
     h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
+    h._cvIdle = 0;        // cover stealth: a shot restarts the idle clock
     return true;
   }
 
@@ -3303,7 +3384,7 @@ export class BattleSim {
     let best = null, bd = SQUAD.KAMI.ACQ_R;
     for (const e of this.ents.values()) {
       if (e.side === k.side || e.neutral || e.hp <= 0 || e.kami || e.decoy || e.hyper || e.gar) continue;
-      if (e.hero && (e.dead || (e.stealthUntil || 0) > this.t)) continue;
+      if ((e.hero && e.dead) || (e.stealthUntil || 0) > this.t) continue;
       const ty = e.hero || e.kind === 'heli' ? (e.y || 0) : 0;
       const d = Math.hypot(e.x - k.x, e.z - k.z, ty - (k.y || 0));
       if (d < bd) { bd = d; best = e; }
@@ -3849,7 +3930,7 @@ export class BattleSim {
     let best = null, bd = Infinity, fallback = null, fd = Infinity;
     for (const e of this.ents.values()) {
       if (e.side === d.side || !e.side || e.neutral || e.decoy || e.kami || e.hyper || e.gar || e.hp <= 0) continue;
-      if (e.hero && (e.dead || (e.stealthUntil || 0) > this.t)) continue;
+      if ((e.hero && e.dead) || (e.stealthUntil || 0) > this.t) continue;
       if (this._airborne(e)) continue;   // 投彈只對地(不對空中無人機/直升機/升空機甲丟炸彈)
       const dist = dist2d(e.x, e.z, d.x, d.z);
       if (dist > DECOY.BOMB_R) continue;
@@ -7124,6 +7205,7 @@ export class BattleSim {
     this._tickNanites(dt);
     this._tickSingularity(dt);
     this._tickElemBuildup(dt);
+    this._tickCoverStealth(dt);
 
     // 小兵 / 塔 / 主堡行為
     // 單次展開共用:兩迴圈之間無 ents 變異(_buildTickIndex 不碰 ents)⇒ 與各展一次逐位元同義,省一份全量複製。
@@ -7968,7 +8050,7 @@ export class BattleSim {
     if (isSuperSide(e.side) && isThirdSide(t.side)) return true;
     if (isThirdSide(e.side) && isSuperSide(t.side)) return true;
     if (t.gar) return true;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
-    if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) return true;   // 匿蹤英雄不被鎖定
+    if ((t.hero && t.dead) || (t.stealthUntil || 0) > this.t) return true;   // 匿蹤者不被鎖定
     // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
     // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
     if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')

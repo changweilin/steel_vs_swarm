@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HABITAT_SCENE } from './habitatCatalog.js';
-import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, planHabitatPathEdges } from './habitat.js';
+import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, planHabitatPathEdges, bakeCoverGrid } from './habitat.js';
 import { groundPlantParts, groundCoverParts } from './scenePlantParts.js';
 import { compileSceneParts } from './scenePropModels.js';
 import { envMat } from './toon.js';
@@ -14,17 +14,21 @@ import { createShoreClassifier, planShoreAnchors, planShoreFacilities } from './
 import { SHORELINE } from './shorelineCatalog.js';
 import { buildShoreFacilities } from './shorelineRender.js';
 
-function detailGeometry(kind, variant, coverSize = 0) {
+function detailGeometry(kind, variant, coverSize = 0, coverDensity = 1) {
   if (coverSize) {
-    const geometry = compileSceneParts(groundCoverParts(kind, variant * 7717, coverSize));
+    const geometry = compileSceneParts(groundCoverParts(kind, variant * 7717, coverSize, coverDensity));
     geometry.deleteAttribute('color');
-    geometry.computeBoundingBox();
-    const pos = geometry.attributes.position;
-    let radius = 0;
-    for (let i = 0; i < pos.count; i++) radius = Math.max(radius, Math.hypot(pos.getX(i), pos.getZ(i)));
-    const box = geometry.boundingBox;
+    // Normalise against the full-density tile: a sparse tile's own extent is smaller, and scaling by it
+    // would stretch the tile past its slot and change blade height per density level.
+    const ref = coverDensity < 1 ? compileSceneParts(groundCoverParts(kind, variant * 7717, coverSize, 1)) : geometry;
+    ref.computeBoundingBox();
+    const pos = ref.attributes.position;
+    let half = 0;   // Square half-extent == planner radius r (= .6 * size): the tile exactly fills its slot
+    for (let i = 0; i < pos.count; i++) half = Math.max(half, Math.abs(pos.getX(i)), Math.abs(pos.getZ(i)));
+    const box = ref.boundingBox;
     geometry.translate(0, -box.min.y, 0);
-    geometry.scale(.58 / Math.max(.01, radius), 1 / Math.max(.01, box.max.y - box.min.y), .58 / Math.max(.01, radius));
+    geometry.scale(.6 / Math.max(.01, half), 1 / Math.max(.01, box.max.y - box.min.y), .6 / Math.max(.01, half));
+    if (ref !== geometry) ref.dispose();
     return geometry;
   }
   if (kind === 'scrub') {
@@ -106,12 +110,12 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
   const buckets = new Map(), matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion();
   const color = new THREE.Color(), scale = new THREE.Vector3(), position = new THREE.Vector3();
   for (const row of plan.rows) {
-    const key = row.kind + '/' + row.variant + '/' + row.coverSize;
+    const key = row.kind + '/' + row.variant + '/' + row.coverSize + '/' + row.coverDensity;
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(row);
   }
   for (const [key, rows] of buckets) {
-    const [kind, variant, coverSize] = key.split('/'), geometry = detailGeometry(kind, +variant, +coverSize);
+    const [kind, variant, coverSize, coverDensity] = key.split('/'), geometry = detailGeometry(kind, +variant, +coverSize, +coverDensity);
     const material = envMat(0xffffff, { vertexColors: !!geometry.attributes.color, side: THREE.DoubleSide,
       wash: .08, cool: .12, land: true, rim: 0, ink: 'land',
       soft: kind === 'stone' || kind === 'planter' ? null : { k: kind === 'scrub' ? 'leaf' : 'grass' } });
@@ -121,7 +125,7 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
       const row = rows[i];
       position.set(row.x, row.y - .025, row.z);
       rotation.setFromEuler(new THREE.Euler(0, row.ry, 0));
-      const spread = row.size * (row.coverSize ? Math.sqrt(row.cover) : 1);
+      const spread = row.size;   // Carpet tiles must fill their slot; shrinking by cover reopens bare gaps
       scale.set(spread, row.height, spread);
       matrix.compose(position, rotation, scale);
       // Shear only the ground plane: blade height stays vertical on fitted sloping patches.
@@ -167,5 +171,6 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     models: buckets.size + furnitureKinds.size + shore.batches, walkway: { ...walkway, pathAnchors: pathEdges.length },
     shoreline: { ...shore, anchors: shoreAnchors.length,
       types: Object.fromEntries([...new Set(shoreAnchors.map(a => a.type))].map(type => [type, shoreAnchors.filter(a => a.type === type).length])) },
-    recipe: 'evidence-habitat-v2' };
+    recipe: 'evidence-habitat-v2',
+    bakeCover: () => bakeCoverGrid({ bounds, rows: plan.rows, sampleAt }) };
 }

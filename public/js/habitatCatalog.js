@@ -26,6 +26,9 @@ export const HABITAT_SCENE = Object.freeze({
   DETAIL_LIMIT: 12000, LOW_DETAIL_LIMIT: 3200,
   DETAIL_PLANT_PARTS: 6,
   DETAIL_MODEL_LIMIT: 47,
+  // Blade-count fractions for carpet tiles (quantised so instances share geometry batches). The floor keeps
+  // the sparsest tile a visible sward; below it the tiles read as bare ground and the patchwork returns.
+  COVER_LEVELS: [.45, .7, 1],
   STREET_STEP_M: 4, STREET_WIDTH_M: 1.8, STREET_LIFT_M: .045,
   STREET_LIMIT: 6000, LOW_STREET_LIMIT: 1800,
   FURNITURE_STEP_M: 24, FURNITURE_LIMIT: 240, LOW_FURNITURE_LIMIT: 70,

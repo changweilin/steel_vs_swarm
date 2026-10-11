@@ -12678,6 +12678,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   group.userData.edgeMotionN = edgeMotionN;
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
   group.userData.gradeCorridors = gradeCorridors;
+  group.userData.bakeCover = ground.bakeCover;   // host-only lazy bake -> world upload `cover` (server cover stealth)
   // 分界線帶遮罩(2026-08-13):main.js → terrain.inBorderBand → terrainEnvCode。
   // **只交出來,不在這裡裝上去** —— 裝了就是建圖期的循環相依(見開頭那一段的清空)
   group.userData.bandDryAt = ground.bandDryAt;
