@@ -33,14 +33,15 @@ function blade(length, width, x, z, angle, lean, color, segments = 5, back = tru
     p: [x, 0, z], r: [0, angle, 0], c: color };
 }
 
-/** Broad patches keep blade widths in metres rather than magnifying a single tuft. */
-export function groundCoverParts(kind, seed, size) {
+/** Broad patches keep blade widths in metres rather than magnifying a single tuft.
+ *  Blades fill a square, not a disc: carpet tiles abut edge to edge, and discs leave round gaps at corners. */
+export function groundCoverParts(kind, seed, size, density = 1) {
   const rnd = mulberry32(seed), parts = [];
-  const count = Math.min(160, Math.max(64, Math.ceil(size * size * 16)));
+  // Same rnd stream at every density, so sparser tiles are strict subsets of denser ones.
+  const count = Math.ceil(Math.min(160, Math.max(64, Math.ceil(size * size * 16))) * density);
   for (let i = 0; i < count; i++) {
-    const angle = rnd() * Math.PI * 2, radius = Math.sqrt(rnd()) * size * .43;
     parts.push(blade(.5 + rnd() * .5, kind === 'understory' ? .32 : .18,
-      Math.cos(angle) * radius, Math.sin(angle) * radius, rnd() * Math.PI * 2,
+      (rnd() - .5) * size * .86, (rnd() - .5) * size * .86, rnd() * Math.PI * 2,
       .08 + rnd() * .2, 0xffffff, 2, false));
   }
   return parts;

@@ -122,6 +122,7 @@ function uiHarness(prepareMapCreation, phase = 'mapbuilder') {
   const deps = { app, $: id => elements[id], MAP_BUILD_TEAMSIZE: 5,
     isRandomMap, resolveMapRot: async () => {}, prepareMapCreation, buildYield: async () => {},
     mapGeometryAudit, validMapSources, MAP_RULE_TEXT, MAP_EVIDENCE_COPY,
+    isMapPrepared: () => false,
     setFavBtnDisabled: value => { saveDisabled = value; }, toast: message => messages.push(message),
     prompt: () => { prompts++; return 'Saved map'; }, saveFavorite: (...args) => saves.push(args),
     console: { error() {} }, myName: () => 'Host', loadPrefs: () => ({}),
@@ -133,12 +134,12 @@ function uiHarness(prepareMapCreation, phase = 'mapbuilder') {
     disabled: () => saveDisabled, prompts: () => prompts };
 }
 
-for (const action of ['save', 'create']) {
+{
   let release, started;
   const gate = new Promise(resolve => { release = resolve; });
   const ready = new Promise(resolve => { started = resolve; });
-  const h = uiHarness(async () => { started(); await gate; return { complete: true }; }, action === 'save' ? 'mapbuilder' : 'openroom');
-  const pending = h[action]();
+  const h = uiHarness(async () => { started(); await gate; return { complete: true }; }, 'mapbuilder');
+  const pending = h.save();
   await ready;
   h.app.favCfg = cfg();
   h.elements.mapStatus.innerHTML = 'New map';
@@ -153,13 +154,43 @@ for (const action of ['save', 'create']) {
   assert.equal(h.elements.createRoomBtn.disabled, false, 'late preparation cannot change the new selection state');
 }
 
-for (const action of ['save', 'create']) {
-  const h = uiHarness(async c => { c.roadTerrain = null; return { complete: false, failed: true }; }, action === 'save' ? 'mapbuilder' : 'openroom');
-  await h[action]();
+{
+  // Room creation never blocks on preparation: the click sends for the selected cfg
+  // at once while the pack keeps building in the background; its late completion
+  // must not rewrite a newer selection.
+  let release, started;
+  const gate = new Promise(resolve => { release = resolve; });
+  const ready = new Promise(resolve => { started = resolve; });
+  const h = uiHarness(async () => { started(); await gate; return { complete: true }; }, 'openroom');
+  const original = h.app.favCfg;
+  const pending = h.create();
+  await ready;
+  h.app.favCfg = cfg();
+  h.elements.openRoomStatus.textContent = 'New room map';
+  release(); await pending;
+  assert.equal(h.prompts(), 0);
+  assert.equal(h.sent.length, 1);
+  assert.equal(h.sent[0].battleConfig, original);
+  assert.equal(h.saves.length, 0);
+  assert.equal(h.elements.openRoomStatus.textContent, 'New room map');
+}
+
+{
+  const h = uiHarness(async c => { c.roadTerrain = null; return { complete: false, failed: true }; }, 'mapbuilder');
+  await h.save();
   assert.equal(h.prompts(), 0);
   assert.equal(h.saves.length, 0);
   assert.equal(h.sent.length, 0);
-  assert.equal(action === 'save' ? h.elements.mapStatus.textContent : h.elements.openRoomStatus.textContent, MAP_RULE_TEXT.roads);
+  assert.equal(h.elements.mapStatus.textContent, MAP_RULE_TEXT.roads);
+}
+
+{
+  // A failing background pack degrades in the room/loading gates, never at the click.
+  const h = uiHarness(async c => { c.roadTerrain = null; return { complete: false, failed: true }; }, 'openroom');
+  await h.create();
+  assert.equal(h.prompts(), 0);
+  assert.equal(h.saves.length, 0);
+  assert.equal(h.sent.length, 1);
 }
 
 const saved = uiHarness(async () => ({ complete: true }));

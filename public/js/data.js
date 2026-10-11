@@ -3345,6 +3345,29 @@ export const TARGET_H = {
   civ: SOLDIER_H,   // 平民/間諜(真人身高)
 };
 
+// ---- Grassland height + cover stealth ----
+// Grass carpet height is drawn from [civilian -10%, tallest hero chassis +10%] so the same yardstick that
+// sizes bodies decides who can hide: a unit hides only while its hitH is below the grass at its feet.
+// Derived, never hand-written -- retuning HERO_SIZE / TARGET_H.civ moves the range with it.
+export const GRASS_H = {
+  lo: TARGET_H.civ * 0.9,
+  hi: SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 1.1,
+};
+// Stealth needs a still, silent body: idle time >= required time. Forest hides instantly; grass needs
+// up to GRASS_T_MAX at the sparsest density, scaling to 0 at full density.
+export const COVER_STEALTH = {
+  GRASS_T_MAX: 2, FOREST_T: 0,
+  MOVE_EPS_M: 0.3,     // drift from the idle anchor beyond which the unit counts as moving
+  GRACE_S: 0.3,        // stealthUntil refresh window; expires by itself once the condition lapses
+  GRID_M: 6, GRID_MAX: 200,
+  NONE: 0, GRASS: 1, FOREST: 2,
+};
+// Cover grid cell = 3 ASCII chars: kind, density 0-9, grass height in decimetres (floored: never hide a tall unit by rounding).
+export const coverEnc = (kind, density, h) => String(kind) + Math.round(Math.max(0, Math.min(1, density)) * 9)
+  + String.fromCharCode(48 + Math.min(70, Math.floor(Math.max(0, h) * 10)));
+export const coverDec = (s, k) => ({ kind: s.charCodeAt(k * 3) - 48, density: (s.charCodeAt(k * 3 + 1) - 48) / 9,
+  h: (s.charCodeAt(k * 3 + 2) - 48) / 10 });
+
 /**
  * 命中量體高度(公尺,站立表面以上):爆風/貫穿判定的「機體垂直帶 = [腳底, 腳底 + hitH]」。
  * 使用者規則(2026-07-23):瞄準物件的哪個部位,就用那個部位的碰撞結果判定命中 ——

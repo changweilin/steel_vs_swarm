@@ -585,7 +585,7 @@ export class RoomHub {
         // Normally arrives before launch (stored per room, applied at startBattle); a spectator host may arrive late -> apply to the live sim directly
         // (LOS takes effect at once; in-corridor obstacles drop from snapshots, clients auto-withdraw). Non-host sources always dropped.
         if (myId === room.hostId && m.occ) {
-          room.world = { occ: m.occ, cor: m.cor, roofs: m.roofs, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet: water/marsh coarse grid; slabs: bridge/tunnel-ceiling slabs (LOS); hgt: coarse height grid (ridge occlusion)
+          room.world = { occ: m.occ, cor: m.cor, roofs: m.roofs, wet: m.wet, slabs: m.slabs, hgt: m.hgt, cover: m.cover };   // wet: water/marsh coarse grid; cover: grass/woodland stealth grid; slabs: bridge/tunnel-ceiling slabs (LOS); hgt: coarse height grid (ridge occlusion)
           if (room.battle) room.battle.setWorld(room.world);
         }
         return;
