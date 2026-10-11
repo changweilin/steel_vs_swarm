@@ -1,7 +1,7 @@
 {
   "identities": {
     "m05": "c0589bdd93f0cea68c9a061f9f7244200f98b86d1eb445919c65fb134a2ac840",
-    "s06": "45c3c8ab60411c757c7b6aaa718736fe7703169195439aefae33076ad224e782",
+    "s06": "d120e133e3118e5d3e5469315efe8f0e745c931030af4d85bdd290c24ba5ee0d",
     "t08": "3431c5fa612de40862433c838d7a8d0864a2e61db6f909bee608df8b853ba7d4"
   },
   "measurements": {
@@ -29,19 +29,19 @@
       "s06": [
         {
           "fps": 30,
-          "handStringGap": 9.742167503148516e-16,
+          "handStringGap": 9.155396550919762e-16,
           "headDrift": 0,
           "clawPitch": 0
         },
         {
           "fps": 60,
-          "handStringGap": 9.80915185026648e-16,
+          "handStringGap": 1.3504558344847776e-15,
           "headDrift": 0,
           "clawPitch": 0
         },
         {
           "fps": 144,
-          "handStringGap": 1.2539255187600815e-15,
+          "handStringGap": 1.3413677968916624e-15,
           "headDrift": 0,
           "clawPitch": 0
         }

@@ -36,8 +36,8 @@
   "renders": [],
   "hashes": {
     "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-    "blend": "9c787daa817c16ab39c4043b8e3ff5118d70060dda338d0bde2b9c936f03981e",
-    "glb": "43257615ddded6f75e09e3869e8d593208570972110ce0ccd22c3d20fb11dfa1"
+    "blend": "c042ddd7093af01c4f096bde5c3658e0fb7129376ee5e3e671baa871b4b94a50",
+    "glb": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
   },
   "gates": {
     "structure": "pass",
@@ -48,12 +48,12 @@
     "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
-    "motion": "pass_structural",
+    "motion": "pass",
     "flight_belly": "pass"
   },
   "motionSource": {
-    "samples": "254b82113fab401b514f7198b25aa66247cb7a02b7841a73af4972904183b5b2",
-    "inputBlend": "out/anatomical_motion/before/s10-63e095d72479.blend",
+    "samples": "c4b6344c619d927918a1f0a4b09b8d55fcf09a62f44ab85d00df57cde4933af3",
+    "inputBlend": "out/anatomical_motion/before/s10-9c787daa817c.blend",
     "clips": [
       "idle",
       "run",
@@ -124,20 +124,21 @@
       "tail_feather_r_4"
     ],
     "drivers": {
-      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
-      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
-      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "locomotion.js": "d00748eb44f691326279cc97b802359cbfbda51bbe61606715583052c2244481",
+      "anatomicalPose.js": "bd05d7c4a183e5bc9e7301e873235f5abdbc526e34ad34cff10a392d69b53bdc",
+      "forge/referenceAsset.js": "c9703f07c3136517ba8019cf4ccc77d982fe5877effa484db18ac877dc118895",
       "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
-      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+      "unitMotion.js": "fa6f18c1fb2db5235c944b17eefcda25bfe1a89151e6d595e43fa33fc187e8c0"
     },
-    "baker": "6b8e4f014cb52dc27679ad6a4d45fe9679a623b4818fa2d64fd31690ae127b8f",
+    "baker": "f940de08e4906be9402c739920fdbde963e336047b02c3da4c7dc6c4a3ad3198",
     "fps": 60,
-    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
-    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
+    "encoder": "97622bb164a659d3e813462ee56c2be39e0a4616a887fb9efef130e87df5cc80",
+    "restorer": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf"
   },
   "validation_refs": {
     "runtime": "runtime-validation.json",
     "source": "source-validation.json",
     "rebuild": "../rebuild-validation.json"
-  }
+  },
+  "motionReview": "../../shooting_posture/validation.json"
 }

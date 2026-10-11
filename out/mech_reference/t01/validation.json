@@ -25,23 +25,23 @@
   "renders": [],
   "hashes": {
     "runtime": "5843d77a478bf7b773f63b123f4e8028cbf3554a1c541d80fcba04bd12df7dc6",
-    "blend": "2ace7b1ac18ac85154969401e3ed0ef734c3f475b50af1f94792e279442ed6aa",
-    "glb": "c6758513f2bdd6ff7418bf2a7dbdd48e88491eaa09b39117ccfaa7f1d3fefdfe"
+    "blend": "1a4b28adc6b123e28708c45ba6c44d2a0cdbd15bc86e6b88f4ae4e60789b03e0",
+    "glb": "e1da50a99954a9b64784f5c8b8ac703aa0a1677681d9b1318fd7c2c106d6c4a3"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
     "geometry": "pending_visual_review",
     "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
-    "motion": "pass_structural"
+    "motion": "pass"
   },
   "motionSource": {
-    "samples": "47aaca9eb3afbb0ae6ff1e24570f330fe3101b29c8c55115c44da8c00f856b06",
-    "inputBlend": "out/anatomical_motion/before/t01-ac822ed6c6d5.blend",
+    "samples": "6c7f797fd4e079f83b169614c8ab8dc7de036bf08a6294a922d3ce843dc542a5",
+    "inputBlend": "out/anatomical_motion/before/t01-2ace7b1ac18a.blend",
     "clips": [
       "idle",
       "run",
@@ -77,15 +77,16 @@
       "barrier"
     ],
     "drivers": {
-      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
-      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
-      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "locomotion.js": "d00748eb44f691326279cc97b802359cbfbda51bbe61606715583052c2244481",
+      "anatomicalPose.js": "bd05d7c4a183e5bc9e7301e873235f5abdbc526e34ad34cff10a392d69b53bdc",
+      "forge/referenceAsset.js": "c9703f07c3136517ba8019cf4ccc77d982fe5877effa484db18ac877dc118895",
       "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
-      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+      "unitMotion.js": "fa6f18c1fb2db5235c944b17eefcda25bfe1a89151e6d595e43fa33fc187e8c0"
     },
-    "baker": "ccd04038d3378aea18129aace2dfbbb5c533cadb3eefcf6370ebfbb81f2ef112",
+    "baker": "f940de08e4906be9402c739920fdbde963e336047b02c3da4c7dc6c4a3ad3198",
     "fps": 60,
-    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
-    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
-  }
+    "encoder": "97622bb164a659d3e813462ee56c2be39e0a4616a887fb9efef130e87df5cc80",
+    "restorer": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf"
+  },
+  "motionReview": "../../shooting_posture/validation.json"
 }

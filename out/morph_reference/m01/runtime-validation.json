@@ -9,13 +9,13 @@
   },
   "hashes": {
     "runtime": "74f3ef897e58819f998be871bad99602d47ffe65d2679f632edf53e1638ff5ef",
-    "glb": "ef55430beb493e3204d2ace09c8764682fba569204887eda4fa72e582ddddb55"
+    "glb": "e59108ff5046ab9018c3ab4e95e5810c88161ccbc263f64373564064b5d3eb26"
   },
   "measurements": {
     "trianglesPerVisibleForm": 11812,
-    "effectTriangles": 1020,
-    "effectMeshes": 10,
-    "retainedTriangles": 24644,
+    "effectTriangles": 738,
+    "effectMeshes": 8,
+    "retainedTriangles": 24362,
     "meshesPerVisibleForm": 103,
     "pairs": {
       "pair": 133,

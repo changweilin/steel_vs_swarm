@@ -1,4 +1,180 @@
 {
+  "t06": {
+    "source": {
+      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
+      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+    },
+    "hashes": {
+      "runtime": "3bc5999e976ac94011165509f4c931cd36326aad19c60dcdbcc4baa07729a765",
+      "glb": "3cd6844ff6b07bb4cf5b187193099cdf3afb46bad48ccf468bff0531f0a69d30"
+    },
+    "measurements": {
+      "trianglesPerVisibleForm": 11680,
+      "effectTriangles": 3978,
+      "effectMeshes": 30,
+      "retainedTriangles": 27338,
+      "meshesPerVisibleForm": 90,
+      "pairs": {
+        "pair": 127,
+        "soft": 0,
+        "gOnly": 0,
+        "aOnly": 0
+      },
+      "maxSeamError": 0,
+      "samples": [
+        0.05,
+        0.25,
+        0.49,
+        0.5,
+        0.51,
+        0.75,
+        0.95
+      ],
+      "forms": [
+        {
+          "form": "ground",
+          "shieldPhases": [
+            0.7692307692307694,
+            0.7692307692307696,
+            0.7692307692307686
+          ]
+        },
+        {
+          "form": "flight",
+          "shieldPhases": [
+            0.7692307692307694,
+            0.7692307692307696,
+            0.7692307692307686
+          ]
+        }
+      ],
+      "clips": [
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy"
+      ]
+    },
+    "gates": {
+      "structure": "pass",
+      "same_parts": "pass",
+      "same_geometry": "pass",
+      "same_scale": "pass",
+      "morph_continuity": "pass",
+      "locomotion_combat_shield": "pass",
+      "export_load": "pass",
+      "registry": "pass",
+      "controls": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
+      "user_signoff": "pending_user_review"
+    }
+  },
+  "s10": {
+    "source": {
+      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
+      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+    },
+    "hashes": {
+      "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
+      "glb": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
+    },
+    "measurements": {
+      "trianglesPerVisibleForm": 17144,
+      "effectTriangles": 487,
+      "effectMeshes": 8,
+      "retainedTriangles": 34775,
+      "meshesPerVisibleForm": 109,
+      "pairs": {
+        "pair": 164,
+        "soft": 0,
+        "gOnly": 0,
+        "aOnly": 0
+      },
+      "maxSeamError": 0,
+      "samples": [
+        0.05,
+        0.25,
+        0.49,
+        0.5,
+        0.51,
+        0.75,
+        0.95
+      ],
+      "forms": [
+        {
+          "form": "ground",
+          "shieldPhases": [
+            0.7692307692307694,
+            0.7692307692307696,
+            0.7692307692307686
+          ]
+        },
+        {
+          "form": "flight",
+          "shieldPhases": [
+            0.7692307692307694,
+            0.7692307692307696,
+            0.7692307692307686
+          ]
+        }
+      ],
+      "clips": [
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy"
+      ]
+    },
+    "gates": {
+      "structure": "pass",
+      "same_parts": "pass",
+      "same_geometry": "pass",
+      "same_scale": "pass",
+      "morph_continuity": "pass",
+      "locomotion_combat_shield": "pass",
+      "export_load": "pass",
+      "registry": "pass",
+      "controls": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
+      "user_signoff": "pending_user_review"
+    }
+  },
   "m01": {
     "source": {
       "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
@@ -10,13 +186,13 @@
     },
     "hashes": {
       "runtime": "74f3ef897e58819f998be871bad99602d47ffe65d2679f632edf53e1638ff5ef",
-      "glb": "ef55430beb493e3204d2ace09c8764682fba569204887eda4fa72e582ddddb55"
+      "glb": "e59108ff5046ab9018c3ab4e95e5810c88161ccbc263f64373564064b5d3eb26"
     },
     "measurements": {
       "trianglesPerVisibleForm": 11812,
-      "effectTriangles": 1020,
-      "effectMeshes": 10,
-      "retainedTriangles": 24644,
+      "effectTriangles": 738,
+      "effectMeshes": 8,
+      "retainedTriangles": 24362,
       "meshesPerVisibleForm": 103,
       "pairs": {
         "pair": 133,
@@ -108,182 +284,6 @@
       "meshesPerVisibleForm": 91,
       "pairs": {
         "pair": 138,
-        "soft": 0,
-        "gOnly": 0,
-        "aOnly": 0
-      },
-      "maxSeamError": 0,
-      "samples": [
-        0.05,
-        0.25,
-        0.49,
-        0.5,
-        0.51,
-        0.75,
-        0.95
-      ],
-      "forms": [
-        {
-          "form": "ground",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        },
-        {
-          "form": "flight",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        }
-      ],
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
-        "flight_shield_deploy",
-        "flight_shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
-      ]
-    },
-    "gates": {
-      "structure": "pass",
-      "same_parts": "pass",
-      "same_geometry": "pass",
-      "same_scale": "pass",
-      "morph_continuity": "pass",
-      "locomotion_combat_shield": "pass",
-      "export_load": "pass",
-      "registry": "pass",
-      "controls": "pass",
-      "appearance": "pending_visual_review",
-      "flight_belly": "pending_visual_review",
-      "user_signoff": "pending_user_review"
-    }
-  },
-  "s10": {
-    "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
-      "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
-    },
-    "hashes": {
-      "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-      "glb": "43257615ddded6f75e09e3869e8d593208570972110ce0ccd22c3d20fb11dfa1"
-    },
-    "measurements": {
-      "trianglesPerVisibleForm": 17144,
-      "effectTriangles": 996,
-      "effectMeshes": 10,
-      "retainedTriangles": 35284,
-      "meshesPerVisibleForm": 109,
-      "pairs": {
-        "pair": 164,
-        "soft": 0,
-        "gOnly": 0,
-        "aOnly": 0
-      },
-      "maxSeamError": 0,
-      "samples": [
-        0.05,
-        0.25,
-        0.49,
-        0.5,
-        0.51,
-        0.75,
-        0.95
-      ],
-      "forms": [
-        {
-          "form": "ground",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        },
-        {
-          "form": "flight",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        }
-      ],
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
-        "flight_shield_deploy",
-        "flight_shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
-      ]
-    },
-    "gates": {
-      "structure": "pass",
-      "same_parts": "pass",
-      "same_geometry": "pass",
-      "same_scale": "pass",
-      "morph_continuity": "pass",
-      "locomotion_combat_shield": "pass",
-      "export_load": "pass",
-      "registry": "pass",
-      "controls": "pass",
-      "appearance": "pending_visual_review",
-      "flight_belly": "pending_visual_review",
-      "user_signoff": "pending_user_review"
-    }
-  },
-  "t06": {
-    "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
-      "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
-    },
-    "hashes": {
-      "runtime": "3bc5999e976ac94011165509f4c931cd36326aad19c60dcdbcc4baa07729a765",
-      "glb": "6f6a1ede5f7c11a69d08343ac9ed360e27dda6a96d8b91956457670a21935d31"
-    },
-    "measurements": {
-      "trianglesPerVisibleForm": 11680,
-      "effectTriangles": 4508,
-      "effectMeshes": 32,
-      "retainedTriangles": 27868,
-      "meshesPerVisibleForm": 90,
-      "pairs": {
-        "pair": 127,
         "soft": 0,
         "gOnly": 0,
         "aOnly": 0

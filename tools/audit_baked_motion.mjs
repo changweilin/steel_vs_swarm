@@ -6,8 +6,11 @@ import { serve } from './mech_prompt_review.mjs';
 import { CHARACTERS } from '../public/js/data.js';
 
 const output='out/anatomical_motion/after',ids=[];
+const option=process.argv.indexOf('--asset');
+const selected=option<0?Object.keys(CHARACTERS):process.argv[option+1].split(',');
+assert(selected.every(id=>CHARACTERS[id]),'Unknown motion asset');
 const samples={};
-for(const id of Object.keys(CHARACTERS)){
+for(const id of selected){
   let report;
   for(const directory of ['morph_reference','mech_reference']){
     try{report=JSON.parse(await readFile(`out/${directory}/${id}/validation.json`,'utf8'));break;}catch{}
