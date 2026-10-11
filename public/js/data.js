@@ -4009,7 +4009,7 @@ export const CHARACTERS = {
     visual: { hue: 0xb9c7ff, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 16 },
     light: { name: '「審判之音」重型磁軌步槍', rw: '高精度固態磁軌狙擊步槍・鎢合金穿甲彈・初速 1600m/s', type: 'rail', mv: 1600, elem: 'shock', elemProb: 0.22,
-      dmg: [27, 34, 42], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
+      dmg: [54, 68, 84], rate: 1.5, mag: [8, 9, 11], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.2, armor: 0.8, air: 1.5, building: 0.5 } },
     // r 6 → 8(2026-08-02 機體混編):她從飛行機體換到地面四足平台,sight 270 → 240 ⇒ 重武器解析
     // 射程 194 → 173m,導引頭在「剛解除保險」的近帶只剩約 26m 修正距離(audit_weapon_gate Ⅵ 的
