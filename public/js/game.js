@@ -12,7 +12,7 @@ import {
   heroMobility, highSupSpeedF,
   WATER, CJUMP, cjumpLiftCost, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
-  weaponMaxHoriz, inWeaponRange,
+  weaponMaxHoriz, inWeaponRange, RANGE_TOL,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
@@ -5569,12 +5569,17 @@ export class BattleClient {
         }
       }
     }
-    // 他人曳光同吃障礙截斷(對方客戶端已擋彈道,這裡的 60m 示意曳光也不可畫穿牆)
+    // 他人曳光同吃障礙截斷(對方客戶端已擋彈道,這裡的 60m 示意曳光也不可畫穿牆)。
+    // 落點火花只給射程內的真實命中:射手那一端已做誠實閘(hit 0/1),這裡再以機制上限
+    // (range × altRangeMax × RANGE_TOL)複驗 —— 超界即只留曳光、不爆,不讓觀戰者看到假命中。
     const clip = this._clipBeam(from, to0);
+    const _od = this._heroEntByPid(m.pid);
+    const _odef = _od ? this._heroDefOf(_od.ch, m.slot) : null;
+    const _ceil = _odef ? (_odef.range || 0) * altRangeMax(_odef) * RANGE_TOL : Infinity;
     this._shotFx(
       from,
       clip.to,
-      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut },
+      { heavy: m.slot === 'heavy', side: m.side, impact: (!!m.hit || clip.cut) && from.distanceTo(clip.to) <= _ceil },
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
@@ -5593,10 +5598,12 @@ export class BattleClient {
     const def = shooter ? this._heroDefOf(shooter.ch, slot) : null;
     if (!def) return;
     const aim = to0.clone();
+    // 連發補畫的落點火花同樣只給射程內:機制上限外的截斷點不爆(曳光照樣畫,槍有連發)。
+    const _ceil = (def.range || 0) * altRangeMax(def) * RANGE_TOL;
     this._queueBurst(def, () => {
       const from = this._entMuzzle(pid, slot, aim);
       const clip = this._clipBeam(from, aim);
-      this._shotFx(from, clip.to, { heavy: slot === 'heavy', side, impact: clip.cut });
+      this._shotFx(from, clip.to, { heavy: slot === 'heavy', side, impact: clip.cut && from.distanceTo(clip.to) <= _ceil });
       this._markFire(pid, slot, performance.now() / 1000, { x: aim.x, z: aim.z, y: aim.y });
     });
   }
@@ -5727,7 +5734,10 @@ export class BattleClient {
     mesh.quaternion.setFromUnitVectors(_FWD_Z, _TMP_D.copy(b.vel).normalize());
     this.scene.add(mesh);
     b.mesh = mesh;
-    b.max = (def.range || 300) * 1.35;   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
+    // 射程球面 = 射擊點為圓心、瞄準點距離與機制上限取小者(與自機彈體同一把尺):
+    // 純視覺彈體 MUST NOT 飛越它的瞄準點 —— 超出的那一段(舊制 1.35×)會在射程外空爆,
+    // 正好是「看似命中、伺服器零傷害」的假命中。
+    b.max = Math.max(0.01, Math.min((def.range || 300) * 1.35, from.distanceTo(to)));
     b.cyclone = null; b.cycAcc = 0; b.cycCol = this._shotCols(side).col; b.age = 0;
     b.guided = !!launch; b.launchDist = launch?.dist || 0;
     b.guide = false; b.homing = null; b.slot = null;
@@ -5764,7 +5774,9 @@ export class BattleClient {
       let hit = false;
       if (dB != null) { b.pos.copy(prev).addScaledVector(_TMP_F.copy(seg).divideScalar(len), dB); hit = true; }
       if (hit || b.pos.distanceTo(b.origin) >= b.max) {
-        starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
+        // 射程外自然終止(無碰撞) = 靜默回收:MUST NOT 在半空畫星爆 —— 那一朵就是
+        // 「看似命中、伺服器零傷害」的假命中。真實命中(地形/障礙截斷)才畫落點火光。
+        if (hit) starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, 1.6, 0xffc79a);
         this._dropBullet(b);
         this._visShells.splice(i, 1);
         continue;
@@ -7722,6 +7734,24 @@ export class BattleClient {
     return (def?.range || 0) * this._altRangeTo(ent, def);
   }
 
+  /** 命中預測的射程誠實閘:與伺服器 heroHit 的 maxR 同界(effRange × RANGE_TOL,量近側表面)。
+   * 超出即視為脫靶 —— 只畫土塵、不送 hit、不跳命中回饋,避免「看似命中、實際零傷害」。
+   * 下坡俯射吃 inWeaponRange 同一條(與伺服器第二判據同構)。 */
+  _inHitRange(def, origin, ent) {
+    if (!def || !ent?.mesh || !origin) return false;
+    const eff = this._effRange(def, ent) * RANGE_TOL;
+    if (!(eff > 0)) return false;
+    const c = ent.mesh.position, hr = this._hitR(ent);
+    if (Math.max(0, origin.distanceTo(c) - hr) <= eff) return true;
+    return inWeaponRange(eff, c.x - origin.x, c.z - origin.z, c.y - origin.y, hr);
+  }
+
+  /** 攔截彈預測的射程誠實閘:與伺服器 hitMissile 同界(range × RANGE_TOL,無高度加成)。 */
+  _inMissileRange(def, origin, p) {
+    if (!def || !origin || !p) return false;
+    return origin.distanceTo(p) <= (def.range || 0) * RANGE_TOL;
+  }
+
   /**
    * 還沒解到目標時的**搜尋上限**:高度制空的機制上限(`altRangeMax`,與伺服器 `heroBurst`
    * 的 `impCap` 同一個誠實界)。只准用在「先找目標」的射線/索敵半徑;找到目標之後
@@ -8423,10 +8453,17 @@ export class BattleClient {
       const col = def.type === 'beam'
         ? (this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff)
         : this._shotCols(this.side).col;
-      this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
+      // 輕武器光束 / 電磁砲:不屬重武器三分類 —— 維持單體直擊(heroHit)
+      const hitEnt = ent || (missileId == null ? this._aimTarget(rng) : null);
+      // 射程誠實閘:瞄到射程外的目標 = 脫靶 —— 曳光照樣畫(槍有開火),但落點不爆、
+      // 不送 hit/missile、不跳命中回饋、不廣播 hit=1 誤導他人畫面。
+      const hitFoe = hitEnt && hitEnt.side !== this.side && !hitEnt.neutral && !hitEnt.dead
+        && this._inHitRange(def, muzzle, hitEnt);
+      const hitMis = missileId != null && this._inMissileRange(def, muzzle, point);
+      this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: (hitFoe || hitMis) ? 1 : 0 });
       // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
       // 這裡 MUST NOT 另送 hitMissile(會重複扣彈藥/電力)。
-      if (missileId != null && aoeClass(def) !== 'line') this.net.send({ t: 'hitMissile', id: missileId, w: id });
+      if (hitMis && aoeClass(def) !== 'line') this.net.send({ t: 'hitMissile', id: missileId, w: id });
       if (aoeClass(def) === 'line') {
         // 重武器光束 / 電磁砲 = 圓柱貫穿(伺服器 heroLance 沿射線結算全部目標);演出見 _lanceVisual
         this._lanceVisual(muzzle, point, def, this.side);
@@ -8435,15 +8472,17 @@ export class BattleClient {
         this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy), point);
         return;
       }
-      // 輕武器光束 / 電磁砲:不屬重武器三分類 —— 維持單體直擊(heroHit)
-      const hitEnt = ent || (missileId == null ? this._aimTarget(rng) : null);
+      // 輕武器光束 / 電磁砲:單體直擊。落點火光與命中回饋只給射程內的真實命中;
+      // 射程外脫靶只留曳光(槍有開火),不爆、不送 hit、不跳 hitmark —— 所見即結算。
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, false, this.side);
-      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
-      if (missileId != null) this._hitFeedback(def, null, point);
-      else if (hitEnt && hitEnt.side !== this.side && !hitEnt.neutral && !hitEnt.dead) {
-        this.net.send({ t: 'hit', id: hitEnt.id, w: id });
-        this._hitFeedback(def, hitEnt, point);
+      if (hitMis) {
+        starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+        this._hitFeedback(def, null, point);
+      } else if (hitFoe) {
+        starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+        this.net.send({ t: 'hit', id: hitFoe.id, w: id });
+        this._hitFeedback(def, hitFoe, point);
       }
       return;
     }
@@ -8556,10 +8595,14 @@ export class BattleClient {
       const col = def.type === 'beam'
         ? (this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff)
         : this._shotCols(this.side).col;
-      const { point } = this._resolveAim(rng, aoeClass(def) === 'line');
+      const { point, ent, missileId } = this._resolveAim(rng, aoeClass(def) === 'line');
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, false, this.side);
-      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+      // 連發補畫的落點火光只給射程內的真實命中;空中的脫靶不爆(本體那一發已定案)。
+      if (missileId != null ? this._inMissileRange(def, muzzle, point)
+        : ent && this._inHitRange(def, muzzle, ent)) {
+        starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+      }
       return;
     }
     // 動能:與本體同初速同重力 ⇒ 三發走同一條彈道,看起來就是一串連續的曳光
@@ -8983,11 +9026,21 @@ export class BattleClient {
         this._lanceVisual(b.origin, p, def, this.side);
         this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy), p);
       } else if (hitMissileId != null) {
-        this.net.send({ t: 'hitMissile', id: hitMissileId, w: b.slot });
-        this._hitFeedback(def, null, p);
+        // 射程外掠過來襲彈:只留土塵、不回報 —— 伺服器 hitMissile 照樣靜默丟棄,先畫命中就是假命中。
+        if (!this._inMissileRange(def, b.origin, p)) {
+          starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);
+        } else {
+          this.net.send({ t: 'hitMissile', id: hitMissileId, w: b.slot });
+          this._hitFeedback(def, null, p);
+        }
       } else if (hitEnt) {
-        this.net.send({ t: 'hit', id: hitEnt.id, w: b.slot });
-        this._hitFeedback(def, hitEnt, p);
+        // 射程誠實閘:彈道碰到射程外的目標 = 脫靶(土塵),MUST NOT 送 hit/跳命中回饋。
+        if (!this._inHitRange(def, b.origin, hitEnt)) {
+          starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);
+        } else {
+          this.net.send({ t: 'hit', id: hitEnt.id, w: b.slot });
+          this._hitFeedback(def, hitEnt, p);
+        }
       } else if (hitKind === 1) {
         starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);   // 打土塵
       }
