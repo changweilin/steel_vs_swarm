@@ -4272,14 +4272,18 @@ export class BattleSim {
         });
       }
     } else if (A.fx === 'emp') {
-      // 區域電磁癱瘓:敵方英雄與小兵武器離線(建築免疫);可附帶回傳視野
-      for (const e of this.ents.values()) {
+      // 區域電磁癱瘓:敵方英雄與小兵武器離線(建築免疫);可附帶回傳視野與傷害
+      for (const e of [...this.ents.values()]) {
         if (e.side === h.side || !e.side || e.neutral) continue;
         if (e.kind === 'tower' || e.kind === 'base') continue;
         if (e.hero && e.dead) continue;
         if (e.hero && this._buffVal(e, 'ccImm') > 0) continue;   // 異常免疫(s12「滿天星座」)
         if (dist2d(e.x, e.z, x, z) > A.r) continue;
         e.empUntil = Math.max(e.empUntil || 0, this.t + A.dur * frac);
+        const dmg = (A.dmg || 0) * frac;
+        if (dmg > 0) {
+          this._damage(e, dmg, h, A.pen || 0, 0, (0, A), { origin: [x, z] });
+        }
       }
       if (A.add) this._applyCC(h, A.add, x, z, A.r);
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);

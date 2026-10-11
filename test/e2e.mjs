@@ -1682,16 +1682,25 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(rb2.money - $a0 >= Math.floor(ECON.BOUNTY.tank * ECON.ASSIST.F),
       `助攻入帳 +$${Math.round(rb2.money - $a0)}(= 賞金 ${ECON.BOUNTY.tank} × ${ECON.ASSIST.F})`);
     assert(sim.events.some((e) => e.e === 'assist' && e.pid === 'p_r2'), 'assist 事件廣播(HUD 提示)');
-    // Pure-damage rule: area EMP (pure debuff) writes no assist credit
+    // EMP dealing damage: area EMP now inflicts damage and writes assist credit
     const empc = sim.addHero('SWARM', 'p_e', 's03');
     const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
     empc.abil.atk = 1; empc.mp = empc.maxMp;
     sim.heroCast('p_e', 'atk', empc.x, empc.z);
     // Atk is carrier-delivered: EMP is cast by the bomber at the drop point, so wait out its delivery leg
     for (let i = 0; i < 400 && !((mark.empUntil || 0) > sim.t); i++) sim.tick(0.125);
-    assert((mark.empUntil || 0) > sim.t && !(mark.asst && mark.asst.p_e != null),
-      '範圍 EMP(純負面狀態)不寫入助攻貢獻戳記');
+    assert((mark.empUntil || 0) > sim.t && mark.hp < 9999 && (mark.asst && mark.asst.p_e != null),
+      '範圍 EMP 造成傷害、武器癱瘓並寫入助攻貢獻戳記');
     sim.ents.delete(mark.id);
+    // Leviathan beam light weapon deals direct damage and awards kill bounty
+    const levPrey = sim._add({ kind: 'soldier', side: 'STEEL', x: empc.x + 12, z: empc.z, hp: UNITS.soldier.hp });
+    sim.t += 1;
+    const levHp0 = levPrey.hp, levMoney0 = empc.money;
+    sim.heroHit('p_e', levPrey.id, 'light');
+    assert(levPrey.hp < levHp0, '利維坦光束輕武器成功造成傷害');
+    sim._damage(levPrey, 99999, empc);
+    assert(empc.money > levMoney0, '利維坦擊殺目標獲得賞金');
+    sim.ents.delete(levPrey.id);
     // Killer-is-also-hero path (old test only covered non-hero finishers): killer takes full bounty, other contributors take ASSIST.F
     const ally = sim.addHero('STEEL', 'p_al', charsOf('STEEL')[0]);
     const prey2 = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 24, z: rb2.z, hp: UNITS.tank.hp });

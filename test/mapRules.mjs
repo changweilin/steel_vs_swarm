@@ -11,18 +11,18 @@ import { VENUE_ROAD_EVIDENCE } from '../public/js/venueRoadEvidence.js';
 const cfg = venueConfig(VENUES.find(v => v.id === 'berlin'), 5);
 assert(mapGeometryAudit(cfg, 5).ok && validMapSources(cfg));
 assert.equal(validateBattleConfig(cfg, 5), null);
-assert.equal(VENUES.filter(v => !v.story && venueAvailability(v).available).length, 16);
+assert.equal(VENUES.filter(v => !v.story && venueAvailability(v).available).length, 18);
 for (const id of ['berlin', 'madrid', 'seoul', 'neworleans', 'rotterdam', 'roppongi', 'kyoto', 'taipei101', 'shibuya']) {
   const v = VENUES.find(v => v.id === id);
   assert(venueAvailability(v).available);
   assert.equal(roadSourceSummary(venueConfig(v, 5)).real, 3);
   for (const n of [1, 2, 3, 4, 5]) assert.equal(validateBattleConfig(venueConfig(v, n), n), null, id);
 }
-for (const id of ['taroko', 'todra']) assert(!venueAvailability(VENUES.find(v => v.id === id)).available);
+for (const id of ['taroko', 'todra']) assert(venueAvailability(VENUES.find(v => v.id === id)).available);
 assert.equal(naturalRoadBiome({ green: .4, wet: .4, urban: .2 }), 'green');
 assert.equal(naturalRoadBiome({ bare: .75, urban: .25 }), 'bare');
 assert.equal(naturalRoadBiome({ green: .3, bare: .3, urban: .4 }), null);
-for (const id of ['matamata', 'interlaken', 'mekong', 'bergen', 'phoenix', 'cappadocia', 'uluru', 'dubai', 'walvisbay']) {
+for (const id of ['matamata', 'interlaken', 'mekong', 'bergen', 'phoenix', 'cappadocia', 'uluru', 'dubai', 'walvisbay', 'taroko', 'todra']) {
   const v = VENUES.find(v => v.id === id), mother = venueConfig(v, 5);
   for (const n of [1, 2, 3, 4, 5]) {
     const c = venueConfig(v, n);

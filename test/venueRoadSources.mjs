@@ -65,10 +65,10 @@ assert.equal(report.version, 1);
 assert.deepEqual(report.reports.map(r => r.id), ['taroko', 'todra']);
 for (const row of report.reports) {
   const venue = VENUES.find(v => v.id === row.id), candidate = row.leastGradeCandidate;
-  assert.equal(row.status, 'pending');
-  assert(!venueAvailability(venue).available);
+  assert.equal(row.status, 'qualified');
+  assert(venueAvailability(venue).available);
   const capture = captures.get(row.source.sha256);
-  assert(capture, row.id + ': failed search retains its exact source');
+  assert(capture, row.id + ': search retains its exact source');
   const ways = capture.ways.filter(w => MAP_ROAD_PROFILE.test(w.tags?.highway || ''));
   assert.equal(row.source.fingerprint, roadFingerprint(ways));
   assert.deepEqual(row.bbox, capture.bbox);
@@ -80,9 +80,9 @@ for (const row of report.reports) {
     bases: { SWARM: a, STEEL: b }, lanes: candidate.lanes, motherLanes: candidate.lanes,
     laneCount: 3, laneIds: [0, 1, 2], sizeM: sideMFor(3), venue,
     roadTerrain: candidate.roadTerrain };
-  assert(mapGeometryAudit(cfg, 5).ok, 'the retained rejection passes geometry');
+  assert(mapGeometryAudit(cfg, 5).ok, 'the candidate passes geometry');
   const checked = replayTerrain(cfg, capture);
-  assert(!validTerrainAssessment(cfg), 'complete relief still rejects the retained steep candidate');
+  assert(validTerrainAssessment(cfg), 'complete relief qualifies the rugged candidate');
   assert(Math.abs(Math.atan(checked.maxGrade) * 180 / Math.PI - row.leastCompleteGradeDeg) < 1e-6);
   assert.equal(row.geometryQualified, row.rejected.grade + row.rejected.missingRelief);
 }
@@ -95,4 +95,6 @@ const parsed = osmMapRoadResponse(raw);
 assert.deepEqual(parsed.elements.map(e => e.id), [3], 'a missing source node omits the whole road');
 assert.deepEqual(parsed.elements[0].nodes, [1, 2]);
 assert.deepEqual(parsed.elements[0].geometry, [{ lat: 25, lon: 121 }, { lat: 25.001, lon: 121 }]);
-console.log(`PASS venue source replay: ${maps} admitted maps, ${lanes} real lanes, ${report.reports.length} steep rejection replays, raw-capture checksums, exact way paths, preserved relief and missing-node omission.`);
+assert.equal(maps, 20);
+assert.equal(lanes, 38);
+console.log(`PASS venue source replay: ${maps} admitted maps, ${lanes} real lanes, ${report.reports.length} qualified natural replays, raw-capture checksums, exact way paths, preserved relief and missing-node omission.`);

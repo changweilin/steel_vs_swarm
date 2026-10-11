@@ -83,7 +83,9 @@ for (const venue of VENUES.filter(v => !only.size || only.has(v.id))) {
       for (let salt = 0; salt < limits.salts; salt++) {
         const mother = [synthLane(A, B, 1, salt), middle, synthLane(A, B, -1, salt)];
         const cfg = { center, bases: { SWARM: A, STEEL: B }, lanes: mother, motherLanes: mother,
-          laneCount: 3, laneIds: [0, 1, 2], sizeM: sideMFor(3), venue: { mix: venue.mix } };
+          laneCount: 3, laneIds: [0, 1, 2], sizeM: sideMFor(3),
+          venue: { id: venue.id, name: venue.name, mix: venue.mix, variant: venue.variant },
+          roadMode: 'natural-hybrid' };
         const audit = mapGeometryAudit(cfg, 5);
         if (!audit.ok) { rejected[audit.code] = (rejected[audit.code] || 0) + 1; continue; }
         geometryQualified++;

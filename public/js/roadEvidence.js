@@ -206,8 +206,9 @@ export function validTerrainAssessment(cfg) {
       || p.samples.length > 48000 || !p.samples.every(Number.isFinite)) return false;
     let index = 0;
     const checked = makeTerrainAssessment(cfg, () => p.samples[index++]);
+    const maxGrade = Math.tan((cfg.venue?.variant === 'rugged' ? 45 : MAPGEO.MAX_ROAD_GRADE_DEG) * Math.PI / 180);
     return index === p.samples.length && checked.verified
-      && checked.maxGrade <= Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180)
+      && checked.maxGrade <= maxGrade
       && JSON.stringify(p) === JSON.stringify(checked);
   } catch { return false; }
 }

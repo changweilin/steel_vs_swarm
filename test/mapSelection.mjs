@@ -287,9 +287,9 @@ if (process.argv.includes('--browser')) {
       await page.goto('http://map-review.local/', { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => window.mapReviewReady);
       assert(await page.evaluate(() => window.mapReviewRandomFirst), 'first-use random mode generates without loading Leaflet or a geographic selector');
-      assert.equal(await page.locator('#venueGrid [data-vid="taroko"]').isDisabled(), true);
+      assert.equal(await page.locator('#venueGrid [data-vid="taroko"]').isDisabled(), false);
       assert.equal(await page.locator('#venueGrid [data-vid="berlin"]').isDisabled(), false);
-      assert.match(await page.locator('#venueGrid [data-vid="taroko"]').textContent(), /待驗證/);
+      assert.match(await page.locator('#venueGrid [data-vid="taroko"]').textContent(), /一實兩生成/);
       assert.equal(await page.locator('#venueGrid [data-vid="madrid"]').isDisabled(), false);
       assert.equal(await page.locator('#venueGrid [data-vid="rotterdam"]').isDisabled(), false);
       assert.equal(await page.locator('#venueGrid [data-vid="phoenix"]').isDisabled(), false);
