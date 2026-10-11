@@ -24,6 +24,10 @@ let _autoMinTimer = null;
 let _domInitialized = false;
 let _userActive = 0;      // 玩家選圖觸發、進行中的預處理數;>0 時預設地圖預熱暫停
 let _warmStarted = false;
+/** Re-arm background warmup after the caches are cleared so preset/story maps reprocess. */
+export function resetPresetWarmup() {
+  _warmStarted = false;
+}
 // 載入頁/戰鬥中:預熱不啟動新項目也不碰面板(省效能與頻寬;回大廳後自動續跑)
 const inBattle = () => typeof document !== 'undefined' && ['loading', 'game'].includes(document.body?.dataset.screen);
 
@@ -176,8 +180,9 @@ export function triggerBackgroundMapSetup(cfg, displayName = '') {
 }
 
 /**
- * 開啟遊戲頁面時依序在背景處理所有預設地圖圖資(已有持久標記者跳過)。
+ * 開啟遊戲頁面時依序在背景處理所有預設地圖與劇情地圖圖資(已有持久標記者跳過)。
  * 玩家選圖(triggerBackgroundMapSetup)優先:有玩家任務進行中時,預熱在下一張前暫停。
+ * 純背景執行:逐張依序、張間讓出主執行緒,不阻塞 UI 操作。
  * @param {{cfg:object,name:string}[]} items
  */
 export async function startPresetWarmup(items) {

@@ -38,8 +38,8 @@ import { inferSatelliteRoadLanes } from './roadLaneEvidence.js';
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
-import { prepareMapCreation, awaitPreparedPack, clearPrepCache, isMapPrepared } from './mapPreparation.js';
-import { triggerBackgroundMapSetup, hideBackgroundMapSetup, startPresetWarmup } from './mapSetupProgress.js';
+import { prepareMapCreation, awaitPreparedPack, clearPrepCache, isMapPrepared, mapPrepKey } from './mapPreparation.js';
+import { triggerBackgroundMapSetup, hideBackgroundMapSetup, startPresetWarmup, resetPresetWarmup } from './mapSetupProgress.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
@@ -4573,6 +4573,35 @@ function bindSettingsControls(p) {
   $(`${p}QuickClear`)?.addEventListener('click', clearGameCache);
 }
 
+/**
+ * 背景暖機清單(唯一出口):預設地圖(全尺寸母體) + 劇情 6 章(單線攻堅配置)一併處理。
+ * 劇情 cfg MUST 用章節 teamSize/守方/環境組裝 —— 通用預設配置是三線母體,
+ * 與劇情單線的 center/size/lanes 不同鍵,暖了也命中不了出擊時的那一份。
+ * Key 不含守方與環境,故每章暖一筆即覆蓋雙陣營視角。
+ */
+function buildMapWarmupItems() {
+  const items = [], seen = new Set();
+  const push = (cfg, name) => {
+    if (!cfg?.center) return;
+    const k = mapPrepKey(cfg);
+    if (k && seen.has(k)) return;
+    if (k) seen.add(k);
+    items.push({ cfg, name });
+  };
+  for (const v of PRESET_VENUES().filter((v) => venueAvailability(v, MAP_BUILD_TEAMSIZE).available)) {
+    push(venueConfig(v, MAP_BUILD_TEAMSIZE), v.name);
+  }
+  for (const ch of STORY) {
+    const v = VENUES.find((x) => x.id === ch.venueId);
+    if (!v) continue;
+    const cfg = venueConfig(v, ch.teamSize, 'SWARM');
+    cfg.env = { ...ch.env };
+    if (!mapGeometryAudit(cfg, ch.teamSize).ok || !validMapSources(cfg)) continue;
+    push(cfg, v.name);
+  }
+  return items;
+}
+
 /** 清除遊戲暫存快取:清空 IndexedDB svs_geo、記憶體中的地貌/預建/OSM 中繼等 */
 async function clearGameCache() {
   app.pre = null;
@@ -4586,7 +4615,12 @@ async function clearGameCache() {
   try { clearPrepCache(); } catch { /* 忽略 */ }
   await geoClear();
   if (app.phaseShown === 'room') renderPreloadStatus();
-  toast('🗑 遊戲暫存已清除,下次開戰將重新載入');
+  // 暫存已空:重啟背景暖機,依序重建預設與劇情地圖圖資(純背景,不阻塞 UI)。
+  try {
+    resetPresetWarmup();
+    startPresetWarmup(buildMapWarmupItems()).catch(() => {});
+  } catch { /* 忽略 */ }
+  toast('🗑 遊戲暫存已清除,預設與劇情地圖圖資將於背景重新處理');
 }
 
 bindSettingsControls('set');
@@ -5862,7 +5896,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.documentElement.classList.add('app-ready');
   setTimeout(() => {
     try {
-      startPresetWarmup(VENUES.filter(v => venueAvailability(v).available).map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
+      startPresetWarmup(buildMapWarmupItems()).catch((err) => console.warn('預設地圖預熱未啟動:', err));
     } catch (err) { console.warn('預設地圖預熱未啟動:', err); }
   }, 3000);
   playPrologueIntro();

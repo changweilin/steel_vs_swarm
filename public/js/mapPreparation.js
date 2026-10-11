@@ -60,7 +60,12 @@ export function isMapPrepared(cfg) {
   if (!cfg) return false;
   if (cfg.mapEvidence?.complete) return true;
   const k = mapPrepKey(cfg);
-  return k ? (_prepCache.has(k) || hasMark(k)) : false;
+  if (!k) return false;
+  // A failed pack is not preparation: launches pressed while it is still
+  // processing must enter the loading screen and wait for a full rebuild.
+  const cached = _prepCache.get(k);
+  if (cached) return !cached.failed;
+  return hasMark(k);
 }
 
 
@@ -69,6 +74,7 @@ export async function awaitPreparedPack(cfg) {
   const key = mapPrepKey(cfg);
   if (!key) return null;
   let pack = _prepCache.get(key);
+  if (pack?.failed) { _prepCache.delete(key); pack = null; }
   if (!pack && _inFlight.has(key)) {
     try { pack = await _inFlight.get(key).promise; } catch { return null; }
   }
@@ -87,15 +93,18 @@ export async function awaitPreparedPack(cfg) {
 // Explicit creation only. Venue browsing must not spend the public Overpass quota.
 export async function prepareMapCreation(cfg, onProgress = () => {}) {
   const key = mapPrepKey(cfg);
-  if (key && _prepCache.has(key)) {
-    const pack = _prepCache.get(key);
-    if (pack.failed && requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
+  const hit = key ? _prepCache.get(key) : null;
+  if (hit && !hit.failed) {
+    const pack = hit;
     if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
-    cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
+    cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
       priorDigest: pack.priorDigest };
     await onProgress(MAP_EVIDENCE_COPY.analyzing);
     return pack;
   }
+  // A failed pack never satisfies a later launch: drop it so the rebuild below
+  // runs the full pass instead of returning degraded data instantly.
+  if (hit?.failed) _prepCache.delete(key);
   if (key && _inFlight.has(key)) {
     const task = _inFlight.get(key);
     task.listeners.add(onProgress);
