@@ -170,7 +170,7 @@
     "flight_belly": "pass"
   },
   "s10": {
-    "blend": "c042ddd7093af01c4f096bde5c3658e0fb7129376ee5e3e671baa871b4b94a50",
+    "blend": "ddb2b36ff305487b48ac9d67035fa81248c986844b5bb1f01fd8a020a5bf8a69",
     "bones": 58,
     "clips": [
       "idle",
@@ -198,6 +198,11 @@
         "heldWeapons": 2
       },
       "feathersBehindBones": 44
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/s10-677c23170589.blend",
+      "contractSourceHash": "677c231705893c3d829ac70cd26b49297ff89a4b5cff5d0cc7cb8f5344973a90",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     },
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
@@ -256,7 +261,7 @@
     "flight_belly": "pass"
   },
   "t06": {
-    "blend": "cae5fa088d0de0d1776d147acba702e3622d4db4c1bc3a93d54753c4b30383fe",
+    "blend": "248942d0d8ffca4c751292072f8d5cbd981424acbed0d0575205bea10e0c7469",
     "bones": 40,
     "clips": [
       "idle",
@@ -281,8 +286,13 @@
     "anatomy": {
       "articulation": {
         "waist": "waist",
-        "heldWeapons": 1
+        "heldWeapons": 2
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t06-9c073c6e1fdc.blend",
+      "contractSourceHash": "9c073c6e1fdc0c76102c7a03e6d931a374a9ceee694308d715d8b15ea98fc22a",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     },
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
@@ -341,7 +351,7 @@
     "flight_belly": "pass"
   },
   "t11": {
-    "blend": "9669b7b045890658facf42dec39ac83011c398ebb726805d064333ace0bb078c",
+    "blend": "e82b6804289fcc8814eefddceb4e032bd07bcdc4c44177f8e441f9f653342e9b",
     "bones": 102,
     "clips": [
       "idle",
@@ -368,6 +378,11 @@
         "waist": "waist",
         "heldWeapons": 0
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t11-25c7cf40dedf.blend",
+      "contractSourceHash": "25c7cf40dedf0000a4b9b9ae86eb8aba3b90ef55d8727c207ef2f84f90a5c7e3",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     },
     "foldedLimbBoundsInHullCoordinates": {
       "hip_l": {
@@ -427,7 +442,7 @@
     "flight_belly": "pass"
   },
   "m05": {
-    "blend": "35b77d5e3a5624c17aa3692988c9096ce9ab7a73636f86cc70c4d722f3886566",
+    "blend": "e86ac0e3077f232203b6e72b462089336b0a94f9c8e094d3cac18e664009e6f4",
     "bones": 66,
     "clips": [
       "idle",
@@ -455,6 +470,11 @@
         "heldWeapons": 0
       }
     },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/m05-c888a3d1c43b.blend",
+      "contractSourceHash": "c888a3d1c43b7a2f7f0a4520191e08ae635c9a9d5df2cebb51f328cfcd3af67f",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+    },
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
     "exposedLimbBoundsInHullCoordinates": {},
@@ -463,7 +483,7 @@
     "flight_belly": "exposed_patagium_struts"
   },
   "m07": {
-    "blend": "4750ee9f1171cf61073e99efeed25bafaaa00050c1fbf0d8f4341747f87615fb",
+    "blend": "d0c012108de81d57d8b9ab3fd96300b5ec5a64288452c23d5663189aa85a5217",
     "bones": 88,
     "clips": [
       "idle",
@@ -490,6 +510,11 @@
         "waist": null,
         "heldWeapons": 0
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/m07-bc83ffbe4665.blend",
+      "contractSourceHash": "bc83ffbe4665f68eb921fde624ed7046768dd1698fa1e8d7b8e5f09d8406b6e2",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     },
     "foldedLimbBoundsInHullCoordinates": {
       "leg_FL": {

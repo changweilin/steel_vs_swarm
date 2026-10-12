@@ -154,7 +154,7 @@ def tails(a):
     if r == 'octopod':
         return
     nodes = a.spec['rig'].get('tailSegs', [])
-    if r in ['centaur', 'hound', 'wolf_squirrel']:
+    if r in ['centaur', 'hound', 'wolf_squirrel', 'wolf_patagium']:
         from mathutils import Vector
         for i, name in enumerate(nodes):
             delta = p['tail'][i + 1] if i + 1 < len(nodes) else p['tailTip']
@@ -181,6 +181,24 @@ def tails(a):
                 a.strut('Horse tail hair strand' if r == 'centaur' else 'Canine tail overlapping coat seam', name,
                         (strand*width*.22,-width*.30,0),
                         (delta[0]+strand*end*.22,delta[1]-end*.30,delta[2]), .025, 'dark' if r == 'centaur' else 'shade')
+            if r == 'wolf_patagium':
+                for strand in range(8):
+                    angle = math.tau*strand/8
+                    at = (math.cos(angle)*width*.34,math.sin(angle)*width*.34,delta[2]*.46)
+                    ellipsoid(a,'Overlapping rounded wolf fur lock',name,(width*.48,width*.34,length*.92),at,'shade' if strand%2 else 'armor',8,4)
+                for strand in range(24):
+                    angle=math.tau*strand/24
+                    radial=(math.cos(angle),math.sin(angle))
+                    tangent=(-radial[1]*.012,radial[0]*.012)
+                    start=(radial[0]*width*.56,radial[1]*width*.50,delta[2]*.32)
+                    end=(radial[0]*width*.73,radial[1]*width*.66,delta[2]*.90)
+                    vertices=[(start[0]+tangent[0],start[1]+tangent[1],start[2]),
+                              (start[0]-tangent[0],start[1]-tangent[1],start[2]),
+                              (end[0]-tangent[0]*.25,end[1]-tangent[1]*.25,end[2]),
+                              (end[0]+tangent[0]*.25,end[1]+tangent[1]*.25,end[2])]
+                    a.mesh('Layered wolf brush guard hair',name,vertices,[(0,1,2,3),(3,2,1,0)],'shade')
+                if i == len(nodes)-1:
+                    ellipsoid(a,'Rounded wolf brush tail tip',name,(width*.62,width*.62,width*.78),delta,'shade',12,6)
         return
     if 'tailWidth' in p:
         from mathutils import Vector
@@ -188,12 +206,14 @@ def tails(a):
             delta = p['tail'][i + 1] if i + 1 < len(nodes) else p['tailTip']
             length = Vector(delta).length
             start = p['tailWidth'] * (1 - i / len(nodes)) ** 1.2
-            end = max(.04, p['tailWidth'] * (1 - (i + 1) / len(nodes)) ** 1.2)
+            end = max(p.get('tailTipWidth',.04), p['tailWidth'] * (1 - (i + 1) / len(nodes)) ** 1.2)
             obj = a.loft('Tapered anatomical tail vertebra armor', name,
                          [(-.04, start, start * .88), (length * .5, (start + end) * .55, (start + end) * .48),
                           (length + .025, end, end * .88)], 'armor')
             obj.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
             a.disk('Tail vertebral hinge', name, start * .23, .06, (0, 0, 0), 'dark', 'x', 10)
+            if p.get('tailTipWidth') and i == len(nodes)-1:
+                ellipsoid(a,'Rounded monkey tail terminal',name,(end,end,end),delta,'armor',12,6)
         if r == 'stego':
             for side in [-1, 1]:
                 for z in [-.04, -.35]:
@@ -234,9 +254,9 @@ def arms(a, chest='chest'):
         width = p['limb'] * (.6 if r == 'roo' else .38 if r == 'trex' else 1)
         if r == 'bastion': ellipsoid(a, 'Giant white ball shoulder', shoulder, (1.55, 1.65, 1.65), (side * .12, .12, 0), 'armor')
         elif r == 'colossus':
-            a.box('Shoulder reactor armor', shoulder, (1.55, 1.55, 1.30), (side * .12, .12, -.06), 'armor', .22)
-            a.box('Recessed shoulder radiator', shoulder, (1.03,.77,.09), (0,.05,.63), 'dark', .06)
-            vents(a, shoulder, (0, -.23, .69), .90, 7, 'brass')
+            a.disk('Transverse cylindrical shoulder reactor', shoulder, .73, 1.55, (side * .12, .12, -.06), 'armor', 'x', 24)
+            a.disk('Recessed circular shoulder radiator', shoulder, .54, .06, (side * .92,.12,-.06), 'dark', 'x', 24)
+            a.tube('Shoulder reactor cooling rim', shoulder, .63, .54, .08, (side * .89,.12,-.06), 'brass', 'x', 24)
         else: ellipsoid(a, 'Articulated shoulder armor', shoulder, (width * 1.8, width * 1.65, width * 1.7), (0, 0, 0), 'shade')
         if r in ['seraph','colossus']:
             animal_limb(a, shoulder, positions[elbow], .32, 'fore', 0)
@@ -837,6 +857,13 @@ def weapons(a):
 
 def light_weapon(a, length):
     p, r = a.p, a.spec['recipe']
+    if r == 'trex':
+        for owner, muzzle in [('gun_recoil','light_muzzle'),('gun_l_recoil','light_muzzle_l')]:
+            a.box('Outboard forearm gun receiver',owner,(.24,.25,.43),(0,0,.10),'dark',.035)
+            a.tube('Independent forearm gun barrel',owner,.065,.035,length-.14,(0,0,(length+.14)/2),'steel',segments=12)
+            a.tube('Forearm gun cooling collar',owner,.095,.065,.08,(0,0,length*.60),'shade',segments=12)
+            a.disk('Light muzzle emission',muzzle,.035,.014,(0,0,0),'glow')
+        return
     a.loft('Light weapon receiver', 'gun_recoil', [(-.27, .34, .3), (.26, .32, .28)], 'brass' if r == 'roo' else 'dark', axis='z')
     count = 4 if r == 'fpv' else 2 if r in ['eagle', 'crane', 'trex', 'zero', 'canard', 'roo', 'stego', 'pterosaur','medical'] else 1
     for i in range(count):
@@ -936,14 +963,16 @@ def heavy_weapon(a):
                     (side*.31,a.spec['rig']['launcher']['extension'],0),.07,'steel')
             a.strut('Launcher moving support rail','launcher_lift',(side*.31,-.12,0),(side*.31,.32,0),.10,'steel')
         a.disk('Launcher elevation hinge','heavy',.18,.95,(0,0,0),'brass','x',16)
-        pod_x = a.nodes['heavy_muzzle'].location.x
+        pods = a.spec['rig']['launcher']['pods']
+        pod_x = max(abs(pod['deploy']) for pod in pods)
         # Outboard launch cells clear the rider without lifting the rack above the helmet.
-        a.box('Low dorsal launcher crossbeam','heavy',(2*pod_x,.14,.28),(0,.08,0),'steel',.025)
-        for side in [-1,1]:
-            x = side * pod_x
-            a.box('Dorsal multi-rocket armored rack','heavy',(.42,1.28,.72),(x,.40,0),'shade',.06)
+        a.box('Low dorsal launcher crossbeam','heavy',(2*min(abs(pod['rest']) for pod in pods),.14,.28),(0,.08,0),'steel',.025)
+        for side, suffix in [(-1,'r'),(1,'l')]:
+            owner = 'launcher_pod_' + suffix
+            a.strut('Telescopic launcher crossarm',owner,(0,.08+side*.05,0),(-side*pod_x,.08+side*.05,0),.075,'steel')
+            a.box('Dorsal multi-rocket armored rack',owner,(.42,1.28,.72),(0,.40,0),'shade',.06)
             for z in [-.22,0,.22]:
-                a.tube('Dorsal rocket launch cell','heavy',.105,.079,1.40,(x,.48,z),'steel','y',12)
+                a.tube('Dorsal rocket launch cell',owner,.105,.079,1.40,(0,.48,z),'steel','y',12)
     else:
         vertical = False
         size = (.75, 1.45, .7) if vertical else (.8, .55, .85)

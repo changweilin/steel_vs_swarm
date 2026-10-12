@@ -507,8 +507,16 @@ class Asset:
         if rig.get('rider'):
             self.rider_pose()
         if rig.get('archery'):
-            self.aim_hands(0)
-            self.archery_pose(rig['archery']['restDraw'])
+            self.nodes[rig['archery']['arrow']].location = xyz(next(at for name,_,at in self.spec['joints'] if name==rig['archery']['arrow']))
+        for side, sign in [('L',1),('R',-1)]:
+            if rig.get('stance'):
+                self.rotate(self.nodes[rig['leg'+side]],'y',sign*rig['stance']['toeOut'])
+                self.rotate(self.nodes[rig['leg'+side]],'z',sign*rig['stance']['hipSplay'])
+        for weapon in rig.get('stowedWeapons', []):
+            node = self.nodes[weapon['node']]
+            for axis, angle in zip('xyz',weapon['rotation']):
+                self.rotate(node,axis,node.rotation_euler[{'x':0,'y':2,'z':1}[axis]]+angle)
+            node.scale = (weapon['scale'],)*3
         if hasattr(self, 'combat'):
             combat.reset(self)
 
@@ -765,7 +773,7 @@ class Asset:
             aim = max(0, min(1, (extension - launcher['rotateStart']) / (1 - launcher['rotateStart'])))
             self.rotate(self.nodes[launcher['pivot']], 'x', math.pi / 2 * aim)
         self.aim_hands(math.sin(math.pi*u)**2 if clip in ('light','heavy','skill','ult') else 0)
-        if rig.get('archery'):
+        if rig.get('archery') and clip == 'light':
             bow = rig['archery']
             draw = 0
             if clip == 'light':
@@ -777,6 +785,9 @@ class Asset:
                     draw = 1-phase*phase*(3-2*phase)
                 self.nodes['gun_recoil'].scale = ((.001 if .58<=u<.80 else 1),)*3
             self.archery_pose(bow['restDraw']+(bow['fullDraw']-bow['restDraw'])*draw)
+        for weapon in rig.get('stowedWeapons', []):
+            weight = math.sin(math.pi*u)**2 if clip==weapon['slot'] else 0
+            self.nodes[weapon['node']].scale = (weapon['scale']+(1-weapon['scale'])*weight,)*3
         if hasattr(self, 'combat'):
             combat.pose(self, clip, t)
 
@@ -944,7 +955,9 @@ for spec in contract['assets'].values():
     if args.no_render:
         asset.setup_render()
     views = [] if args.no_render else asset.render(directory)
-    bpy.ops.wm.save_as_mainfile(filepath=str(blend))
+    temporary_blend = blend.with_suffix('.build.blend')
+    bpy.ops.wm.save_as_mainfile(filepath=str(temporary_blend))
+    temporary_blend.replace(blend)
     asset.export_selection()
     glb = EXPORT / (spec['id'] + '.glb')
     temporary_glb = glb.with_suffix('.export.glb')

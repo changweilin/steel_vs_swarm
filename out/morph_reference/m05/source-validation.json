@@ -1,5 +1,5 @@
 {
-  "blend": "35b77d5e3a5624c17aa3692988c9096ce9ab7a73636f86cc70c4d722f3886566",
+  "blend": "e86ac0e3077f232203b6e72b462089336b0a94f9c8e094d3cac18e664009e6f4",
   "bones": 66,
   "clips": [
     "idle",
@@ -26,6 +26,11 @@
       "waist": "waist",
       "heldWeapons": 0
     }
+  },
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/m05-c888a3d1c43b.blend",
+    "contractSourceHash": "c888a3d1c43b7a2f7f0a4520191e08ae635c9a9d5df2cebb51f328cfcd3af67f",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
   },
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,

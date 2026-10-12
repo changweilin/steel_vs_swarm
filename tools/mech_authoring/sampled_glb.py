@@ -15,38 +15,46 @@ def encode_tracks(file, samples, clips):
     assert binary_kind == 0x004E4942 and len(gltf['buffers']) == 1
     binary = bytearray(payload[28+size:28+size+gltf['buffers'][0]['byteLength']])
     components = {'translation': (1, 3, 'VEC3'), 'rotation': (2, 4, 'VEC4'), 'scale': (3, 3, 'VEC3')}
+    node_indices = {node['name']:i for i,node in enumerate(gltf['nodes']) if 'name' in node}
+    for name,position,rotation,scale in samples['clips']['idle']['frames'][0]:
+        if name not in node_indices:
+            continue
+        node=gltf['nodes'][node_indices[name]]
+        node.pop('matrix',None)
+        node.update(translation=position,rotation=rotation,scale=scale)
+    def accessor(values, count, shape, limits=None):
+        binary.extend(b'\0' * (-len(binary) % 4))
+        view_index = len(gltf['bufferViews'])
+        gltf['bufferViews'].append({'buffer':0,'byteOffset':len(binary),'byteLength':len(values)*4})
+        binary.extend(struct.pack('<'+'f'*len(values),*values))
+        index = len(gltf['accessors'])
+        row = {'bufferView':view_index,'componentType':5126,'count':count,'type':shape}
+        if limits:
+            row.update(min=[limits[0]],max=[limits[1]])
+        gltf['accessors'].append(row)
+        return index
     for animation in gltf.get('animations', []):
         if animation['name'] not in clips:
             continue
         sampled = samples['clips'][animation['name']]
         frames = [{row[0]: row for row in frame} for frame in sampled['frames']]
-        for channel in animation['channels']:
-            name = gltf['nodes'][channel['target']['node']]['name']
+        times = [(i+1)/sampled['fps'] for i in range(len(frames))]
+        time_index = accessor(times,len(times),'SCALAR',(times[0],times[-1]))
+        animation['channels'],animation['samplers'] = [],[]
+        for name in frames[0]:
             if name.startswith('fx_'):
                 continue
-            sampler = animation['samplers'][channel['sampler']]
-            accessor = gltf['accessors'][sampler['input']]
-            view = gltf['bufferViews'][accessor['bufferView']]
-            assert accessor['componentType'] == 5126 and accessor['type'] == 'SCALAR'
-            offset = view.get('byteOffset', 0) + accessor.get('byteOffset', 0)
-            times = struct.unpack_from('<' + 'f' * accessor['count'], binary, offset)
-            field, count, shape = components[channel['target']['path']]
-            values, previous = [], None
-            for time in times:
-                index = round(time * sampled['fps']) - 1
-                assert 0 <= index < len(frames), f'{animation["name"]}: sample time outside the clip'
-                value = list(frames[index][name][field])
-                if field == 2 and previous and sum(a*b for a,b in zip(previous,value)) < 0:
-                    value = [-v for v in value]
-                previous = value
-                values.extend(value)
-            binary.extend(b'\0' * (-len(binary) % 4))
-            view_index = len(gltf['bufferViews'])
-            gltf['bufferViews'].append({'buffer': 0, 'byteOffset': len(binary), 'byteLength': len(values)*4})
-            binary.extend(struct.pack('<' + 'f' * len(values), *values))
-            sampler['output'] = len(gltf['accessors'])
-            gltf['accessors'].append({'bufferView': view_index, 'componentType': 5126, 'count': len(times), 'type': shape})
-            sampler['interpolation'] = 'LINEAR'
+            assert name in node_indices, 'Missing exported joint: '+name
+            for path,(field,count,shape) in components.items():
+                values,previous = [],None
+                for frame in frames:
+                    value = list(frame[name][field])
+                    if field==2 and previous and sum(a*b for a,b in zip(previous,value))<0:
+                        value=[-v for v in value]
+                    previous=value
+                    values.extend(value)
+                animation['channels'].append({'sampler':len(animation['samplers']),'target':{'node':node_indices[name],'path':path}})
+                animation['samplers'].append({'input':time_index,'output':accessor(values,len(times),shape),'interpolation':'LINEAR'})
     gltf['buffers'][0]['byteLength'] = len(binary)
     header = json.dumps(gltf, separators=(',', ':')).encode('utf8')
     header += b' ' * (-len(header) % 4)

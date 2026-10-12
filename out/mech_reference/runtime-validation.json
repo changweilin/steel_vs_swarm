@@ -1,658 +1,94 @@
 {
   "identities": {
-    "s01": {
-      "glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25",
-      "runtime": "a87ee41c6900cf90466ae7cac45506811a1e90bc132eb4c23b1305ada1c360ec",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "t10": {
-      "glb": "5d6cc109d5f6fa4abf8e3da25e860c3f6fd8b3163d750c4bea0c27772e663138",
-      "runtime": "f08cfee9968e9b3af7014a5e6afc1826ee1c80f9ed73e941948e12f6ef36448e",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "s02": {
-      "glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9",
-      "runtime": "f42a06bf837de865bee4a431ecaba20a0b02b0b3ee4f7019955043e9b2d40f4a",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s04": {
-      "glb": "e379a12cf9584f8eb5342f809c3faf4020003f87763bda62c16b54ce9d8217cf",
-      "runtime": "e90d00a689c19beb35a2eb0c708c9e9d59fd217370aef0456c7503e212239aec",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s05": {
-      "glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126",
-      "runtime": "01714521be4f4ba77508d3c05e7d3dd0a41c7288f5d51ae6f73652f336d770d4",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s08": {
-      "glb": "8eee0ddd80475e62919333b89f43635eab37d3ae32773d5619c9fd6c24f8e090",
-      "runtime": "ff0bcd500439eff17a17cc8a75e84dc58802f5e3757d4b345adc190613635f97",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s11": {
-      "glb": "d5323c7787fd84bb97eda6073ce05499d9990f07bdd771099f83571d30736b8d",
-      "runtime": "b3e78683029cf9216f3b0430a8a2af70ed02ab5eac37db69f8e2330025a5cf2c",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s12": {
-      "glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9",
-      "runtime": "731054a014d842fa6790e64656450568f86067867a9862ac7caa6da2f30b00a8",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "t07": {
-      "glb": "47eaef6fd071dd1693d692a5e5e72b6901c2aa14c5f87ce83e0a7359e21e9c39",
-      "runtime": "3bb9261ce430d5641f67d63f71c2d9c99bb2e0fb6d931f3d3ea62f968a6d4414",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t08": {
-      "glb": "3431c5fa612de40862433c838d7a8d0864a2e61db6f909bee608df8b853ba7d4",
-      "runtime": "9445452f140d6aa3d00dac653e2e8f44d6e632c9c4cadc72cfe6588b2f76c571",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t09": {
-      "glb": "01154e92859f1ebb0060676387b05dcb8f9324eba1506fb46d83fad8673781fd",
-      "runtime": "a921400cb83161d036fc6d213f6d8fe2d0f555751a910867d89b8abdfc516f97",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "m03": {
-      "glb": "35ba50a528f935dda65662f5673e5d9805a81b401d1d67226711d8380fd11058",
-      "runtime": "59d71e9b7b265e8258eebdf62e685a763ebc393fb47b97c1e0613e9cfc19eada",
-      "clips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "m04": {
-      "glb": "6dcd2564394e2ec39de7adab54181b656a594c02cf8cfd576de343c051bbee45",
-      "runtime": "65a401890fe384fed22bf2da90b27a19815dd90f9be4ad61a4cd7e711f7d9c44",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
     "s06": {
-      "glb": "d120e133e3118e5d3e5469315efe8f0e745c931030af4d85bdd290c24ba5ee0d",
-      "runtime": "ba216e2fd89198077253eae66bbf95ca0954ea0cdeb2405cd7fa09e6b0e7a14d",
+      "glb": "c58611ca2ba235581a40796ba884253076b02e6498f8d1caa3ee5b16246aa755",
+      "runtime": "c37b7fd39afff79848b6ccd88eefaa2bd4e914123a518698ead06c6b263a7f21",
       "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "idle",
         "run",
         "light",
-        "heavy"
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
       ]
     },
     "s07": {
-      "glb": "6685c491e42d7c0a4c4921a3e80739abfa7c6b8ef3056811cf98c64d266a56b3",
-      "runtime": "5501eadaf46fef9f841689908bb785b8a2217cb254d0fdf1722ab8c3a923bcaa",
+      "glb": "d2ff576a026178caa0f888da088cd6dc540990d3224d49356b74d3859707c0cb",
+      "runtime": "a54520145666578efd51c9c5ca920eebb2ebf185f4f71367d6b9210757e02172",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
         "run",
         "light",
-        "heavy"
+        "heavy",
+        "skill",
+        "ult"
       ]
     },
     "s09": {
-      "glb": "529d38ad95fb96577e880e3d230f72554af63f269ae61f83c94c94911973a354",
-      "runtime": "752a479ac0c838fa8246c669ec1af43acdfb80f40cc482443c207ec07a00b333",
+      "glb": "8494acc68db36ce2c7df11cea7c07f4708d2116047a8ecabb9a2d6ae4b31496b",
+      "runtime": "28b3fbf7618e9764f07469c68aa7d7ab5a88f3d74572b61390dd8e212a8a7e14",
       "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "idle",
         "run",
+        "shield_deploy",
+        "shield_retract",
+        "heavy",
         "light",
-        "heavy"
+        "skill",
+        "ult"
       ]
     },
-    "t01": {
-      "glb": "e1da50a99954a9b64784f5c8b8ac703aa0a1677681d9b1318fd7c2c106d6c4a3",
-      "runtime": "5843d77a478bf7b773f63b123f4e8028cbf3554a1c541d80fcba04bd12df7dc6",
+    "m02": {
+      "glb": "ba725805aa12c836bfb7acc33fe86cfc44356436e107a3a3c01efe5d5551514c",
+      "runtime": "a079cdcdde49250fba84c2a3483589448e9fabf9c2deb009e9caa72c7d9cff7f",
       "clips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
         "light",
-        "heavy"
-      ]
-    },
-    "t02": {
-      "glb": "8a733455d3cb17680c09eecf65598dc58fdd5000eca073e0ed7170acbe663e95",
-      "runtime": "1eb075ddbd293ecfae411ba67d6a6ba60a4b364fa462985b3dfdd34dd40f72cc",
-      "clips": [
+        "heavy",
         "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
+        "ult"
       ]
     },
     "t03": {
-      "glb": "d9fa8ab959e519aeff6b62b6a002be2ad8e7761a17f84043592162ec594573db",
-      "runtime": "204db239ec2b75dd185abf92054aa3cf95ab5a03e391a646a9bbfeec562ed0a5",
+      "glb": "ad07dd1d290839367bdf6531bc5c23e6ece9aa13cdd0ce8466c783ddf9a614a0",
+      "runtime": "887836ddd5f7ac9c498f49869313356224eaea3b12b8194a80d405ead2066257",
       "clips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t04": {
-      "glb": "b4786f7073fbe0d01ad944f9594d01182f070f26463f75cf0a32c8ceaa868f3a",
-      "runtime": "7ac6a85d506a825a2acb7d6c020f5b5cccfd08043737261f788831a0b4c3f2e0",
-      "clips": [
         "skill",
         "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t05": {
-      "glb": "fc8c574333ba201a17bf0967e6a98966c633cc6de1bdac4df3e5804f12155b63",
-      "runtime": "94dc1ab3019d2696be9b800052fd9581f80b163d33108016fb9c75b43ebae54e",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t12": {
-      "glb": "0919e497c73e05d2820ed6e837412dbc9600c60a1d12ff51d951058d2b2adda3",
-      "runtime": "91a58b8a34925e0cea3bc355cae666711a9a245f2ef7b697efa742f715821826",
+      "glb": "9088ae93483a6b447806c630780e32443eda1e45398cb0469521617958621eb3",
+      "runtime": "d612717356ba5f2bc55b24f25864a749620cc9b2f9682ca5f36a17aa1a966735",
       "clips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "m02": {
-      "glb": "a5992b445814d7d3a887726a109c641926a9212ef9a082b26bf6053925ad6d4c",
-      "runtime": "85c1e08d5fe4c5c3d5f2b86b7bd2db68743db4181d2649351f203924de9f9a9d",
-      "clips": [
         "skill",
         "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "m06": {
-      "glb": "683f79d0f60f2127166f6f519e659850fe577649f06ce9ec4b5e968ae8a3d079",
-      "runtime": "bd4aa8b239930af0d59a43c3e394270df56d9087d39207c53b03ae8044b93a2f",
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
+        "heavy",
+        "light"
       ]
     }
   },
   "metrics": {
-    "s01": {
-      "meshes": 68,
-      "triangles": 16448,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.8064516129032255,
-        0.8064516129032253,
-        0.8064516129032248
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "t10": {
-      "meshes": 98,
-      "triangles": 14330,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.6944444444444443,
-        0.6944444444444443,
-        0.694444444444445
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "s02": {
-      "meshes": 40,
-      "triangles": 10624,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s04": {
-      "meshes": 37,
-      "triangles": 9784,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s05": {
-      "meshes": 42,
-      "triangles": 9396,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s08": {
-      "meshes": 38,
-      "triangles": 9296,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s11": {
-      "meshes": 39,
-      "triangles": 9280,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "s12": {
-      "meshes": 45,
-      "triangles": 9908,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "t07": {
-      "meshes": 76,
-      "triangles": 12204,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t08": {
-      "meshes": 131,
-      "triangles": 18232,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t09": {
-      "meshes": 35,
-      "triangles": 9260,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "m03": {
-      "meshes": 35,
-      "triangles": 8704,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract"
-      ]
-    },
-    "m04": {
-      "meshes": 78,
-      "triangles": 14204,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
     "s06": {
-      "meshes": 122,
-      "triangles": 14636,
+      "meshes": 125,
+      "triangles": 14724,
       "fps": [
         30,
         60,
@@ -664,19 +100,19 @@
         0.7692307692307686
       ],
       "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "idle",
         "run",
         "light",
-        "heavy"
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
       ]
     },
     "s07": {
-      "meshes": 131,
-      "triangles": 22664,
+      "meshes": 129,
+      "triangles": 22091,
       "fps": [
         30,
         60,
@@ -691,11 +127,11 @@
         "idle",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
         "run",
         "light",
-        "heavy"
+        "heavy",
+        "skill",
+        "ult"
       ]
     },
     "s09": {
@@ -712,19 +148,19 @@
         0.7692307692307686
       ],
       "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "idle",
         "run",
+        "shield_deploy",
+        "shield_retract",
+        "heavy",
         "light",
-        "heavy"
+        "skill",
+        "ult"
       ]
     },
-    "t01": {
-      "meshes": 84,
-      "triangles": 12035,
+    "m02": {
+      "meshes": 96,
+      "triangles": 13671,
       "fps": [
         30,
         60,
@@ -736,38 +172,14 @@
         0.7692307692307686
       ],
       "glbClips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
         "light",
-        "heavy"
-      ]
-    },
-    "t02": {
-      "meshes": 80,
-      "triangles": 13980,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
+        "heavy",
         "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
+        "ult"
       ]
     },
     "t03": {
@@ -784,67 +196,19 @@
         0.7692307692307686
       ],
       "glbClips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t04": {
-      "meshes": 100,
-      "triangles": 13640,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
         "skill",
         "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "t05": {
-      "meshes": 91,
-      "triangles": 14512,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t12": {
       "meshes": 70,
-      "triangles": 11288,
+      "triangles": 11248,
       "fps": [
         30,
         60,
@@ -856,62 +220,14 @@
         0.5555555555555552
       ],
       "glbClips": [
-        "skill",
-        "ult",
+        "idle",
         "shield_deploy",
         "shield_retract",
-        "idle",
         "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "m02": {
-      "meshes": 94,
-      "triangles": 14256,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.7692307692307694,
-        0.7692307692307696,
-        0.7692307692307686
-      ],
-      "glbClips": [
         "skill",
         "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
-      ]
-    },
-    "m06": {
-      "meshes": 98,
-      "triangles": 14080,
-      "fps": [
-        30,
-        60,
-        144
-      ],
-      "shieldPhases": [
-        0.5555555555555556,
-        0.5555555555555551,
-        0.5555555555555552
-      ],
-      "glbClips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy"
+        "heavy",
+        "light"
       ]
     }
   },

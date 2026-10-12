@@ -135,8 +135,8 @@ try {
       && morph.ground.tailSegs.length === 5
       && ['l', 'r'].every(side => morph.gg.getObjectByName('wing_' + side).parent.name === 'elbow_' + side),
       'Wolf must retain elbow-folded patagium, paired fist blades and a balanced tail');
-    if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'wing_r'
-      && morph.gg.getObjectByName('heavy').parent.name === 'wing_l', 'Weapons must stay on shoulder trays');
+    if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'shoulder_r'
+      && morph.gg.getObjectByName('heavy').parent.name === 'shoulder_l', 'Weapons must stay outboard on the shoulders');
     if (id === 't11') {
       check(count('Solid retractable rotor shield petal') === 48, 'Solid twin shield covers lost');
       for (const tree of [morph.gg, morph.ag]) {
@@ -193,7 +193,11 @@ try {
         const delta = Math.max(...g.matrixWorld.elements.map((v, j) => Math.abs(v - a.matrixWorld.elements[j])));
         maxSeamError = Math.max(maxSeamError, delta);
         check(delta < 1e-5, `Rig-swap seam: ${id}/${g.name} ${delta}; t=${t}, shield=${defending}, aim=${unit.userData.rig._fireAim}`);
-        check(g.scale.toArray().every(v => Math.abs(v - 1) < 1e-7), `Rigid part scale changed: ${g.name}`);
+        const stow=spec.rig.stowedWeapons?.find(control=>control.node===g.name);
+        if (stow) {
+          check(g.scale.toArray().every(v=>v>=stow.scale-1e-7&&v<=1+1e-7), `Weapon exceeds declared stow scale: ${g.name}`);
+          check(Math.max(...g.scale.toArray())-Math.min(...g.scale.toArray())<1e-7, `Weapon stow distorts proportions: ${g.name}`);
+        } else check(g.scale.toArray().every(v => Math.abs(v - 1) < 1e-7), `Rigid part scale changed: ${g.name}`);
       }
     };
     const samples = [.05, .25, .49, .5, .51, .75, .95];
@@ -240,7 +244,12 @@ try {
             && leg.chain.every(j => j.axis === 'z')), 'Sprawled insect leg uses mammal flexion axes');
         }
       }
-      if (!flight && id === 's10') check(rig.tailSegs.every(n => Math.abs(n.rotation.x) < .04), 'Raptor counterbalance tail droops');
+      if (!flight && id === 's10') {
+        const tail = rig.tailSegs.map(n => unit.worldToLocal(n.getWorldPosition(new THREE.Vector3())));
+        check(tail.at(-1).z < tail[0].z && tail.every(p => p.y > 0), 'Raptor tail loses rear counterbalance or strikes ground');
+        check(rig.tailSegs.some((n, i) => i && n.quaternion.angleTo(rig.tailSegs[i - 1].quaternion) > 1e-4),
+          'Raptor tail remains a rigid straight chain');
+      }
       if (!flight && id === 'm05') check(morph.gg.getObjectByName('hunch').rotation.x > .3, 'Wolf attack stance lost during locomotion');
       check(rig.kind === (flight ? 'aerial' : spec.kind), 'Wrong locomotion rig');
       if (id === 's10') {

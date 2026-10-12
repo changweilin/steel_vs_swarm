@@ -57,7 +57,8 @@ for file in sorted(SAMPLES.glob('*.json')):
                 actual_q = obj.matrix_basis.to_quaternion()
                 angular = 1 - abs(actual_q.dot(expected_q))
                 drift = (obj.location - expected_position).length
-                assert angular < 2e-6 and drift < 2e-5, f'{id}/{clip}/{frame}/{name}: baked joint differs from runtime'
+                scale_drift=(obj.scale-Vector((scale[0],scale[2],scale[1]))).length
+                assert angular < 2e-6 and drift < 2e-5 and scale_drift < 2e-5, f'{id}/{clip}/{frame}/{name}: baked joint differs from runtime'
                 assert all(math.isfinite(v) for row in obj.matrix_world for v in row), id + ': invalid world matrix'
                 error = max(error, drift)
                 count += 1

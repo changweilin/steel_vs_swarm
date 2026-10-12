@@ -99,6 +99,7 @@
     "audit:baked-motion": "node tools/audit_baked_motion.mjs",
     "audit:reference-mechs": "node tools/audit_reference_mechs.mjs",
     "audit:anatomical-motion": "node tools/audit_anatomical_motion.mjs",
+    "audit:mech-equipment": "node tools/audit_mech_equipment.mjs",
     "audit:fantasy-motion": "node tools/audit_fantasy_motion.mjs",
     "author:morphers": "node tools/mech_authoring/build.mjs --contract morphers.json",
     "audit:reference-morph": "node tools/audit_reference_morph.mjs",

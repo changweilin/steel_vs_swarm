@@ -3486,7 +3486,7 @@
         },
         "gallop": 0,
         "tailBase": 0,
-        "tailStiffness": 0.12,
+        "tailStiffness": 1,
         "heldWeapons": [
           {
             "node": "gun",
@@ -3504,7 +3504,8 @@
         "weap": {
           "light": "R",
           "heavy": "L"
-        }
+        },
+        "tailUp": 0.03
       },
       "cavity": {
         "owner": "spine",
@@ -3663,8 +3664,9 @@
         "tailTip": [
           0,
           0.06,
-          -0.28
-        ]
+          -0.4
+        ],
+        "tailTipWidth": 0.085
       },
       "materials": {
         "armor": {
@@ -3918,7 +3920,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3927,7 +3929,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3936,7 +3938,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3945,7 +3947,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3954,7 +3956,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3963,7 +3965,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3972,7 +3974,7 @@
           [
             0,
             0.08,
-            -0.34
+            -0.48
           ]
         ],
         [
@@ -3995,11 +3997,11 @@
         ],
         [
           "gun",
-          "chest",
+          "wrist_l",
           [
-            -0.5,
-            0.34,
-            0.42
+            0,
+            -0.13,
+            0.1
           ]
         ],
         [
@@ -4441,7 +4443,7 @@
         "top": 8.5,
         "stride": 3,
         "weap": {
-          "light": "R",
+          "light": "L",
           "heavy": "R"
         },
         "hvy": {
@@ -4524,7 +4526,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.08
+            "r": 0.08,
+            "aimJoint": "wrist_l"
           },
           "heavy": {
             "nodes": [
@@ -4543,6 +4546,11 @@
             "node": "heavy",
             "hand": "wrist_r",
             "staff": true
+          },
+          {
+            "node": "gun",
+            "hand": "wrist_l",
+            "staff": false
           }
         ],
         "gunR": {
@@ -4574,7 +4582,31 @@
         "limb": {
           "fore": "plantigrade",
           "hind": "digitigrade"
-        }
+        },
+        "stowedWeapons": [
+          {
+            "node": "gun",
+            "slot": "light",
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": 0.46,
+            "clearance": 0.06
+          },
+          {
+            "node": "heavy",
+            "slot": "heavy",
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": 0.28,
+            "clearance": 0.06
+          }
+        ]
       },
       "cavity": {
         "owner": "chest",
@@ -5064,11 +5096,11 @@
         ],
         [
           "gun",
-          "wing_r",
+          "shoulder_r",
           [
-            0,
+            -0.32,
             0.28,
-            0.08
+            0.04
           ]
         ],
         [
@@ -5091,11 +5123,11 @@
         ],
         [
           "heavy",
-          "wing_l",
+          "shoulder_l",
           [
-            0,
+            0.32,
             0.28,
-            0.08
+            0.04
           ]
         ],
         [
@@ -8608,6 +8640,10 @@
           "elbow": -0.94,
           "wrist": -0.2,
           "splay": 0.18
+        },
+        "stance": {
+          "toeOut": 0.28,
+          "hipSplay": 0.08
         }
       },
       "cavity": null,
@@ -8700,7 +8736,34 @@
         "rights": "../../LICENSE"
       },
       "parameters": {
-        "limb": 0.22
+        "limb": 0.22,
+        "hornPath": [
+          [
+            0,
+            0.1,
+            0.55
+          ],
+          [
+            0,
+            0.45,
+            0.98
+          ],
+          [
+            0,
+            0.85,
+            1.5
+          ],
+          [
+            0,
+            1.12,
+            2.04
+          ],
+          [
+            0,
+            1.19,
+            2.43
+          ]
+        ]
       },
       "materials": {
         "armor": {
@@ -9496,7 +9559,7 @@
           "heavy_muzzle",
           "heavy_recoil",
           [
-            0,
+            0.5,
             0,
             1.65
           ]
@@ -10437,7 +10500,16 @@
             "d": 0.28,
             "axis": "z"
           }
-        ]
+        ],
+        "dorsalLift": {
+          "node": "heavy",
+          "height": 1.55,
+          "rest": 0.94,
+          "slot": "heavy"
+        },
+        "fireLead": {
+          "heavy": 0.28
+        }
       },
       "cavity": {
         "owner": "spine",

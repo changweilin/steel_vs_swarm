@@ -1,0 +1,77 @@
+{
+  "assets": {
+    "s06": {
+      "runtime": "c37b7fd39afff79848b6ccd88eefaa2bd4e914123a518698ead06c6b263a7f21",
+      "blend": "01476e4d3c6b945d8df717ca9aa7ddde68d7d15fbf86c9ebd0fb0590af1d2c9d",
+      "glb": "c58611ca2ba235581a40796ba884253076b02e6498f8d1caa3ee5b16246aa755"
+    },
+    "s07": {
+      "runtime": "a54520145666578efd51c9c5ca920eebb2ebf185f4f71367d6b9210757e02172",
+      "blend": "40a961f464f7c51f9036c9faf01e05d34059f1984461c5af16a9fc3c22bebcd6",
+      "glb": "d2ff576a026178caa0f888da088cd6dc540990d3224d49356b74d3859707c0cb"
+    },
+    "s09": {
+      "runtime": "28b3fbf7618e9764f07469c68aa7d7ab5a88f3d74572b61390dd8e212a8a7e14",
+      "blend": "60263d182edb3b73c94ffe1e7d1c9200daf62db5db8a79c49df7a084af9db383",
+      "glb": "8494acc68db36ce2c7df11cea7c07f4708d2116047a8ecabb9a2d6ae4b31496b"
+    },
+    "m02": {
+      "runtime": "a079cdcdde49250fba84c2a3483589448e9fabf9c2deb009e9caa72c7d9cff7f",
+      "blend": "e0e396a258d3a5b83b9e97e17ce140caba66fd3647f192fc7e496cc105f0c5e6",
+      "glb": "ba725805aa12c836bfb7acc33fe86cfc44356436e107a3a3c01efe5d5551514c"
+    },
+    "t12": {
+      "runtime": "d612717356ba5f2bc55b24f25864a749620cc9b2f9682ca5f36a17aa1a966735",
+      "blend": "bc943f27a77f48984cb52902ace9acc15a1a120a277c93fc71ee29b34b018aab",
+      "glb": "9088ae93483a6b447806c630780e32443eda1e45398cb0469521617958621eb3"
+    },
+    "t03": {
+      "runtime": "887836ddd5f7ac9c498f49869313356224eaea3b12b8194a80d405ead2066257",
+      "blend": "8ec46bdfc0b2b1e7e96bb962d05471679ecea0802a1de11829b92b8d3718d74d",
+      "glb": "ad07dd1d290839367bdf6531bc5c23e6ece9aa13cdd0ce8466c783ddf9a614a0"
+    },
+    "t06": {
+      "runtime": "86020baa08c02f7a9576a7b7bb8f2c02d588cc2639e3775b46ba8ca985b585b5",
+      "blend": "248942d0d8ffca4c751292072f8d5cbd981424acbed0d0575205bea10e0c7469",
+      "glb": "8e39b6188f284886c7132a894fda288aed9bc358b8a440e2836439996b8a0650"
+    },
+    "s10": {
+      "runtime": "b73fdba1206a1a7d4be9d1a5f271a6af5dda7da72653c520e442fafacc978ba8",
+      "blend": "ddb2b36ff305487b48ac9d67035fa81248c986844b5bb1f01fd8a020a5bf8a69",
+      "glb": "80ae2aad9f56f3576919b08dfc8af4e34fd3cbb19a03a5b6997cb2560c356956"
+    },
+    "t11": {
+      "runtime": "eac2da03f64d4d389bc9eeb6d297349fa79f26015a1bc3c300790e442730b46e",
+      "blend": "e82b6804289fcc8814eefddceb4e032bd07bcdc4c44177f8e441f9f653342e9b",
+      "glb": "6a0cdca015bff089a2739a0eaad3fbc08178a89bbda68d2b6db79a9babf58ab4"
+    },
+    "m05": {
+      "runtime": "391257d9141d55304c23916821712dd572b65a737a7d5cb829ad50cec7e0b0f7",
+      "blend": "e86ac0e3077f232203b6e72b462089336b0a94f9c8e094d3cac18e664009e6f4",
+      "glb": "cc794a30051adb267994356c7700438fd42d48f0d496ce7b1079a2b375950098"
+    },
+    "m07": {
+      "runtime": "022f4ee6b4d58518faa1024d1ade809c527e5a6dbdc5ff69e19f294a9befec8d",
+      "blend": "d0c012108de81d57d8b9ab3fd96300b5ec5a64288452c23d5663189aa85a5217",
+      "glb": "a5f4fbc2a05877f5e4b4f03e786cd5d3c5a897616f5ddc0f0e0013f326f0ca78"
+    }
+  },
+  "blenderJointSamples": 2852735,
+  "glbJointSamples": 485035,
+  "motionAssets": 23,
+  "equipmentAssets": 11,
+  "gates": {
+    "editableSource": "pass",
+    "exactExport": "pass",
+    "visualReview": "pass",
+    "runtimeEquipment": "pass",
+    "combatRoster": "pass",
+    "userSignoff": "pending_user_review"
+  },
+  "remainingGuard": {
+    "asset": "t11",
+    "guard": "audit_biped_posture",
+    "failure": "Defense disk and projected shield have different vertical centers",
+    "baseline": "Original Git version also fails this audit at the left firing forearm check"
+  }
+}

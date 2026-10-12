@@ -1,25 +1,25 @@
 {
   "t06": {
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     },
     "hashes": {
-      "runtime": "3bc5999e976ac94011165509f4c931cd36326aad19c60dcdbcc4baa07729a765",
-      "glb": "3cd6844ff6b07bb4cf5b187193099cdf3afb46bad48ccf468bff0531f0a69d30"
+      "runtime": "86020baa08c02f7a9576a7b7bb8f2c02d588cc2639e3775b46ba8ca985b585b5",
+      "glb": "8e39b6188f284886c7132a894fda288aed9bc358b8a440e2836439996b8a0650"
     },
     "measurements": {
-      "trianglesPerVisibleForm": 11680,
+      "trianglesPerVisibleForm": 12064,
       "effectTriangles": 3978,
       "effectMeshes": 30,
-      "retainedTriangles": 27338,
-      "meshesPerVisibleForm": 90,
+      "retainedTriangles": 28106,
+      "meshesPerVisibleForm": 92,
       "pairs": {
-        "pair": 127,
+        "pair": 129,
         "soft": 0,
         "gOnly": 0,
         "aOnly": 0
@@ -53,23 +53,23 @@
         }
       ],
       "clips": [
-        "skill",
-        "ult",
+        "flight_idle",
         "shield_deploy",
         "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
         "flight_shield_deploy",
         "flight_shield_retract",
         "idle",
+        "to_flight",
+        "to_ground",
         "run",
         "light",
         "heavy",
-        "flight_idle",
+        "skill",
+        "ult",
         "flight_light",
-        "flight_heavy"
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult"
       ]
     },
     "gates": {
@@ -89,22 +89,22 @@
   },
   "s10": {
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     },
     "hashes": {
-      "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-      "glb": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
+      "runtime": "b73fdba1206a1a7d4be9d1a5f271a6af5dda7da72653c520e442fafacc978ba8",
+      "glb": "80ae2aad9f56f3576919b08dfc8af4e34fd3cbb19a03a5b6997cb2560c356956"
     },
     "measurements": {
-      "trianglesPerVisibleForm": 17144,
+      "trianglesPerVisibleForm": 17744,
       "effectTriangles": 487,
       "effectMeshes": 8,
-      "retainedTriangles": 34775,
+      "retainedTriangles": 35975,
       "meshesPerVisibleForm": 109,
       "pairs": {
         "pair": 164,
@@ -141,199 +141,23 @@
         }
       ],
       "clips": [
-        "skill",
-        "ult",
+        "flight_idle",
         "shield_deploy",
         "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
         "flight_shield_deploy",
         "flight_shield_retract",
         "idle",
-        "run",
-        "light",
-        "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
-      ]
-    },
-    "gates": {
-      "structure": "pass",
-      "same_parts": "pass",
-      "same_geometry": "pass",
-      "same_scale": "pass",
-      "morph_continuity": "pass",
-      "locomotion_combat_shield": "pass",
-      "export_load": "pass",
-      "registry": "pass",
-      "controls": "pass",
-      "appearance": "pending_visual_review",
-      "flight_belly": "pending_visual_review",
-      "user_signoff": "pending_user_review"
-    }
-  },
-  "m01": {
-    "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
-      "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
-    },
-    "hashes": {
-      "runtime": "74f3ef897e58819f998be871bad99602d47ffe65d2679f632edf53e1638ff5ef",
-      "glb": "e59108ff5046ab9018c3ab4e95e5810c88161ccbc263f64373564064b5d3eb26"
-    },
-    "measurements": {
-      "trianglesPerVisibleForm": 11812,
-      "effectTriangles": 738,
-      "effectMeshes": 8,
-      "retainedTriangles": 24362,
-      "meshesPerVisibleForm": 103,
-      "pairs": {
-        "pair": 133,
-        "soft": 0,
-        "gOnly": 0,
-        "aOnly": 0
-      },
-      "maxSeamError": 0,
-      "samples": [
-        0.05,
-        0.25,
-        0.49,
-        0.5,
-        0.51,
-        0.75,
-        0.95
-      ],
-      "forms": [
-        {
-          "form": "ground",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        },
-        {
-          "form": "flight",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        }
-      ],
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "to_flight",
         "to_ground",
-        "flight_skill",
-        "flight_ult",
-        "flight_shield_deploy",
-        "flight_shield_retract",
-        "idle",
-        "run",
-        "light",
-        "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
-      ]
-    },
-    "gates": {
-      "structure": "pass",
-      "same_parts": "pass",
-      "same_geometry": "pass",
-      "same_scale": "pass",
-      "morph_continuity": "pass",
-      "locomotion_combat_shield": "pass",
-      "export_load": "pass",
-      "registry": "pass",
-      "controls": "pass",
-      "appearance": "pending_visual_review",
-      "flight_belly": "pending_visual_review",
-      "user_signoff": "pending_user_review"
-    }
-  },
-  "s03": {
-    "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
-      "image": "b335083d23ec7ec543f37bb9acf7da2657e0cf47773f5cd6101022dac7a28253",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
-    },
-    "hashes": {
-      "runtime": "c2e4a6b2128d0b8abedc88d27ac6fc0618091ea0810d3d28f6e89b53b51523ee",
-      "glb": "05270f172f8d0f5a8275a30086e2eeb3a0bcd82abe21dec19e708216592b4fef"
-    },
-    "measurements": {
-      "trianglesPerVisibleForm": 16308,
-      "effectTriangles": 932,
-      "effectMeshes": 10,
-      "retainedTriangles": 33548,
-      "meshesPerVisibleForm": 91,
-      "pairs": {
-        "pair": 138,
-        "soft": 0,
-        "gOnly": 0,
-        "aOnly": 0
-      },
-      "maxSeamError": 0,
-      "samples": [
-        0.05,
-        0.25,
-        0.49,
-        0.5,
-        0.51,
-        0.75,
-        0.95
-      ],
-      "forms": [
-        {
-          "form": "ground",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        },
-        {
-          "form": "flight",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        }
-      ],
-      "clips": [
         "skill",
         "ult",
-        "shield_deploy",
-        "shield_retract",
-        "to_flight",
-        "to_ground",
         "flight_skill",
         "flight_ult",
-        "flight_shield_deploy",
-        "flight_shield_retract",
-        "idle",
         "run",
-        "light",
         "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
+        "flight_heavy",
+        "light",
+        "flight_light"
       ]
     },
     "gates": {
@@ -353,22 +177,22 @@
   },
   "t11": {
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "9ef67af27f03fc71f8b5dd0a1b1638344c354b3903adc0a97f3a3df37c854880",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     },
     "hashes": {
-      "runtime": "17cd516be4219b7dda42b3923eadd7a41c42c62ed702c2f4ef8723584264f279",
-      "glb": "f8a9b71ec6c6ae04e45af979975e60c53d0e1797454b1ec2e55b21faf8288a05"
+      "runtime": "eac2da03f64d4d389bc9eeb6d297349fa79f26015a1bc3c300790e442730b46e",
+      "glb": "6a0cdca015bff089a2739a0eaad3fbc08178a89bbda68d2b6db79a9babf58ab4"
     },
     "measurements": {
       "trianglesPerVisibleForm": 13804,
-      "effectTriangles": 716,
+      "effectTriangles": 355,
       "effectMeshes": 6,
-      "retainedTriangles": 28324,
+      "retainedTriangles": 27963,
       "meshesPerVisibleForm": 135,
       "pairs": {
         "pair": 234,
@@ -405,23 +229,23 @@
         }
       ],
       "clips": [
-        "skill",
-        "ult",
+        "flight_idle",
         "shield_deploy",
         "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy",
-        "flight_skill",
-        "flight_ult",
         "flight_shield_deploy",
         "flight_shield_retract",
         "idle",
+        "to_flight",
+        "to_ground",
         "run",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
         "light",
-        "heavy"
+        "heavy",
+        "flight_light",
+        "flight_heavy"
       ]
     },
     "gates": {
@@ -441,22 +265,22 @@
   },
   "m05": {
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     },
     "hashes": {
-      "runtime": "8fc53478049a580b69a5954eca5f5bb704a3adab084773dcca12b35c068377da",
-      "glb": "c0589bdd93f0cea68c9a061f9f7244200f98b86d1eb445919c65fb134a2ac840"
+      "runtime": "391257d9141d55304c23916821712dd572b65a737a7d5cb829ad50cec7e0b0f7",
+      "glb": "cc794a30051adb267994356c7700438fd42d48f0d496ce7b1079a2b375950098"
     },
     "measurements": {
-      "trianglesPerVisibleForm": 16184,
-      "effectTriangles": 724,
+      "trianglesPerVisibleForm": 19016,
+      "effectTriangles": 408,
       "effectMeshes": 6,
-      "retainedTriangles": 33092,
+      "retainedTriangles": 38440,
       "meshesPerVisibleForm": 131,
       "pairs": {
         "pair": 194,
@@ -493,23 +317,23 @@
         }
       ],
       "clips": [
-        "skill",
-        "ult",
+        "flight_idle",
         "shield_deploy",
         "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
         "flight_shield_deploy",
         "flight_shield_retract",
         "idle",
+        "to_flight",
+        "to_ground",
         "run",
         "light",
         "heavy",
-        "flight_idle",
+        "skill",
+        "ult",
         "flight_light",
-        "flight_heavy"
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult"
       ]
     },
     "gates": {
@@ -529,25 +353,25 @@
   },
   "m07": {
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     },
     "hashes": {
-      "runtime": "af9fce9df33463447548b0d623c4b982371c64a56151ec79a5110d1e51675d50",
-      "glb": "49d157d873d125e3137b8ee5d89c27c509330ca4c8ae146ed3d817e1a5f76ea9"
+      "runtime": "022f4ee6b4d58518faa1024d1ade809c527e5a6dbdc5ff69e19f294a9befec8d",
+      "glb": "a5f4fbc2a05877f5e4b4f03e786cd5d3c5a897616f5ddc0f0e0013f326f0ca78"
     },
     "measurements": {
-      "trianglesPerVisibleForm": 13216,
-      "effectTriangles": 868,
-      "effectMeshes": 10,
-      "retainedTriangles": 27300,
-      "meshesPerVisibleForm": 104,
+      "trianglesPerVisibleForm": 13468,
+      "effectTriangles": 351,
+      "effectMeshes": 8,
+      "retainedTriangles": 27287,
+      "meshesPerVisibleForm": 106,
       "pairs": {
-        "pair": 189,
+        "pair": 191,
         "soft": 0,
         "gOnly": 0,
         "aOnly": 0
@@ -581,111 +405,23 @@
         }
       ],
       "clips": [
-        "skill",
-        "ult",
+        "flight_idle",
         "shield_deploy",
         "shield_retract",
-        "to_flight",
-        "to_ground",
-        "flight_skill",
-        "flight_ult",
         "flight_shield_deploy",
         "flight_shield_retract",
         "idle",
-        "run",
-        "light",
-        "heavy",
-        "flight_idle",
-        "flight_light",
-        "flight_heavy"
-      ]
-    },
-    "gates": {
-      "structure": "pass",
-      "same_parts": "pass",
-      "same_geometry": "pass",
-      "same_scale": "pass",
-      "morph_continuity": "pass",
-      "locomotion_combat_shield": "pass",
-      "export_load": "pass",
-      "registry": "pass",
-      "controls": "pass",
-      "appearance": "pending_visual_review",
-      "flight_belly": "pending_visual_review",
-      "user_signoff": "pending_user_review"
-    }
-  },
-  "m08": {
-    "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
-      "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
-    },
-    "hashes": {
-      "runtime": "6087eee5be35b9355d7419c6c60d136583c65690af17821fec1f1179d9ba19bc",
-      "glb": "e967f678807c6442d704a17e7571e489ec99536c0bd6be4337f8ff5e6fc3eb24"
-    },
-    "measurements": {
-      "trianglesPerVisibleForm": 16612,
-      "effectTriangles": 924,
-      "effectMeshes": 10,
-      "retainedTriangles": 34148,
-      "meshesPerVisibleForm": 104,
-      "pairs": {
-        "pair": 151,
-        "soft": 0,
-        "gOnly": 0,
-        "aOnly": 0
-      },
-      "maxSeamError": 0,
-      "samples": [
-        0.05,
-        0.25,
-        0.49,
-        0.5,
-        0.51,
-        0.75,
-        0.95
-      ],
-      "forms": [
-        {
-          "form": "ground",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        },
-        {
-          "form": "flight",
-          "shieldPhases": [
-            0.7692307692307694,
-            0.7692307692307696,
-            0.7692307692307686
-          ]
-        }
-      ],
-      "clips": [
-        "skill",
-        "ult",
-        "shield_deploy",
-        "shield_retract",
         "to_flight",
         "to_ground",
+        "skill",
+        "ult",
         "flight_skill",
         "flight_ult",
-        "flight_shield_deploy",
-        "flight_shield_retract",
-        "idle",
-        "run",
         "light",
-        "heavy",
-        "flight_idle",
         "flight_light",
-        "flight_heavy"
+        "heavy",
+        "flight_heavy",
+        "run"
       ]
     },
     "gates": {

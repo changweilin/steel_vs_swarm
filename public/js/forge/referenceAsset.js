@@ -79,8 +79,12 @@ export function buildReferenceAsset(asset, spec) {
   if (rig.axialWave) rig.axialWave = { ...rig.axialWave, chain: rig.axialWave.chain.map(nodeOf) };
   if (rig.predatory) rig.predatory = { ...rig.predatory, hunch: nodeOf(rig.predatory.hunch) };
   if (rig.archery) rig.archery = { ...rig.archery,
-    ...Object.fromEntries(['bow','nock','shoulder','elbow','hand'].map(key => [key,nodeOf(rig.archery[key])])),
+    ...Object.fromEntries(['bow','nock','shoulder','elbow','hand','arrow','head','bowShoulder','bowElbow','bowHand'].map(key => [key,nodeOf(rig.archery[key])])),
     strings: rig.archery.strings.map(nodeOf), scratch: Array.from({length:6}, () => new THREE.Vector3()) };
+  if (rig.archery) {
+    rig.archery.arrowRest = rig.archery.arrow.position.clone();
+    rig.archery.arrowRotation = rig.archery.arrow.quaternion.clone();
+  }
   // Parent-space yaw brings the holding hand inward instead of twisting a hanging arm.
   if (rig.archery) rig.armSh[0].rotation.order = 'YXZ';
   if (rig.rotorWings) rig.rotorWings = rig.rotorWings.map(wing => ({ ...wing, node: nodeOf(wing.node) }));
@@ -89,7 +93,12 @@ export function buildReferenceAsset(asset, spec) {
   if (rig.swim) rig.swim = { ...rig.swim, body: nodeOf(rig.swim.body),
     tail: rig.swim.tail.map(nodeOf), fins: rig.swim.fins.map(nodeOf) };
   if (rig.launcher) rig.launcher = { ...rig.launcher, base: nodeOf(rig.launcher.base),
-    lift: nodeOf(rig.launcher.lift), pivot: nodeOf(rig.launcher.pivot) };
+    lift: nodeOf(rig.launcher.lift), pivot: nodeOf(rig.launcher.pivot),
+    pods: rig.launcher.pods?.map(pod => ({...pod,node:nodeOf(pod.node)})) };
+  if (rig.dorsalLift) rig.dorsalLift = {...rig.dorsalLift,node:nodeOf(rig.dorsalLift.node)};
+  if (rig.stowedWeapons) rig.stowedWeapons = rig.stowedWeapons.map(weapon => ({...weapon,node:nodeOf(weapon.node)}));
+  if (rig.alternating) rig.alternating = {...rig.alternating,index:-1,
+    weapons:rig.alternating.weapons.map(nodeOf),muzzles:rig.alternating.muzzles.map(nodeOf),recoils:rig.alternating.recoils.map(nodeOf)};
   if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
     w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),

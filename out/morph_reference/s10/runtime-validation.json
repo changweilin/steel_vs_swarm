@@ -1,21 +1,21 @@
 {
   "source": {
-    "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-    "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-    "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+    "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+    "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+    "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
     "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-    "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-    "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+    "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+    "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
   },
   "hashes": {
-    "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-    "glb": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
+    "runtime": "b73fdba1206a1a7d4be9d1a5f271a6af5dda7da72653c520e442fafacc978ba8",
+    "glb": "80ae2aad9f56f3576919b08dfc8af4e34fd3cbb19a03a5b6997cb2560c356956"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 17144,
+    "trianglesPerVisibleForm": 17744,
     "effectTriangles": 487,
     "effectMeshes": 8,
-    "retainedTriangles": 34775,
+    "retainedTriangles": 35975,
     "meshesPerVisibleForm": 109,
     "pairs": {
       "pair": 164,
@@ -52,23 +52,23 @@
       }
     ],
     "clips": [
-      "skill",
-      "ult",
+      "flight_idle",
       "shield_deploy",
       "shield_retract",
-      "to_flight",
-      "to_ground",
-      "flight_skill",
-      "flight_ult",
       "flight_shield_deploy",
       "flight_shield_retract",
       "idle",
+      "to_flight",
+      "to_ground",
+      "skill",
+      "ult",
+      "flight_skill",
+      "flight_ult",
       "run",
-      "light",
       "heavy",
-      "flight_idle",
-      "flight_light",
-      "flight_heavy"
+      "flight_heavy",
+      "light",
+      "flight_light"
     ]
   },
   "gates": {

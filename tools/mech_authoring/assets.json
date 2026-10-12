@@ -5729,7 +5729,7 @@
         {
           "id": "weapons",
           "route": "procedural",
-          "intent": "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms"
+          "intent": "Separately held recurve bow and arrow; draw only during light fire, cheek anchor and aligned draw elbow; dorsal rocket boxes close inward at rest and separate before elevating"
         },
         {
           "id": "shield",
@@ -5932,6 +5932,15 @@
             0,
             -0.7,
             0.1
+          ]
+        ],
+        [
+          "arrow_grip",
+          "wrist_l",
+          [
+            0,
+            -0.05,
+            0.08
           ]
         ],
         [
@@ -6170,7 +6179,7 @@
         ],
         [
           "gun_recoil",
-          "bow_nock",
+          "arrow_grip",
           [
             0,
             0,
@@ -6183,7 +6192,7 @@
           [
             0,
             0,
-            1.55
+            1.9
           ]
         ],
         [
@@ -6223,6 +6232,24 @@
           ]
         ],
         [
+          "launcher_pod_l",
+          "heavy",
+          [
+            0.55,
+            0,
+            0
+          ]
+        ],
+        [
+          "launcher_pod_r",
+          "heavy",
+          [
+            -0.55,
+            0,
+            0
+          ]
+        ],
+        [
           "charge_hinge",
           "heavy",
           [
@@ -6233,9 +6260,9 @@
         ],
         [
           "heavy_muzzle",
-          "heavy",
+          "launcher_pod_l",
           [
-            1.35,
+            0,
             1.2,
             0
           ]
@@ -6292,15 +6319,16 @@
         ],
         "armBase": [
           {
-            "shX": -1.65,
-            "shZ": 0.12,
-            "elX": -0.1,
-            "shY": 0.7
+            "shX": 0.05,
+            "shZ": -0.12,
+            "elX": -0.22,
+            "shY": 0
           },
           {
-            "shX": -0.72,
-            "shZ": -0.48,
-            "elX": -0.88
+            "shX": 0.05,
+            "shZ": 0.12,
+            "elX": -0.22,
+            "shY": 0
           }
         ],
         "gunR": {
@@ -6417,7 +6445,7 @@
             "muzzle": "light_muzzle",
             "r": 0.075,
             "aimJoint": "wrist_r",
-            "alwaysForward": true
+            "alwaysForward": false
           },
           "heavy": {
             "nodes": [
@@ -6441,7 +6469,19 @@
           "extension": 0.62,
           "rest": 0.32,
           "clearance": 0.2,
-          "rotateStart": 0.85
+          "rotateStart": 0.85,
+          "pods": [
+            {
+              "node": "launcher_pod_r",
+              "rest": -0.55,
+              "deploy": -1.35
+            },
+            {
+              "node": "launcher_pod_l",
+              "rest": 0.55,
+              "deploy": 1.35
+            }
+          ]
         },
         "archery": {
           "bow": "gun",
@@ -6455,13 +6495,31 @@
           "hand": "wrist_l",
           "halfHeight": 0.95,
           "restDraw": 0.24,
-          "fullDraw": 0.88,
-          "arrowLength": 1.55,
+          "fullDraw": 1.54,
+          "arrowLength": 1.9,
           "pole": [
-            1,
-            0.15,
-            -0.05
+            -1,
+            0.9,
+            -0.5
+          ],
+          "arrow": "arrow_grip",
+          "head": "head",
+          "bowShoulder": "shoulder_r",
+          "bowElbow": "elbow_r",
+          "bowHand": "wrist_r",
+          "gripOffset": [
+            0.16,
+            -0.1,
+            1.76
+          ],
+          "anchorOffset": [
+            0.16,
+            -0.1,
+            0.22
           ]
+        },
+        "fireLead": {
+          "light": 0.26
         }
       },
       "motion": {
@@ -6570,7 +6628,7 @@
         {
           "id": "weapons",
           "route": "procedural",
-          "intent": "Light and heavy weapons held higher by the right and left lateral upper tentacle tips; front tentacle remains unarmed and the face stays visible"
+          "intent": "Lateral weapon tentacles converge before muzzle discharge; front tentacle carries a swaying shield generator, rear tentacle holds the attack tool above the head and scans vertically"
         },
         {
           "id": "shield",
@@ -7259,8 +7317,8 @@
           "tent_1",
           "spine",
           [
-            5.572142936120457e-17,
-            0.24,
+            0,
+            0.7,
             0.91
           ]
         ],
@@ -7269,7 +7327,7 @@
           "tent_1",
           [
             2.433239441802644e-17,
-            -0.06,
+            0.018,
             0.39737815727714476
           ]
         ],
@@ -7278,7 +7336,7 @@
           "tent_1_0",
           [
             2.3563277017167424e-17,
-            -0.052956686078964255,
+            0.018,
             0.38481751691300864
           ]
         ],
@@ -7287,7 +7345,7 @@
           "tent_1_1",
           [
             2.2049353081291024e-17,
-            -0.046483979563610056,
+            0.018,
             0.3600932627536796
           ]
         ],
@@ -7296,7 +7354,7 @@
           "tent_1_2",
           [
             1.9838475905172014e-17,
-            -0.04110626064114354,
+            0.018,
             0.3239868984099633
           ]
         ],
@@ -7305,7 +7363,7 @@
           "tent_1_3",
           [
             1.700052862805685e-17,
-            -0.03725920011613704,
+            0.018,
             0.27763970215564654
           ]
         ],
@@ -7314,7 +7372,7 @@
           "tent_1_4",
           [
             1.3625215312605773e-17,
-            -0.03525446395297668,
+            0.018,
             0.22251665250898753
           ]
         ],
@@ -7323,7 +7381,7 @@
           "tent_1_5",
           [
             9.819225508546872e-18,
-            -0.035254463952976677,
+            0.018,
             0.1603601220430805
           ]
         ],
@@ -7332,7 +7390,7 @@
           "tent_1_6",
           [
             5.702861925736984e-18,
-            -0.03725920011613704,
+            0.018,
             0.09313480310743535
           ]
         ],
@@ -7341,7 +7399,7 @@
           "tent_1_7",
           [
             1.4062378117838183e-18,
-            -0.04110626064114353,
+            0.018,
             0.022965606291755234
           ]
         ],
@@ -7350,7 +7408,7 @@
           "tent_1_8",
           [
             -2.934835769501117e-18,
-            -0.04648397956361006,
+            0.018,
             -0.04792950541404206
           ]
         ],
@@ -7359,7 +7417,7 @@
           "tent_1_9",
           [
             -7.183142760691847e-18,
-            -0.05295668607896425,
+            0.018,
             -0.11730962373303111
           ]
         ],
@@ -7368,7 +7426,7 @@
           "tent_1_10",
           [
             -1.1204399343476908e-17,
-            -0.06,
+            0.018,
             -0.18298172748710642
           ]
         ],
@@ -7493,8 +7551,8 @@
           "tent_3",
           "spine",
           [
-            -1.4633916112057394e-16,
-            0.24,
+            0,
+            0.65,
             -0.91
           ]
         ],
@@ -7502,108 +7560,108 @@
           "tent_3_0",
           "tent_3",
           [
-            -6.390328152041414e-17,
-            -0.06,
-            -0.39737815727714476
+            0,
+            0.22,
+            0.035
           ]
         ],
         [
           "tent_3_1",
           "tent_3_0",
           [
-            -6.188337649401314e-17,
-            -0.052956686078964255,
-            -0.38481751691300864
+            0,
+            0.22,
+            0.04767796505786434
           ]
         ],
         [
           "tent_3_2",
           "tent_3_1",
           [
-            -5.790741318301526e-17,
-            -0.046483979563610056,
-            -0.3600932627536796
+            0,
+            0.22,
+            0.059328836785501896
           ]
         ],
         [
           "tent_3_3",
           "tent_3_2",
           [
-            -5.210106695315455e-17,
-            -0.04110626064114354,
-            -0.3239868984099633
+            0,
+            0.22,
+            0.06900873084594163
           ]
         ],
         [
           "tent_3_4",
           "tent_3_3",
           [
-            -4.4647869348597045e-17,
-            -0.03725920011613704,
-            -0.27763970215564654
+            0,
+            0.22,
+            0.07593343979095332
           ]
         ],
         [
           "tent_3_5",
           "tent_3_4",
           [
-            -3.5783406882992846e-17,
-            -0.03525446395297668,
-            -0.22251665250898753
+            0,
+            0.22,
+            0.07954196488464196
           ]
         ],
         [
           "tent_3_6",
           "tent_3_5",
           [
-            -2.5787874436238742e-17,
-            -0.035254463952976677,
-            -0.1603601220430805
+            0,
+            0.22,
+            0.07954196488464198
           ]
         ],
         [
           "tent_3_7",
           "tent_3_6",
           [
-            -1.4977218635024078e-17,
-            -0.03725920011613704,
-            -0.09313480310743535
+            0,
+            0.22,
+            0.07593343979095332
           ]
         ],
         [
           "tent_3_8",
           "tent_3_7",
           [
-            -3.693151164132786e-18,
-            -0.04110626064114353,
-            -0.022965606291755234
+            0,
+            0.22,
+            0.06900873084594163
           ]
         ],
         [
           "tent_3_9",
           "tent_3_8",
           [
-            7.707652324412003e-18,
-            -0.04648397956361006,
-            0.04792950541404206
+            0,
+            0.22,
+            0.0593288367855019
           ]
         ],
         [
           "tent_3_10",
           "tent_3_9",
           [
-            1.8864826295013124e-17,
-            -0.05295668607896425,
-            0.11730962373303111
+            0,
+            0.22,
+            0.04767796505786434
           ]
         ],
         [
           "tent_3_11",
           "tent_3_10",
           [
-            2.9425706044897386e-17,
-            -0.06,
-            0.18298172748710642
+            0,
+            0.22,
+            0.03500000000000003
           ]
         ],
         [
@@ -7662,29 +7720,20 @@
         ],
         [
           "cast_dish",
-          "spine",
+          "tent_3_11",
           [
             0,
-            0.45,
-            -0.65
+            0.12,
+            0.06
           ]
         ],
         [
           "emitter_l",
-          "spine",
+          "tent_1_11",
           [
-            0.23,
-            0.28,
-            -0.38
-          ]
-        ],
-        [
-          "emitter_r",
-          "spine",
-          [
-            -0.23,
-            0.28,
-            -0.38
+            0,
+            0.09,
+            0
           ]
         ],
         [
@@ -8474,7 +8523,10 @@
               0.008,
               0.015,
               0.008
-            ]
+            ],
+            "slot": "light",
+            "convergeYaw": -1.85,
+            "convergeAt": 0.8
           },
           {
             "chain": [
@@ -8494,9 +8546,9 @@
             "phase": 5.6499999999999995,
             "frequency": 0.32,
             "swing": [
-              0.014,
-              0.02,
-              0.014
+              0.015,
+              0.05,
+              0.008
             ],
             "travel": [
               0.008,
@@ -8530,7 +8582,10 @@
               0.008,
               0.015,
               0.008
-            ]
+            ],
+            "slot": "heavy",
+            "convergeYaw": 1.85,
+            "convergeAt": 0.8
           },
           {
             "chain": [
@@ -8550,9 +8605,9 @@
             "phase": 7.909999999999999,
             "frequency": 0.32,
             "swing": [
-              0.014,
-              0.02,
-              0.014
+              0.022,
+              0.012,
+              0.01
             ],
             "travel": [
               0.008,
@@ -8561,7 +8616,11 @@
             ]
           }
         ],
-        "cephalopod": true
+        "cephalopod": true,
+        "fireLead": {
+          "light": 0.2,
+          "heavy": 0.2
+        }
       },
       "motion": {
         "shield": {
@@ -8573,23 +8632,11 @@
               "axis": "y",
               "rest": 0,
               "deploy": 0.22
-            },
-            {
-              "node": "emitter_r",
-              "axis": "y",
-              "rest": 0,
-              "deploy": 0.22
             }
           ],
           "mounts": [
             {
               "node": "emitter_l",
-              "axis": "y",
-              "radius": 0.12,
-              "depth": 0.065
-            },
-            {
-              "node": "emitter_r",
               "axis": "y",
               "radius": 0.12,
               "depth": 0.065
@@ -8826,9 +8873,9 @@
           "shoulder_r",
           "chest",
           [
-            -0.38,
+            -0.68,
             0.36,
-            0.15
+            0.21
           ]
         ],
         [
@@ -8889,9 +8936,9 @@
           "shoulder_l",
           "chest",
           [
-            0.38,
+            0.68,
             0.36,
-            0.15
+            0.21
           ]
         ],
         [
@@ -9197,7 +9244,12 @@
             "staff": false
           }
         ],
-        "neck": "neck"
+        "neck": "neck",
+        "stance": {
+          "toeOut": 0.24,
+          "hipSplay": 0.08,
+          "armSplay": 0.18
+        }
       },
       "motion": {
         "shield": {
@@ -10546,8 +10598,8 @@
           "wrist_l",
           [
             0,
-            -0.23,
-            0.16
+            0.16,
+            0.08
           ]
         ],
         [
@@ -10573,8 +10625,8 @@
           "wrist_r",
           [
             0,
-            -0.23,
-            0.16
+            0.16,
+            0.08
           ]
         ],
         [
@@ -10754,7 +10806,35 @@
           "rest": 0,
           "aim": 0
         },
-        "neck": "neck"
+        "neck": "neck",
+        "stance": {
+          "toeOut": 0.24,
+          "hipSplay": 0.08
+        },
+        "stowedWeapons": [
+          {
+            "node": "gun",
+            "slot": "light",
+            "rotation": [
+              3.141592653589793,
+              0,
+              0
+            ],
+            "scale": 1,
+            "clearance": 0.06
+          },
+          {
+            "node": "heavy",
+            "slot": "heavy",
+            "rotation": [
+              -3.141592653589793,
+              0,
+              0
+            ],
+            "scale": 1,
+            "clearance": 0.06
+          }
+        ]
       },
       "motion": {
         "shield": {
@@ -12570,7 +12650,11 @@
             "staff": false
           }
         ],
-        "neck": "neck"
+        "neck": "neck",
+        "stance": {
+          "toeOut": 0.24,
+          "hipSplay": 0.08
+        }
       },
       "motion": {
         "shield": {
@@ -12686,7 +12770,7 @@
         {
           "id": "weapons",
           "route": "procedural",
-          "intent": "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms"
+          "intent": "Alternating left/right guns mounted outside the short forearms; oral heavy rotary cannon retains its opening jaw"
         },
         {
           "id": "shield",
@@ -12926,6 +13010,33 @@
           ]
         ],
         [
+          "gun_l",
+          "elbow_l",
+          [
+            0.23,
+            -0.06,
+            0.09
+          ]
+        ],
+        [
+          "gun_l_recoil",
+          "gun_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle_l",
+          "gun_l_recoil",
+          [
+            0,
+            0,
+            0.68
+          ]
+        ],
+        [
           "wrist_l",
           "elbow_l",
           [
@@ -12999,11 +13110,11 @@
         ],
         [
           "gun",
-          "chest",
+          "elbow_r",
           [
-            0,
-            -0.3,
-            1.05
+            -0.23,
+            -0.06,
+            0.09
           ]
         ],
         [
@@ -13211,11 +13322,13 @@
         "wpn": {
           "light": {
             "nodes": [
-              "gun"
+              "gun",
+              "gun_l"
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "alwaysForward": true
           },
           "heavy": {
             "nodes": [
@@ -13234,7 +13347,30 @@
         },
         "anatomicalArms": true,
         "waist": "waist",
-        "neck": "neck"
+        "neck": "neck",
+        "stance": {
+          "toeOut": 0.24,
+          "hipSplay": 0.08
+        },
+        "alternating": {
+          "slot": "light",
+          "weapons": [
+            "gun",
+            "gun_l"
+          ],
+          "muzzles": [
+            "light_muzzle",
+            "light_muzzle_l"
+          ],
+          "recoils": [
+            "gun_recoil",
+            "gun_l_recoil"
+          ],
+          "sides": [
+            "R",
+            "L"
+          ]
+        }
       },
       "motion": {
         "shield": {
@@ -13275,7 +13411,16 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.17
+            "amplitude": -0.17,
+            "barrel": 0
+          },
+          {
+            "node": "gun_l_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.17,
+            "barrel": 1
           }
         ],
         "charge": [

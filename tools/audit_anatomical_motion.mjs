@@ -1,6 +1,6 @@
 // The real registry and locomotion driver must preserve species motion and equipment clearance together.
-import { mkdir, writeFile } from 'node:fs/promises';
-import { chromiumOrNull, chromePath } from './pw.mjs';
+import { mkdir } from 'node:fs/promises';
+import { chromiumOrNull, chromePath, writeReview as writeFile } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 
 const root = 'out/mech_reference/motion';

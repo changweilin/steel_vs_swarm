@@ -18,16 +18,22 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   const cf = ent.castFx, duration = rig.combat?.clips[cf?.slot]?.duration ?? (cf?.slot === 'atk' ? 1.35 : .95);
   const age = cf ? (now - cf.t0) / duration : -1;
   const cast = age >= 0 && age < 1 ? Math.sin(Math.PI * age) ** 2 : 0;
+  const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
+  rig._bowAim = rig.archery && rig._aimSlot==='light' && !(age>=0&&age<1) && !defending && !ent.dead
+    ? Math.max(0,Math.min(1,rig._fireAim || 0)) : 0;
   for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
     for (const track of tracks) {
       const phase = track.trigger === 'heavy' ? Math.max(0, rig._chg || 0, rig._aimH || 0) : weight;
-      track.node[track.channel][track.axis] = track.rest + track.amplitude * phase;
+      const active = track.barrel == null || track.barrel === rig.alternating?.index;
+      track.node[track.channel][track.axis] = track.rest + track.amplitude * (active ? phase : 0);
     }
   }
   if (rig.launcher) {
     // Retraction restores the vertical rack before the support enters the rider's height range.
     rig.launcher.pivot.rotation.set(0, 0, 0);
     rig.launcher.lift.scale.y = 1;
+    const spread = Math.max(0,Math.min(1,rig._aimH || 0));
+    for (const pod of rig.launcher.pods || []) pod.node.position.x = pod.rest+(pod.deploy-pod.rest)*spread;
   }
   const spinner = motion.fireSpin;
   if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]
@@ -35,7 +41,6 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   stepAuthoredCombat(rig, ent, now);
   const shield = rig.shield;
   if (!shield) return;
-  const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
   const castShield = rig.combat && cf?.slot === 'def' && age >= 0 && age < 1;
   const target = !ent.dead && (!!defending || castShield);
   shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));

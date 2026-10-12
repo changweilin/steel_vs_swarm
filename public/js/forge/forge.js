@@ -53,6 +53,7 @@
 // 「兩座看板同形」的保證仍是同一支收尾。
 
 import * as THREE from 'three';
+import { stepEquipmentPose } from '../anatomicalPose.js';
 import { outlinify } from '../toon.js';
 import { heroPalette, paintUnit } from '../paint.js';
 import { segLimbF, outlineWF } from './geo.js';
@@ -229,6 +230,8 @@ function finishRig(g, rig, W, K, H, D, ctx, F, spec) {
   rig.stab = stabList(g, W.stab);
   if (D.extra) D.extra(ctx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
   rig.aimForward = weaponAimList(g, rig.wpn);
+  // The aiming basis must be captured before a holstered weapon reverses its forward axis.
+  stepEquipmentPose(rig);
   // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
   if (K.accentF !== 1) g.traverse((o) => {
     if (o.isMesh && o.material?.emissiveIntensity) o.material.emissiveIntensity *= K.accentF;

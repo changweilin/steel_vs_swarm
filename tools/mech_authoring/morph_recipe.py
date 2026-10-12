@@ -40,6 +40,9 @@ def create(base, spec):
                             r = [0, 0, 0]
                             r['xyz'.index(joint.get('axis', 'x'))] = joint['base']
                             ground.setdefault(joint['g'], {}).setdefault('rotation', r)
+                    if rig.get('stance'):
+                        r=ground[rig['leg'+side]]['rotation']
+                        r[1],r[2]=(1 if side=='L' else -1)*rig['stance']['toeOut'],(1 if side=='L' else -1)*rig['stance']['hipSplay']
             self.reset()
 
         def reset(self):
@@ -339,7 +342,8 @@ def limb_inventory(a):
             for x in [-.09, 0, .09]:
                 if a.spec['id'] == 'm05':
                     a.strut('Open wolf proximal finger','wrist_'+n,(x,-.15,.09),(x*1.55,-.26,.30),.038,'armor')
-                    spike(a, 'Wolf fore claw', 'wrist_'+n, (x*1.55, -.26, .30), (x*1.8, -.36, .52), .055, 'steel')
+                    a.plate('Retractable triple knuckle blade','wrist_'+n,
+                            [(-.045,0),(.045,0),(.035,.59),(0,.78),(-.032,.60)],.035,(x*1.55,-.22,.22),'steel').rotation_euler = rotation((math.pi/2,0,0)).to_euler()
                 else:
                     a.box('Armored finger', 'wrist_'+n, (.06, .18, .08), (x, -.22, .12), 'armor', .009)
 
@@ -523,6 +527,7 @@ def raptor(a):
         rounded_hull(a,'Continuous tapered raptor counterbalance tail',name,
                      [(-.89,max(.028,width-.105),max(.028,width-.105)*.74),(.02,width,width*.74)],
                      (0,0,0),'armor')
+        ellipsoid(a,'Flexible overlapping raptor tail coupling',name,(width,width*.74,.26),(0,0,0),'armor',12,6)
         for s,n in [(1,'l'),(-1,'r')]:
             wing(a,'Paired archaeopteryx tail feather',f'tail_feather_{n}_{i}',
                  [(s*.04,0),(s*.28,-.10),(s*.57,-.68),(s*.16,-.58)],(0,.04,0),'armor',.045)
@@ -563,7 +568,7 @@ def beetle(a):
     ellipsoid(a,'Three segment armored insect abdomen','spine',(2.50,1.43,2.60),(0,.12,-.64),'shade',20,10)
     ellipsoid(a,'Insect pronotum no neck','chest',(2.20,1.25,1.35),(0,.27,.13),'armor',20,10)
     ellipsoid(a,'Insect head directly on thorax','head',(1.16,.81,.83),(0,.05,.25),'armor',16,8)
-    path=[(0,.1,.55),(0,.65,.85),(0,1.35,1.12),(0,1.98,1.10),(0,2.28,.94)]
+    path=a.p['hornPath']
     for i,(start,end) in enumerate(zip(path,path[1:])):
         a.strut('Large curved metallic rhinoceros horn','head',start,end,.19-i*.039,'steel')
     for s,n in [(1,'l'),(-1,'r')]:
@@ -671,6 +676,11 @@ def weapons(a):
         spike(a,'Handheld raptor electromagnetic lance tip','heavy_recoil',(0,0,heavy_len-.10),(0,0,heavy_len+.43),.10,'brass')
     else:
         if id=='m07':
+            lift=a.spec['rig']['dorsalLift']
+            a.disk('Dorsal cannon lift foot','chest',.35,.18,(0,lift['rest']-.18,-.68),'armor','y',16)
+            a.tube('Dorsal cannon telescopic socket','chest',.28,.22,.44,(0,lift['rest']-.02,-.68),'shade','y',12)
+            a.tube('Dorsal cannon sliding lift ram','heavy',.10,.06,lift['height']+.24,
+                   (0,-(lift['height']+.24)/2+.10,0),'steel','y',12)
             a.disk('Dorsal central twin AA turret','heavy',.43,.23,(0,-.04,0),'armor','y',20)
             count=2
             for s in [-1,1]:
@@ -682,7 +692,7 @@ def weapons(a):
             for i in range(2 if id=='t11' else 1):
                 a.tube('Twin tray top machine gun barrel' if id=='t11' else 'Short dorsal phase laser barrel','gun_recoil',.071,.040,light_len-.25,((i-.5)*.18 if id=='t11' else 0,0,(light_len+.25)/2),'steel')
         for i in range(count):
-            x=(i-.5)*.3 if count==2 else 0
+            x=(i-.5)*(1.0 if id=='m07' else .3) if count==2 else 0
             a.tube('Twin 35mm anti-aircraft open barrel' if id=='m07' else 'Tray top recoilless cannon' if id=='t11' else 'Long dorsal electromagnetic lance tube',
                    'heavy_recoil',.105 if id!='s10' else .09,.06,heavy_len-.28,(x,0,(heavy_len+.28)/2),'steel')
         if id=='s10':

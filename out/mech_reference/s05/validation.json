@@ -6,9 +6,9 @@
     "meshes": 30,
     "joints": 16,
     "source": {
-      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
+      "contract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2",
       "image": "67cef56fb89e067c8f6958784842211b69d640fed7fc61f568997139f436daf6"
     }
   },
@@ -24,8 +24,8 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "01714521be4f4ba77508d3c05e7d3dd0a41c7288f5d51ae6f73652f336d770d4",
-    "blend": "536628817410306ef26ee15212d0d9087c2b77dc78652a590e0164021a8883e2",
+    "runtime": "fa6ace7ac1a340b4dd9716f64b284d3133046c6db0850e21df828be524b1eedc",
+    "blend": "074707c306cffa8df4f950eec2c38a89c02ad41c7c37b739545ff2630a8c65b1",
     "glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126"
   },
   "gates": {
@@ -35,7 +35,6 @@
     "appearance": "pending_visual_review",
     "export": "pending_independent_load",
     "destination": "pending_browser_review",
-    "user_signoff": "pending_user_review",
-    "editable_source": "pass"
+    "user_signoff": "pending_user_review"
   }
 }

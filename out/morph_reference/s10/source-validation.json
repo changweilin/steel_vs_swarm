@@ -1,5 +1,5 @@
 {
-  "blend": "c042ddd7093af01c4f096bde5c3658e0fb7129376ee5e3e671baa871b4b94a50",
+  "blend": "ddb2b36ff305487b48ac9d67035fa81248c986844b5bb1f01fd8a020a5bf8a69",
   "bones": 58,
   "clips": [
     "idle",
@@ -27,6 +27,11 @@
       "heldWeapons": 2
     },
     "feathersBehindBones": 44
+  },
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/s10-677c23170589.blend",
+    "contractSourceHash": "677c231705893c3d829ac70cd26b49297ff89a4b5cff5d0cc7cb8f5344973a90",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
   },
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,

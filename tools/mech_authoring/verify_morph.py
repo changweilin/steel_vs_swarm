@@ -9,7 +9,7 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain, open_contract_source
 contract = json.loads((HERE / 'morphers.json').read_text())
 output = (HERE / contract['authoring']['outputs']).resolve()
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -51,7 +51,7 @@ for id in ids:
     blend = directory / (id + '.blend')
     report = json.loads((directory / 'validation.json').read_text())
     assert report['hashes']['blend'] == sha(blend), 'Stale Blender source: ' + id
-    bpy.ops.wm.open_mainfile(filepath=str(blend))
+    baked_source = open_contract_source(blend, report)
     rest_pose = {name: bpy.data.objects[name].matrix_local.copy() for name, _, _ in spec['joints']}
     skeleton = bpy.data.objects[id + '_skeleton']
     assert len(skeleton.data.bones) == len(spec['joints'])
@@ -98,15 +98,25 @@ for id in ids:
         assert len([obj for obj in meshes if obj.name.startswith('Folded patagium fist blade')])==2, 'Paired fist blades missing'
         assert len(spec['rig']['tailSegs'])==5, 'Wolf tail missing'
     for clip in spec['clips']:
+        # The snapshot's replaced clips are not shipped; verify_motion.py checks the delivered actions exactly.
+        if baked_source and clip in report['motionSource']['clips']:
+            continue
         activate_clip(spec, clip, 16)
         # Airframe endpoints turn carried hand weapons into fixed wing/body mounts.
         hand_pose = not (clip.startswith('flight_') and spec['forms']['flight']['kind'] == 'aerial')
-        verify_weapon_pose(spec,clip in ['light','heavy','flight_light','flight_heavy'],clip.removeprefix('flight_'),hand_pose)
+        # Transform-only clips carry no shot; the runtime aim solver runs after the morph blend.
+        if clip not in ['to_flight','to_ground']:
+            verify_weapon_pose(spec,clip in ['light','heavy','flight_light','flight_heavy'],clip.removeprefix('flight_'),hand_pose)
         for name, _, _ in spec['joints']:
             joint = bpy.data.objects[name]
             assert all(math.isfinite(v) for row in joint.matrix_world for v in row), clip + ': nonfinite joint'
             if name != 'barrier':
-                assert all(abs(v - 1) < 1e-6 for v in joint.scale), clip + ': resized rigid joint'
+                stow=next((w for w in spec['rig'].get('stowedWeapons',[]) if w['node']==name),None)
+                if stow:
+                    assert all(stow['scale']-1e-6<=v<=1+1e-6 for v in joint.scale), clip+': weapon exceeds stow range'
+                    assert max(joint.scale)-min(joint.scale)<1e-6, clip+': distorted weapon stow'
+                else:
+                    assert all(abs(v - 1) < 1e-6 for v in joint.scale), clip + ': resized rigid joint'
         if id == 't11':
             head = bpy.data.objects['head'].matrix_world.to_quaternion()
             if clip in ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract']:
@@ -247,6 +257,7 @@ for id in ids:
         assert id == 'm05' and not spec['acceptance']['flightBellyClosed'], 'Unspecified closure exception'
         assert len([n for n, _, _ in spec['joints'] if n.startswith(('hip_', 'shoulder_'))]) == 4
     result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'], 'validatedClips': len(spec['clips']), 'anatomy': anatomy,
+              'bakedSource': baked_source,
               'foldedLimbBoundsInHullCoordinates': envelopes, 'limbVerticesOutsideHull': len(outside),
               'exposedLimbBoundsInHullCoordinates': exposed,
               'outsideExamples': outside[:4], 'editable_source': 'pass',

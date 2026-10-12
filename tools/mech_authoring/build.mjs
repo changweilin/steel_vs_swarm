@@ -42,7 +42,7 @@ for (const id of ids) {
   if (useMcp) {
     const script = path.join(root, 'tools/mech_authoring/build.py');
     const code = contract.authoring.factoryWorker
-      ? `import bpy, subprocess\nr = subprocess.run([bpy.app.binary_path, '--background', '--factory-startup', '--python-exit-code', '1', '--python', ${JSON.stringify(script)}, '--', '--asset', ${JSON.stringify(id)}, *${JSON.stringify(flags)}], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))\nif r.returncode: raise RuntimeError(r.stdout[-3000:] + r.stderr[-3000:])\nprint(next(line for line in r.stdout.splitlines() if line.startswith('ASSET_RESULT ')))`
+      ? `import bpy, subprocess\nr = subprocess.run([bpy.app.binary_path, '--background', '--factory-startup', '--python-expr', 'import bpy; bpy.context.preferences.filepaths.save_version = 0', '--python-exit-code', '1', '--python', ${JSON.stringify(script)}, '--', '--asset', ${JSON.stringify(id)}, *${JSON.stringify(flags)}], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))\nif r.returncode: raise RuntimeError(r.stdout[-3000:] + r.stderr[-3000:])\nprint(next(line for line in r.stdout.splitlines() if line.startswith('ASSET_RESULT ')))`
       : `import runpy, sys\nsys.argv = ['build.py', '--', '--asset', ${JSON.stringify(id)}, *${JSON.stringify(flags)}]\nrunpy.run_path(${JSON.stringify(script)}, run_name='__main__')`;
     const result = await blenderMcp('execute_blender_code', { code, user_prompt: userPrompt });
     for (const item of result.content || []) if (item.type === 'text') {
@@ -51,7 +51,9 @@ for (const id of ids) {
     }
     continue;
   }
-  const processArgs = ['--background', '--factory-startup', '--python-exit-code', '1',
+  // Reproducible factory outputs need no backup rename, which can fail while an existing export is open.
+  const processArgs = ['--background', '--factory-startup', '--python-expr',
+    'import bpy; bpy.context.preferences.filepaths.save_version = 0', '--python-exit-code', '1',
     '--python', path.join(root, 'tools/mech_authoring/build.py'), '--', '--asset', id, ...flags];
   const code = await new Promise((resolve, reject) => {
     const child = spawn(blender, processArgs, { cwd: root, stdio: 'inherit', windowsHide: true });

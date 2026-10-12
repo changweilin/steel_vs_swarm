@@ -234,6 +234,12 @@ try {
           if (slot === 'light' || slot === 'heavy') ent.fireFx = event;
           else ent.castFx = event;
           const duration = rig.combat.clips[slot].duration;
+          const lead = rig.fireLead?.[slot] || 0;
+          if (lead) {
+            step(lead * .5);
+            check(rig.combat.joints.every(([name]) => name === 'fx_guard' || !rig.combat.nodes.get(name).visible), `${id}/${slot}: effects precede weapon preparation`);
+            step(lead * .5);
+          }
           for (let i = 0; i < 12; i++) step(duration / 30);
           check(rig.combat.joints.some(([name]) => name !== 'fx_guard' && rig.combat.nodes.get(name).visible), `${id}/${slot}: no attached effects`);
           if (slot === 'def') { check(rig.combat.guard.visible, `${id}: defense cast has no shield`); bodyBox(unit, rig); }

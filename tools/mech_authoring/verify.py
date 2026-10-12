@@ -11,7 +11,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain, open_contract_source
 ROOT = HERE.parent.parent
 contract_file = HERE / 'assets.json'
 contract = json.loads(contract_file.read_text(encoding='utf8'))
@@ -49,7 +49,7 @@ for id in selected:
     assert report['measurements']['source']['contract'] == sha(contract_file), id + ': stale contract'
     assert report['measurements']['source']['builder'] == sha(HERE / 'build.py'), id + ': stale recipe'
     assert report['measurements']['source']['catalog'] == sha(HERE / 'catalog.py'), id + ': stale catalog recipe'
-    bpy.ops.wm.open_mainfile(filepath=str(blend))
+    baked_source = open_contract_source(blend, report)
     skeleton = bpy.data.objects[id + '_skeleton']
     assert len(skeleton.data.bones) == len(spec['joints']), id + ': skeleton lost bones'
     for name, parent, position in spec['joints']:
@@ -153,6 +153,9 @@ for id in selected:
     joints = [bpy.data.objects[name] for name, _, _ in spec['joints']]
     pose_samples = 0
     for clip in report['clips']:
+        # Runtime-baked clips are checked at every frame by verify_motion.py and by the equipment geometry audit.
+        if baked_source and clip in report['motionSource']['clips']:
+            continue
         for joint in joints:
             joint.animation_data.action = None
             for track in joint.animation_data.nla_tracks:
@@ -224,7 +227,8 @@ for id in selected:
         for track in joint.animation_data.nla_tracks:
             track.mute = True
     results[id] = {'blend': sha(blend), 'sourceMeshes': len(meshes), 'bones': len(skeleton.data.bones),
-                   'editableClips': report['clips'], 'poseSamples': pose_samples, 'anatomy': anatomy}
+                   'editableClips': report['clips'], 'poseSamples': pose_samples, 'anatomy': anatomy,
+                   'bakedSource': baked_source}
     report['gates']['editable_source'] = 'pass'
     pending = report_file.with_suffix('.json.tmp')
     pending.write_text(json.dumps(report, indent=2) + '\n', encoding='utf8')

@@ -8,13 +8,13 @@
 // 所有目標值都經指數阻尼(非線性緩動)進骨架,不出現機械式瞬跳。
 // 純客戶端視覺:不動伺服器權威狀態;rig 由 models.js 各建模函式提供。
 
-import { MORPH, lerpFPS } from './data.js';
+import { MORPH, lerpFPS, frictionFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
 import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose, resetReferenceMotion } from './unitMotion.js';
 import { stepAuthoredCombat, clearMorphCombatShield } from './forge/combatAsset.js';
-import { resetAnatomicalPose, stepAnatomicalPose } from './anatomicalPose.js';
+import { resetAnatomicalPose, stepAnatomicalPose, stepEquipmentPose } from './anatomicalPose.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -133,9 +133,11 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   }
   if (rig.tentacleWaves) {
     for (const wave of rig.tentacleWaves) wave.chain.forEach((node,i) => {
+      const converge = wave.slot === rig._aimSlot ? clamp((rig._fireAim || 0)/(wave.convergeAt || 1),0,1) : 0;
       ['x','y','z'].forEach((axis,j) => {
         const amplitude = wave.swing[j] + (wave.travel?.[j] || 0) * clamp(L.amp, 0, 1);
-        node.rotation[axis] = amplitude * Math.sin(now * Math.PI * 2 * wave.frequency + wave.phase + L.ph - i*.36 + j*1.2);
+        node.rotation[axis] = amplitude * (1-converge) * Math.sin(now * Math.PI * 2 * wave.frequency + wave.phase + L.ph - i*.36 + j*1.2)
+          + (i===0 && axis==='y' ? (wave.convergeYaw || 0)*converge : 0);
       });
     });
   }
@@ -175,6 +177,9 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   }
   // The drawing hand follows the final aimed bow, including the wrist correction.
   if (rig.archery) poseArchery(rig);
+  if (morph) {
+    stepEquipmentPose(morph.ground,rig);stepEquipmentPose(morph.air,rig);
+  } else stepEquipmentPose(rig);
   if (morph) {
     clearMorphCombatShield(morph.ground);
     clearMorphCombatShield(morph.air);
@@ -299,12 +304,24 @@ export function stepCombatFx(ent, now, dt) {
   if (fx && fx.t0 !== C.fireT) {
     C.fireT = fx.t0;
     C.slot = fx.slot || 'light';
+    const alternate = rig.alternating;
+    if (alternate?.slot === C.slot) {
+      alternate.index = (alternate.index+1)%alternate.weapons.length;
+      rig.wpn[C.slot].ref = alternate.weapons[alternate.index];
+      rig.wpn[C.slot].muz = alternate.muzzles[alternate.index];
+      // Shot origins are queried before the next event reaches the animation driver.
+      rig.muzzles[C.slot].n = alternate.muzzles[(alternate.index+1)%alternate.muzzles.length];
+      for (const [name,parent] of rig.combat?.joints || []) {
+        if (parent===alternate.muzzles[0].name) alternate.muzzles[alternate.index].add(rig.combat.nodes.get(name));
+      }
+      for (const flame of rig.flames?.[C.slot] || []) alternate.muzzles[alternate.index].add(flame);
+    }
     C.aimUntil = Math.max(C.aimUntil, fx.t0 + AIM_HOLD_S);
     // 重武器專屬射姿窗(_aimH):驅動「重武器指向攻擊方向」的機構級瞄準(如 monkey 尾砲前捲)
     if (fx.slot === 'heavy') C.hUntil = Math.max(C.hUntil ?? -1, fx.t0 + AIM_HOLD_S);
     // 幅度接 RECOIL 三級分級(makeUnit 依 data.js recoilTier 換算成 rig.kickAmp 倍率)
     const amp = (fx.slot === 'heavy' ? 1.0 : 0.45) * ((rig.kickAmp || S0)[fx.slot] ?? 1);
-    const side = (rig.weap || S0)[fx.slot] || 'R';   // 'L'|'R'|'B' 持手;'N' = 機載(機身後座)
+    const side = alternate?.slot === C.slot ? alternate.sides[alternate.index] : (rig.weap || S0)[fx.slot] || 'R';   // 'L'|'R'|'B' 持手;'N' = 機載(機身後座)
     if (side === 'L' || side === 'B') C.kL = Math.min(1.3, C.kL + amp);
     if (side === 'R' || side === 'B') C.kR = Math.min(1.3, C.kR + amp);
     if (side === 'N') C.kB = Math.min(1.3, (C.kB || 0) + amp);   // 機載武器:後座打進機身(各步態消費 _kickB)
@@ -337,6 +354,9 @@ export function stepCombatFx(ent, now, dt) {
   // 第一幀就把手臂與槍軸跳到 100%，觀感是切 pose 而不是舉槍。
   rig._fireAim = C.aim;
   rig._aimSlot = C.slot || 'light';
+  rig._fireAge = C.fireT >= 0 ? Math.max(0,now-C.fireT) : Infinity;
+  const fireLead=rig.fireLead?.[C.slot];
+  if (fireLead) C.lg=rig._fireAge>=fireLead?frictionFPS(10,rig._fireAge-fireLead):0;
   // 重武器掛點:蓄力 glow 增亮 / pivot 朝 deploy 展開;擊發 glow 強閃、pivot 以 −0.85 反向過衝
   // (蓄力怎麼展開,擊發就怎麼反向甩回 = 「蓄力動畫與開火相反」的通則,全機種共用)
   if (rig.heavy) {
@@ -1098,30 +1118,38 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
 
 function poseArchery(rig) {
   const a = rig.archery;
-  const release = clamp(rig._kickR || 0,0,1);
-  const draw = a.restDraw + (a.fullDraw-a.restDraw) * clamp((rig._fireAim || 0)-release*1.5,0,1);
+  const weight = clamp(rig._bowAim || 0,0,1);
+  const age = rig._fireAge, release = age>=.26 && age<.46 ? Math.sin(Math.PI*(age-.26)/.20) : 0;
+  const draw = a.restDraw + (a.fullDraw-a.restDraw) * weight*(1-release);
   a.nock.position.z = -draw;
   a.strings.forEach((node,i) => {
     node.rotation.x = (i ? -1 : 1) * (Math.atan2(draw,a.halfHeight)-Math.atan2(a.restDraw,a.halfHeight));
     node.scale.setScalar(Math.hypot(draw,a.halfHeight)/Math.hypot(a.restDraw,a.halfHeight));
   });
-  rig.wpn.light.ref.getObjectByName('gun_recoil').scale.setScalar(release>.45 ? .001 : 1);
+  a.arrow.getObjectByName('gun_recoil').scale.setScalar(weight>1e-4 && release>.45 ? .001 : 1);
+  if (weight<=1e-4) return;
   const [target,delta,pole,upper,rest,local] = a.scratch;
-  a.nock.getWorldPosition(target);
-  a.shoulder.parent.updateWorldMatrix(true,false);
-  local.copy(target); a.shoulder.parent.worldToLocal(local);
-  delta.copy(local).sub(a.shoulder.position);
-  const lengthA = a.elbow.position.length(), lengthB = a.hand.position.length();
-  const distance = clamp(delta.length(),Math.abs(lengthA-lengthB)+1e-5,lengthA+lengthB-1e-5);
-  delta.normalize();
-  const reach = (lengthA*lengthA-lengthB*lengthB+distance*distance)/(2*distance);
-  pole.fromArray(a.pole).addScaledVector(delta,-pole.dot(delta)).normalize();
-  upper.copy(delta).multiplyScalar(reach).addScaledVector(pole,Math.sqrt(Math.max(0,lengthA*lengthA-reach*reach)));
-  a.shoulder.quaternion.setFromUnitVectors(rest.copy(a.elbow.position).normalize(),upper.normalize());
-  a.shoulder.updateWorldMatrix(true,false);
-  local.copy(target); a.shoulder.worldToLocal(local);
-  a.elbow.quaternion.setFromUnitVectors(rest.copy(a.hand.position).normalize(),local.sub(a.elbow.position).normalize());
+  const q = rig.anatomical.q, group = rig.anatomical.group;
+  const placeArm = (shoulder,elbow,hand,axis) => {
+    shoulder.parent.updateWorldMatrix(true,false);
+    local.copy(target);shoulder.parent.worldToLocal(local);delta.copy(local).sub(shoulder.position);
+    const lengthA=elbow.position.length(),lengthB=hand.position.length();
+    const distance=clamp(delta.length(),Math.abs(lengthA-lengthB)+1e-5,lengthA+lengthB-1e-5);
+    delta.normalize();
+    const reach=(lengthA*lengthA-lengthB*lengthB+distance*distance)/(2*distance);
+    pole.fromArray(axis).addScaledVector(delta,-pole.dot(delta)).normalize();
+    upper.copy(delta).multiplyScalar(reach).addScaledVector(pole,Math.sqrt(Math.max(0,lengthA*lengthA-reach*reach)));
+    q[0].setFromUnitVectors(rest.copy(elbow.position).normalize(),upper.normalize());shoulder.quaternion.slerp(q[0],weight);
+    shoulder.updateWorldMatrix(true,false);local.copy(target);shoulder.worldToLocal(local);
+    q[0].setFromUnitVectors(rest.copy(hand.position).normalize(),local.sub(elbow.position).normalize());elbow.quaternion.slerp(q[0],weight);
+  };
+  a.head.getWorldPosition(target);group.worldToLocal(target);target.add(delta.fromArray(a.gripOffset));group.localToWorld(target);
+  placeArm(a.bowShoulder,a.bowElbow,a.bowHand,[-1,-.1,.1]);
+  stepAimForward(rig);
+  a.nock.getWorldPosition(target);placeArm(a.shoulder,a.elbow,a.hand,a.pole);
   a.hand.rotation.set(0,0,0);
+  a.nock.getWorldPosition(target);a.arrow.parent.worldToLocal(target);a.arrow.position.lerp(target,weight);
+  group.getWorldQuaternion(q[0]);a.arrow.parent.getWorldQuaternion(q[1]);q[1].invert().multiply(q[0]);a.arrow.quaternion.slerp(q[1],weight);
 }
 
 function stepCephalopod(L, rig, dt, now, speed, yawRate) {

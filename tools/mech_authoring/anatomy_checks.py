@@ -1,7 +1,41 @@
 """Measure authored feather surfaces in each load bone's local plane."""
 import math
+import hashlib
+import json
+from pathlib import Path
 import bpy
 from mathutils import Vector
+
+
+def open_contract_source(blend, report):
+    """Require verified baked motion and unchanged geometry before checking the recipe's rest pose."""
+    bpy.ops.wm.open_mainfile(filepath=str(blend))
+    source = report.get('motionSource')
+    if not source:
+        return None
+    root = Path(__file__).resolve().parents[2]
+    evidence = json.loads((root / 'out/anatomical_motion/after/blender-validation.json').read_text())
+    verified = evidence[blend.stem]
+    assert verified['blend'] == hashlib.sha256(blend.read_bytes()).hexdigest(), 'Unverified baked source'
+    assert verified['samples'] == source['samples'], 'Stale baked motion samples'
+
+    def inventory():
+        return {obj.name: (obj.parent.name if obj.parent else None,
+                tuple(tuple(row) for row in obj.matrix_basis),
+                tuple(tuple(v.co) for v in obj.data.vertices),
+                tuple(tuple(face.vertices) for face in obj.data.polygons),
+                tuple(material.name for material in obj.data.materials))
+                for obj in bpy.data.objects if obj.type == 'MESH'}
+
+    geometry = inventory()
+    parents = {name: bpy.data.objects[name].parent.name for name in source['nodes']}
+    original = root / source['inputBlend']
+    assert original.is_file(), 'Missing contract source snapshot'
+    bpy.ops.wm.open_mainfile(filepath=str(original))
+    assert inventory() == geometry, 'Baking changed editable geometry'
+    assert all(bpy.data.objects[name].parent.name == parent for name, parent in parents.items()), 'Baking changed joint hierarchy'
+    return {'contractSource': source['inputBlend'], 'contractSourceHash': hashlib.sha256(original.read_bytes()).hexdigest(),
+            'motionVerification': 'out/anatomical_motion/after/blender-validation.json'}
 
 
 def verify_articulated_body(spec, meshes):

@@ -2,16 +2,16 @@
   "asset": "s10",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 17144,
+    "triangles": 17744,
     "meshes": 109,
     "joints": 58,
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
+      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
+      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
       "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
+      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
     }
   },
   "clips": [
@@ -35,15 +35,15 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-    "blend": "c042ddd7093af01c4f096bde5c3658e0fb7129376ee5e3e671baa871b4b94a50",
-    "glb": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
+    "runtime": "b73fdba1206a1a7d4be9d1a5f271a6af5dda7da72653c520e442fafacc978ba8",
+    "blend": "ddb2b36ff305487b48ac9d67035fa81248c986844b5bb1f01fd8a020a5bf8a69",
+    "glb": "80ae2aad9f56f3576919b08dfc8af4e34fd3cbb19a03a5b6997cb2560c356956"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
     "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
+    "appearance": "pass",
     "export": "pass",
     "destination": "pass",
     "user_signoff": "pending_user_review",
@@ -52,16 +52,24 @@
     "flight_belly": "pass"
   },
   "motionSource": {
-    "samples": "c4b6344c619d927918a1f0a4b09b8d55fcf09a62f44ab85d00df57cde4933af3",
-    "inputBlend": "out/anatomical_motion/before/s10-9c787daa817c.blend",
+    "samples": "8ccac3d9e60b209b412a20aed4c9001ab414f4baeb0c7aab2c5a78de7cbd90c4",
+    "inputBlend": "out/anatomical_motion/before/s10-677c23170589.blend",
     "clips": [
       "idle",
       "run",
       "light",
       "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract",
       "flight_idle",
       "flight_light",
-      "flight_heavy"
+      "flight_heavy",
+      "flight_skill",
+      "flight_ult",
+      "flight_shield_deploy",
+      "flight_shield_retract"
     ],
     "nodes": [
       "tilt",
@@ -124,21 +132,25 @@
       "tail_feather_r_4"
     ],
     "drivers": {
-      "locomotion.js": "d00748eb44f691326279cc97b802359cbfbda51bbe61606715583052c2244481",
-      "anatomicalPose.js": "bd05d7c4a183e5bc9e7301e873235f5abdbc526e34ad34cff10a392d69b53bdc",
-      "forge/referenceAsset.js": "c9703f07c3136517ba8019cf4ccc77d982fe5877effa484db18ac877dc118895",
+      "locomotion.js": "99ce9548328fee54ba8332012320ac7a62efb771c7b3603df4680d22040a6904",
+      "anatomicalPose.js": "b3c9a4746e8ab55ce4ae4164d8096f5236988a4b7455e5be4131410e737c9bfe",
+      "forge/referenceAsset.js": "18d20224dccccd17aae8cd25ead1c00fcac7832b05cdac4d845d1c7c236195f5",
+      "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
       "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
-      "unitMotion.js": "fa6f18c1fb2db5235c944b17eefcda25bfe1a89151e6d595e43fa33fc187e8c0"
+      "unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e"
     },
-    "baker": "f940de08e4906be9402c739920fdbde963e336047b02c3da4c7dc6c4a3ad3198",
+    "baker": "c8b4f8a62242d12f1bdeaf7db54d2a54daca08c3ce19c2aeb9c42ff938397e07",
     "fps": 60,
-    "encoder": "97622bb164a659d3e813462ee56c2be39e0a4616a887fb9efef130e87df5cc80",
+    "sampler": "dd8d1b45832226c05777a6348d8b1fa3702a3c594128601424ab9c2c3eab42f9",
+    "encoder": "01a56f665216dc676ce59443e7013dd149aff790473d0e18b1c7e5eed5ce875d",
     "restorer": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf"
   },
   "validation_refs": {
     "runtime": "runtime-validation.json",
     "source": "source-validation.json",
-    "rebuild": "../rebuild-validation.json"
-  },
-  "motionReview": "../../shooting_posture/validation.json"
+    "rebuild": "../rebuild-validation.json",
+    "equipment": "../../appearance_motion/runtime-validation.json",
+    "motion": "../../anatomical_motion/after/blender-validation.json",
+    "motion_export": "../../anatomical_motion/after/export-validation.json"
+  }
 }

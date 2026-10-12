@@ -109,7 +109,7 @@ export function stepAuthoredCombat(rig, ent, now) {
   for (const [slot, clip] of Object.entries(combat.clips)) {
     const event = slot === 'light' || slot === 'heavy' ? ent.fireFx : ent.castFx;
     if (event?.slot !== slot || !Number.isFinite(event.t0)) continue;
-    const time = (now - event.t0) / clip.duration;
+    const time = (now - event.t0 - (rig.fireLead?.[slot] || 0)) / clip.duration;
     if (time < 0 || time >= 1) continue;
     for (const track of clip.tracks) {
       if (combat.transported?.includes(track.node)) continue;
