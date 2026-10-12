@@ -1,0 +1,44 @@
+{
+  "inputs": {
+    "locomotion.js": "4acb6506e2e35eb9699dc953469dbe84078919f9cb0831db58f5989f0802db77",
+    "anatomicalPose.js": "0941fee0c1c13b97b12b4c8da98855c64e8340ad97ac189b5fa6859417bab5c9",
+    "unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e",
+    "models.js": "292acf92bee840d42d04f936b08643d13c8931de7e1181fe8101c1954f5c1790",
+    "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
+    "forge/referenceAsset.js": "5fc6f4453e832c3dfd357ebd65bb24d8622fa574a6d767406a9da1719d8747d4",
+    "forge/assets/t01.js": "4ae1e5904c86dcd459f522d928f39d807a8f1ae735bbd947b02fbcb3de561a6c"
+  },
+  "metrics": {
+    "t01": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    }
+  },
+  "gates": {
+    "structure": "pass",
+    "motion": "pass",
+    "visual": "pending_image_inspection"
+  }
+}

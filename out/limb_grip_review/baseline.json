@@ -1,0 +1,1170 @@
+{
+  "s01": {
+    "roots": [],
+    "held": []
+  },
+  "t10": {
+    "roots": [
+      {
+        "node": "hip_l",
+        "x": 0.5899999737739563,
+        "surface": 0.4782257080078125,
+        "exposed": 0.1117742657661438
+      },
+      {
+        "node": "hip_r",
+        "x": 0.5899999737739563,
+        "surface": 0.4782257080078125,
+        "exposed": 0.1117742657661438
+      },
+      {
+        "node": "shoulder_l",
+        "x": 1.059999942779541,
+        "surface": 0.8374195098876953,
+        "exposed": 0.2225804328918457
+      },
+      {
+        "node": "shoulder_r",
+        "x": 1.059999942779541,
+        "surface": 0.8374195098876953,
+        "exposed": 0.2225804328918457
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.281000018119812
+      }
+    ]
+  },
+  "s02": {
+    "roots": [],
+    "held": []
+  },
+  "s04": {
+    "roots": [],
+    "held": []
+  },
+  "s05": {
+    "roots": [],
+    "held": []
+  },
+  "s08": {
+    "roots": [],
+    "held": []
+  },
+  "s11": {
+    "roots": [],
+    "held": []
+  },
+  "s12": {
+    "roots": [],
+    "held": []
+  },
+  "t07": {
+    "roots": [],
+    "held": []
+  },
+  "t08": {
+    "roots": [],
+    "held": []
+  },
+  "t09": {
+    "roots": [],
+    "held": []
+  },
+  "m03": {
+    "roots": [],
+    "held": []
+  },
+  "m04": {
+    "roots": [],
+    "held": []
+  },
+  "s06": {
+    "roots": [
+      {
+        "node": "shoulder_r",
+        "x": 0.949999988079071,
+        "surface": 0.6178569793701172,
+        "exposed": 0.33214300870895386
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.949999988079071,
+        "surface": 0.6178569793701172,
+        "exposed": 0.33214300870895386
+      },
+      {
+        "node": "leg_FL",
+        "x": 0.6234999895095825,
+        "surface": 0.7262001037597656,
+        "exposed": -0.1027001142501831
+      },
+      {
+        "node": "leg_FL_0",
+        "x": 0.6234999895095825,
+        "surface": 0.6309108734130859,
+        "exposed": -0.007410883903503418
+      },
+      {
+        "node": "leg_FL_1",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.6234999895095825,
+        "surface": 0.7262001037597656,
+        "exposed": -0.1027001142501831
+      },
+      {
+        "node": "leg_FR_0",
+        "x": 0.6234999895095825,
+        "surface": 0.63104248046875,
+        "exposed": -0.0075424909591674805
+      },
+      {
+        "node": "leg_FR_1",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.6234999895095825,
+        "surface": 0.7800006866455078,
+        "exposed": -0.1565006971359253
+      },
+      {
+        "node": "leg_HL_0",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_1",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.6234999895095825,
+        "surface": 0.7800006866455078,
+        "exposed": -0.1565006971359253
+      },
+      {
+        "node": "leg_HR_0",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_1",
+        "x": 0.6234999895095825,
+        "surface": null,
+        "exposed": null
+      }
+    ],
+    "held": []
+  },
+  "s07": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.5656853914260864,
+        "surface": 0.41655540466308594,
+        "exposed": 0.1491299867630005
+      },
+      {
+        "node": "leg_FL_0",
+        "x": 0.7323793172836304,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_1",
+        "x": 0.905386209487915,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_2",
+        "x": 1.0844237804412842,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_3",
+        "x": 1.2686880826950073,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_4",
+        "x": 1.4569201469421387,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_5",
+        "x": 1.647403597831726,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_6",
+        "x": 1.838069200515747,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_7",
+        "x": 2.026740312576294,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_8",
+        "x": 2.2115697860717773,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_9",
+        "x": 2.391488552093506,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_10",
+        "x": 2.5665507316589355,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FL_11",
+        "x": 2.7380564212799072,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.5656853914260864,
+        "surface": 0.4165515899658203,
+        "exposed": 0.1491338014602661
+      },
+      {
+        "node": "leg_FR_0",
+        "x": 0.7154144644737244,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_1",
+        "x": 0.8541132211685181,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_2",
+        "x": 0.982107400894165,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_3",
+        "x": 1.100551962852478,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_4",
+        "x": 1.2118966579437256,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_5",
+        "x": 1.3201141357421875,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_6",
+        "x": 1.4306464195251465,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_7",
+        "x": 1.5499663352966309,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_8",
+        "x": 1.6846920251846313,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_9",
+        "x": 1.84013032913208,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_10",
+        "x": 2.0184671878814697,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR_11",
+        "x": 2.217446804046631,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.5656853914260864,
+        "surface": 0.4165515899658203,
+        "exposed": 0.1491338014602661
+      },
+      {
+        "node": "leg_HL_0",
+        "x": 0.7321684956550598,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_1",
+        "x": 0.9050449728965759,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_2",
+        "x": 1.0843331813812256,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_3",
+        "x": 1.2696765661239624,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_4",
+        "x": 1.460479736328125,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_5",
+        "x": 1.6558494567871094,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_6",
+        "x": 1.8544962406158447,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_7",
+        "x": 2.054666042327881,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_8",
+        "x": 2.2542600631713867,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_9",
+        "x": 2.4510960578918457,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_10",
+        "x": 2.643350124359131,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_11",
+        "x": 2.830153465270996,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.5656853914260864,
+        "surface": 0.41655540466308594,
+        "exposed": 0.1491299867630005
+      },
+      {
+        "node": "leg_HR_0",
+        "x": 0.7201409339904785,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_1",
+        "x": 0.8745316863059998,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_2",
+        "x": 1.034494400024414,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_3",
+        "x": 1.2048089504241943,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_4",
+        "x": 1.389204978942871,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_5",
+        "x": 1.5902448892593384,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_6",
+        "x": 1.8093516826629639,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_7",
+        "x": 2.0468177795410156,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_8",
+        "x": 2.3016483783721924,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_9",
+        "x": 2.5709939002990723,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_10",
+        "x": 2.849435806274414,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_11",
+        "x": 3.12896728515625,
+        "surface": null,
+        "exposed": null
+      }
+    ],
+    "held": []
+  },
+  "s09": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.4000000059604645,
+        "surface": 0.6356296539306641,
+        "exposed": -0.23562964797019958
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.6800000071525574,
+        "surface": 0.4482097625732422,
+        "exposed": 0.23179024457931519
+      },
+      {
+        "node": "hip_l",
+        "x": 0.4000000059604645,
+        "surface": 0.6356277465820312,
+        "exposed": -0.23562774062156677
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.6800000071525574,
+        "surface": 0.4482097625732422,
+        "exposed": 0.23179024457931519
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.28100019693374634
+      }
+    ]
+  },
+  "t01": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.800000011920929,
+        "surface": 0.8783779144287109,
+        "exposed": -0.07837790250778198
+      },
+      {
+        "node": "shoulder_r",
+        "x": 1.649999976158142,
+        "surface": 1.145833969116211,
+        "exposed": 0.5041660070419312
+      },
+      {
+        "node": "hip_l",
+        "x": 0.800000011920929,
+        "surface": 0.8783779144287109,
+        "exposed": -0.07837790250778198
+      },
+      {
+        "node": "shoulder_l",
+        "x": 1.649999976158142,
+        "surface": 1.1458358764648438,
+        "exposed": 0.5041640996932983
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.37000009417533875
+      },
+      {
+        "node": "heavy",
+        "staff": false,
+        "receiverBottom": -0.5400000810623169
+      }
+    ]
+  },
+  "t02": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.3400000035762787,
+        "surface": 0.3868751525878906,
+        "exposed": -0.04687514901161194
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.800000011920929,
+        "surface": 0.6001167297363281,
+        "exposed": 0.19988328218460083
+      },
+      {
+        "node": "hip_l",
+        "x": 0.3400000035762787,
+        "surface": 0.3868751525878906,
+        "exposed": -0.04687514901161194
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.800000011920929,
+        "surface": 0.6001167297363281,
+        "exposed": 0.19988328218460083
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.28099992871284485
+      },
+      {
+        "node": "heavy",
+        "staff": true,
+        "receiverBottom": -0.19999998807907104
+      }
+    ]
+  },
+  "t03": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.6399999856948853,
+        "surface": 0.9581241607666016,
+        "exposed": -0.3181241750717163
+      },
+      {
+        "node": "shoulder_r",
+        "x": 1.350000023841858,
+        "surface": 0.9803390502929688,
+        "exposed": 0.36966097354888916
+      },
+      {
+        "node": "hip_l",
+        "x": 0.6399999856948853,
+        "surface": 0.9581241607666016,
+        "exposed": -0.3181241750717163
+      },
+      {
+        "node": "shoulder_l",
+        "x": 1.350000023841858,
+        "surface": 0.9816265106201172,
+        "exposed": 0.3683735132217407
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.4999999403953552
+      },
+      {
+        "node": "heavy",
+        "staff": false,
+        "receiverBottom": -0.2809999883174896
+      }
+    ]
+  },
+  "t04": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.39559999108314514,
+        "surface": 0.5085258483886719,
+        "exposed": -0.11292585730552673
+      },
+      {
+        "node": "leg_FL_0",
+        "x": 0.39559999108314514,
+        "surface": 0.4249401092529297,
+        "exposed": -0.029340118169784546
+      },
+      {
+        "node": "leg_FL_1",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.39559999108314514,
+        "surface": 0.5085277557373047,
+        "exposed": -0.11292776465415955
+      },
+      {
+        "node": "leg_FR_0",
+        "x": 0.39559999108314514,
+        "surface": 0.42491912841796875,
+        "exposed": -0.02931913733482361
+      },
+      {
+        "node": "leg_FR_1",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.39559999108314514,
+        "surface": 0.3820781707763672,
+        "exposed": 0.013521820306777954
+      },
+      {
+        "node": "leg_HL_0",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_1",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.39559999108314514,
+        "surface": 0.3820781707763672,
+        "exposed": 0.013521820306777954
+      },
+      {
+        "node": "leg_HR_0",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_1",
+        "x": 0.39559999108314514,
+        "surface": null,
+        "exposed": null
+      }
+    ],
+    "held": []
+  },
+  "t05": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.3400000035762787,
+        "surface": 0.6110877990722656,
+        "exposed": -0.27108779549598694
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.5799999833106995,
+        "surface": 0.5872917175292969,
+        "exposed": -0.007291734218597412
+      },
+      {
+        "node": "hip_l",
+        "x": 0.3400000035762787,
+        "surface": 0.6110877990722656,
+        "exposed": -0.27108779549598694
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.5799999833106995,
+        "surface": 0.5872917175292969,
+        "exposed": -0.007291734218597412
+      }
+    ],
+    "held": []
+  },
+  "t12": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.8159999847412109,
+        "surface": 0.804443359375,
+        "exposed": 0.011556625366210938
+      },
+      {
+        "node": "shoulder_r",
+        "x": 1.5499999523162842,
+        "surface": 1.184286117553711,
+        "exposed": 0.36571383476257324
+      },
+      {
+        "node": "hip_l",
+        "x": 0.8159999847412109,
+        "surface": 0.804443359375,
+        "exposed": 0.011556625366210938
+      },
+      {
+        "node": "shoulder_l",
+        "x": 1.5499999523162842,
+        "surface": 1.1842880249023438,
+        "exposed": 0.36571192741394043
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.2809999883174896
+      }
+    ]
+  },
+  "m02": {
+    "roots": [
+      {
+        "node": "hip_r",
+        "x": 0.5120000243186951,
+        "surface": 0.4189109802246094,
+        "exposed": 0.0930890440940857
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.8100000023841858,
+        "surface": 0.5440502166748047,
+        "exposed": 0.2659497857093811
+      },
+      {
+        "node": "hip_l",
+        "x": 0.5120000243186951,
+        "surface": 0.4189128875732422,
+        "exposed": 0.09308713674545288
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.8100000023841858,
+        "surface": 0.5411548614501953,
+        "exposed": 0.2688451409339905
+      }
+    ],
+    "held": []
+  },
+  "m06": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.902999997138977,
+        "surface": 0.7290000915527344,
+        "exposed": 0.17399990558624268
+      },
+      {
+        "node": "leg_FL_0",
+        "x": 0.902999997138977,
+        "surface": 0.5486335754394531,
+        "exposed": 0.3543664216995239
+      },
+      {
+        "node": "leg_FL_1",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.902999997138977,
+        "surface": 0.7290000915527344,
+        "exposed": 0.17399990558624268
+      },
+      {
+        "node": "leg_FR_0",
+        "x": 0.902999997138977,
+        "surface": 0.5486335754394531,
+        "exposed": 0.3543664216995239
+      },
+      {
+        "node": "leg_FR_1",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.902999997138977,
+        "surface": 0.8678493499755859,
+        "exposed": 0.03515064716339111
+      },
+      {
+        "node": "leg_HL_0",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HL_1",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.902999997138977,
+        "surface": 0.8678493499755859,
+        "exposed": 0.03515064716339111
+      },
+      {
+        "node": "leg_HR_0",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      },
+      {
+        "node": "leg_HR_1",
+        "x": 0.902999997138977,
+        "surface": null,
+        "exposed": null
+      }
+    ],
+    "held": []
+  },
+  "m01": {
+    "roots": [
+      {
+        "node": "hip_l",
+        "x": 0.4000000059604645,
+        "surface": 0.3690910339355469,
+        "exposed": 0.030908972024917603
+      },
+      {
+        "node": "shoulder_l",
+        "x": 1.0199999809265137,
+        "surface": 0.9079208374023438,
+        "exposed": 0.11207914352416992
+      },
+      {
+        "node": "hip_r",
+        "x": 0.4000000059604645,
+        "surface": 0.3690910339355469,
+        "exposed": 0.030908972024917603
+      },
+      {
+        "node": "shoulder_r",
+        "x": 1.0199999809265137,
+        "surface": 0.9079208374023438,
+        "exposed": 0.11207914352416992
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.2810000479221344
+      },
+      {
+        "node": "heavy",
+        "staff": false,
+        "receiverBottom": -0.2810000479221344
+      }
+    ]
+  },
+  "s03": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 1.0556000471115112,
+        "surface": 1.1329994201660156,
+        "exposed": -0.0773993730545044
+      },
+      {
+        "node": "leg_FR",
+        "x": 1.0556000471115112,
+        "surface": 1.1329994201660156,
+        "exposed": -0.0773993730545044
+      },
+      {
+        "node": "leg_HL",
+        "x": 1.0556000471115112,
+        "surface": 1.291177749633789,
+        "exposed": -0.23557770252227783
+      },
+      {
+        "node": "leg_HR",
+        "x": 1.0556000471115112,
+        "surface": 1.2911796569824219,
+        "exposed": -0.23557960987091064
+      }
+    ],
+    "held": []
+  },
+  "s10": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.5799999833106995,
+        "surface": 0.34954071044921875,
+        "exposed": 0.2304592728614807
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.5799999833106995,
+        "surface": 0.3493366241455078,
+        "exposed": 0.23066335916519165
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.5699999928474426,
+        "surface": 0.3757514953613281,
+        "exposed": 0.1942484974861145
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.5699999928474426,
+        "surface": 0.3757514953613281,
+        "exposed": 0.1942484974861145
+      }
+    ],
+    "held": [
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.2810001075267792
+      },
+      {
+        "node": "heavy",
+        "staff": true,
+        "receiverBottom": 0.19999971985816956
+      }
+    ]
+  },
+  "t06": {
+    "roots": [
+      {
+        "node": "hip_l",
+        "x": 0.4300000071525574,
+        "surface": 0.37000083923339844,
+        "exposed": 0.059999167919158936
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.9800000190734863,
+        "surface": 1.0712509155273438,
+        "exposed": -0.09125089645385742
+      },
+      {
+        "node": "hip_r",
+        "x": 0.4300000071525574,
+        "surface": 0.37000083923339844,
+        "exposed": 0.059999167919158936
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.9800000190734863,
+        "surface": 1.0712509155273438,
+        "exposed": -0.09125089645385742
+      }
+    ],
+    "held": [
+      {
+        "node": "heavy",
+        "staff": true,
+        "receiverBottom": -0.13999995589256287
+      },
+      {
+        "node": "gun",
+        "staff": false,
+        "receiverBottom": -0.28099989891052246
+      }
+    ]
+  },
+  "t11": {
+    "roots": [
+      {
+        "node": "hip_l",
+        "x": 0.4300000071525574,
+        "surface": 0.37000083923339844,
+        "exposed": 0.059999167919158936
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.9800000190734863,
+        "surface": 1.0712509155273438,
+        "exposed": -0.09125089645385742
+      },
+      {
+        "node": "hip_r",
+        "x": 0.4300000071525574,
+        "surface": 0.37000083923339844,
+        "exposed": 0.059999167919158936
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.9800000190734863,
+        "surface": 1.0712509155273438,
+        "exposed": -0.09125089645385742
+      }
+    ],
+    "held": []
+  },
+  "m05": {
+    "roots": [
+      {
+        "node": "hip_l",
+        "x": 0.5,
+        "surface": 0.33974456787109375,
+        "exposed": 0.16025543212890625
+      },
+      {
+        "node": "shoulder_l",
+        "x": 0.9800000190734863,
+        "surface": 0.8524436950683594,
+        "exposed": 0.12755632400512695
+      },
+      {
+        "node": "hip_r",
+        "x": 0.5,
+        "surface": 0.3981037139892578,
+        "exposed": 0.10189628601074219
+      },
+      {
+        "node": "shoulder_r",
+        "x": 0.9800000190734863,
+        "surface": 0.8524456024169922,
+        "exposed": 0.12755441665649414
+      }
+    ],
+    "held": []
+  },
+  "m07": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.6399999856948853,
+        "surface": 0.6659145355224609,
+        "exposed": -0.025914549827575684
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.6399999856948853,
+        "surface": 0.6659164428710938,
+        "exposed": -0.025916457176208496
+      },
+      {
+        "node": "leg_ML",
+        "x": 0.6800000071525574,
+        "surface": 1.1143760681152344,
+        "exposed": -0.434376060962677
+      },
+      {
+        "node": "leg_MR",
+        "x": 0.6800000071525574,
+        "surface": 1.1143741607666016,
+        "exposed": -0.4343741536140442
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.6800000071525574,
+        "surface": 1.2069416046142578,
+        "exposed": -0.5269415974617004
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.6800000071525574,
+        "surface": 1.2069435119628906,
+        "exposed": -0.5269435048103333
+      }
+    ],
+    "held": []
+  },
+  "m08": {
+    "roots": [
+      {
+        "node": "leg_FL",
+        "x": 0.5699999928474426,
+        "surface": 0.7150020599365234,
+        "exposed": -0.1450020670890808
+      },
+      {
+        "node": "leg_FR",
+        "x": 0.5699999928474426,
+        "surface": 0.7150020599365234,
+        "exposed": -0.1450020670890808
+      },
+      {
+        "node": "leg_HL",
+        "x": 0.5699999928474426,
+        "surface": 0.7127285003662109,
+        "exposed": -0.1427285075187683
+      },
+      {
+        "node": "leg_HR",
+        "x": 0.5699999928474426,
+        "surface": 0.7127285003662109,
+        "exposed": -0.1427285075187683
+      }
+    ],
+    "held": []
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "baseline": {
+    "min": [
+      -1.0574572052901805,
+      0.4174999998509885,
+      -2.6486237115898423
+    ],
+    "max": [
+      0.9078404178477743,
+      0.49749999779462817,
+      -0.17867145829831815
+    ],
+    "worst": {
+      "node": "outer_l/armor",
+      "parts": [
+        "Fanned primary feather",
+        "Fanned primary feather.001",
+        "Fanned primary feather.002",
+        "Fanned primary feather.003",
+        "Fanned primary feather.004",
+        "Fanned primary feather.005",
+        "Fanned primary feather.006",
+        "Fanned primary feather.007",
+        "Fanned primary feather.008"
+      ],
+      "point": [
+        -1.0574572052901805,
+        0.4304999998509884,
+        -1.1010190460306541
+      ]
+    }
+  },
+  "original": [
+    1.74,
+    -2.85,
+    2.22
+  ],
+  "legWorld": [
+    0.9059051229024061,
+    1.7,
+    0.4862835613123565
+  ],
+  "best": {
+    "rotations": [
+      1.7249999999999992,
+      -2.8500000000000005,
+      2.1499999999999995
+    ],
+    "bounds": {
+      "min": [
+        -0.9794883773462161,
+        0.4174999998509885,
+        -2.6476933095599353
+      ],
+      "max": [
+        0.9217997903670405,
+        0.49749999779462817,
+        -0.1967344043290996
+      ],
+      "worst": {
+        "node": "outer_l/armor",
+        "parts": [
+          "Fanned primary feather",
+          "Fanned primary feather.001",
+          "Fanned primary feather.002",
+          "Fanned primary feather.003",
+          "Fanned primary feather.004",
+          "Fanned primary feather.005",
+          "Fanned primary feather.006",
+          "Fanned primary feather.007",
+          "Fanned primary feather.008"
+        ],
+        "point": [
+          -0.9794883773462161,
+          0.4304999998509884,
+          -1.184547720662146
+        ]
+      }
+    },
+    "score": 0.005125000000000126,
+    "legPosition": [
+      0.49348616186505634,
+      -0.51,
+      0.5610625892940759
+    ]
+  },
+  "points": 1320
+}
