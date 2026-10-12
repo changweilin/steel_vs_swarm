@@ -1,0 +1,24 @@
+{
+  "gate": "pass",
+  "assets": [
+    "t08",
+    "m04",
+    "s03",
+    "t06",
+    "m05",
+    "m08"
+  ],
+  "coverage": [
+    "neutral front/side/back",
+    "authored weapon details",
+    "complete light/heavy/run cycles",
+    "both morph forms",
+    "native Blender pluck preview"
+  ],
+  "images": {
+    "out/weapon_revision/gallery-1.png": "38f141bec7f46d27d357fb90230c37d691976464ffcd5a1667a69d329fa8c966",
+    "out/weapon_revision/gallery-2.png": "b09342d3e9846f20672ae55f119d987a50a0151730d153eaa42c7d23e36ed203",
+    "out/weapon_revision/gallery-3.png": "5ca01e1b8307c14e07f222e7f41b846333e797c5a6010047ece87aff59e28e97",
+    "out/weapon_revision/cycles.png": "712998a551d2e55d8cb6dbacfdc8c452de69a2a33d719c5b80907034b3e73cce"
+  }
+}

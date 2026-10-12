@@ -2,18 +2,18 @@
   "asset": "m08",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 17461,
-    "meshes": 121,
-    "joints": 65,
+    "triangles": 18561,
+    "meshes": 125,
+    "joints": 69,
     "source": {
-      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
-      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
+      "contract": "36dca79aa62df1c72362d695b9c0c7eb765ba067e1734da8750bb34615ad82c2",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "532d2f52b46812ed674fd38db7fcc3c21a2fabbe86db8f1a185246c3fa53bb84",
       "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
-      "combat": "9edca8af62e9ae5e691de14b34c1e2922b3e5e012a0bf694560e91a9c55e64ed",
+      "combat": "06151fbfe9b55bf70b8c61b89215f858260f104a338145fe7bea93183e4ccb8a",
       "intent": "07abd378fc0382184f10b970d53af3251e04fed156b88a47477a9c35b5f6f159",
-      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
+      "sharedContract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "sharedCatalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c"
     }
   },
   "clips": [
@@ -39,9 +39,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "876de23c110d154c0316be5b607cdcb023ac640275aee8dd364c51123096f970",
-    "blend": "e41b48038228bb66e2e30190869a1cd7c218719e7e0f85087591b914fcaf8017",
-    "glb": "10c239ca3d4fdf4c36f095c2e8d3952e4cd7e21d580913a5db8954c384f6cbb4"
+    "runtime": "f11f9f15b0d87128ef71b59ad56c48eccb2f50481aace9b3a525b934689ffd44",
+    "blend": "65bd95c015e4b5e07709203af35b089aa7654dfda7a19303bf980d93bae8b92f",
+    "glb": "b7e7eb123c03370fc50b2c580e09c8913a21737facd352a623cc3fb7ee5a6c5c"
   },
   "gates": {
     "structure": "pass",

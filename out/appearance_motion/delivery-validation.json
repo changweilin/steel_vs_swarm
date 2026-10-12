@@ -73,5 +73,6 @@
     "guard": "audit_biped_posture",
     "failure": "Defense disk and projected shield have different vertical centers",
     "baseline": "Original Git version also fails this audit at the left firing forearm check"
-  }
+  },
+  "superseded_by": "../appearance_refinement/delivery-validation.json"
 }

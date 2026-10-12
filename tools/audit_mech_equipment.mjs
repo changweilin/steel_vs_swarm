@@ -6,7 +6,8 @@ import { createHash } from 'node:crypto';
 import { chromiumOrNull, chromePath } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 
-const output='out/appearance_motion';
+const outputOption=process.argv.indexOf('--output');
+const output=outputOption<0?'out/appearance_motion':process.argv[outputOption+1];
 const option=process.argv.indexOf('--asset');
 const ids=option<0?['s06','s07','s09','m02','t12','t03','t06','s10','t11','m05','m07']:process.argv[option+1].split(',');
 const inputHashes={};
@@ -61,20 +62,50 @@ try {
         };
         if(action==='def'||action==='atk')ent.castFx={t0:0,slot:action};
         const xBefore=rig.wpn.light.ref.getWorldPosition(point()).x;
-        let soleMargin=Infinity,handGap=Infinity;
+        let soleMargin=Infinity,handGap=Infinity,tailLeft=Infinity,tailRight=-Infinity;
         for(let frame=0;frame<180;frame++) {
           tick(1/60);
           if(rig.stowedWeapons) {
             const sole=Math.min(...['L','R'].map(side=>bounds(rig['legChain'+side].at(-1).g).min.y));
             for(const control of rig.stowedWeapons) {
               const margin=bounds(control.node).min.y-sole;soleMargin=Math.min(soleMargin,margin);
-              check(margin>=-.001,'weapon falls below the soles');
+              check(margin>=-.001,`${action}/${frame}: weapon falls below the soles by ${-margin}`);
             }
           }
           if(id==='s09') {
             const hands=['L','R'].map(side=>rig['armChain'+side].at(-1).g.getWorldPosition(point()));
             handGap=Math.min(handGap,hands[0].distanceTo(hands[1]));check(hands[0].distanceTo(hands[1])>.35,'forepaws collapse together');
           }
+          if(id==='s06' && action!=='light' && (rig._bowAim || 0)<1e-4) {
+            const a=rig.archery;
+            for(const [weapon,hand,elbow] of [[a.bow,a.bowHand,a.bowElbow],[a.arrow,a.hand,a.elbow]]) {
+              const direction=hand.getWorldPosition(point()).sub(elbow.getWorldPosition(point())).normalize();
+              check(point().set(0,0,1).applyQuaternion(weapon.getWorldQuaternion(q())).dot(direction)>.999,
+                'carried bow or arrow does not follow its forearm');
+            }
+          }
+          if(id==='t06') {
+            const tip=unit.worldToLocal(rig.tailSegs.at(-1).getWorldPosition(point()));
+            tailLeft=Math.min(tailLeft,tip.x);tailRight=Math.max(tailRight,tip.x);
+            for(const control of rig.stowedWeapons) if(control.node.scale.x<=control.scale+.01) {
+              const direction=point().set(0,0,1).applyQuaternion(control.node.getWorldQuaternion(q()));
+              direction.applyQuaternion(unit.getWorldQuaternion(q()).invert());
+              check(Math.abs(direction.x)>.999,'shrunk weapon does not stay horizontal across the hand');
+            }
+          }
+          if(id==='s07') {
+            const roots=rig.tentacleWaves.map(w=>w.chain[0]);
+            check(Math.max(...roots.map(n=>n.position.y))-Math.min(...roots.map(n=>n.position.y))<1e-7,'tentacle roots occupy different body heights');
+            const rear=rig.tentacleWaves.find(w=>w.chain[0].name==='tent_3');
+            const mantle=[];unit.traverse(mesh=>{if(mesh.isMesh&&mesh.userData.authoredParts?.includes('Cephalopod armored mantle'))mantle.push(mesh);});
+            const center=rig.spine.localToWorld(point().set(0,.75,0)),clearance=.22*rig.spine.getWorldScale(point()).x;
+            for(const node of rear.chain.slice(3,9)) {
+              const origin=node.getWorldPosition(point()),direction=center.clone().sub(origin).normalize();
+              const hit=new T.Raycaster(origin,direction,0,20).intersectObjects(mantle,false)[0];
+              check(!hit || hit.distance>clearance,'rear tentacle presses against the mantle');
+            }
+          }
+          if(id==='m07')check(Math.abs(rig.dorsalMount.node.position.y-rig.dorsalMount.height)<1e-7,'dorsal cannon changes its fixed height');
           if(frame>=120&&rig.stance)check(rig.legL.rotation.y>.15&&rig.legR.rotation.y<-.15,'toe-out stance lost');
         }
         if(id==='s06') {
@@ -109,6 +140,12 @@ try {
         }
         if(id==='s07') {
           check(unit.getObjectByName('emitter_l').parent.name==='tent_1_11','shield is not held by front tentacle');
+          for(const wave of rig.tentacleWaves) {
+            const root=wave.chain[0].name,points=[...wave.chain,unit.getObjectByName(root+'_11')].map(n=>n.getWorldPosition(point()));
+            const directions=points.slice(1).map((p,i)=>p.clone().sub(points[i]).normalize());
+            const bend=directions.slice(1).reduce((sum,d,i)=>sum+Math.acos(Math.max(-1,Math.min(1,d.dot(directions[i])))),0);
+            check(bend>.65,'tentacle curvature stays confined to one rigid straight reach');
+          }
           const tool=unit.getObjectByName('cast_dish');check(tool.parent.name==='tent_3_11','attack tool is not held by rear tentacle');
           check(tool.getWorldPosition(point()).y>rig.head.getWorldPosition(point()).y,'rear attack tool is below the head');
           if(action==='light')check(Math.abs(rig.wpn.light.ref.getWorldPosition(point()).x)<Math.abs(xBefore)*.6,'firing tentacle does not converge');
@@ -123,21 +160,25 @@ try {
             check(rig.muzzles.light.n!==rig.wpn.light.muz,'next shot repeats the previous muzzle');
           }
         }
-        if(id==='t06')check(rig.wpn.light.ref.parent.name==='wrist_l','light gun stays in the staff hand');
+        if(id==='t06') {
+          check(rig.wpn.light.ref===rig.hairFlick.middle && rig.hairFlick.hand.name==='wrist_l','hair flick leaves its free hand');
+          check(tailLeft<-.4 && tailRight>.4,'monkey tail does not sweep to both sides');
+        }
         if(['light','heavy'].includes(action)) {
           const weapon=rig.wpn[action],axis=weapon.fwd;
           const direction=point().set(axis==='x'?1:0,axis==='y'?1:0,axis==='z'?1:0).applyQuaternion(weapon.ref.getWorldQuaternion(q()));
           check(direction.z>.95,'active muzzle points away from target');
         }
-        if(id==='t11')check(rig.wpn.light.ref.parent.name==='shoulder_r'&&rig.wpn.heavy.ref.parent.name==='shoulder_l','weapons remain buried at the head');
+        if(id==='t11')check(unit.getObjectByName('gun').parent.name==='shoulder_r'&&unit.getObjectByName('heavy').parent.name==='shoulder_l','weapons remain buried at the head');
         if(id==='m07'&&action==='heavy') {
-          check(rig.dorsalLift.node.position.y>rig.dorsalLift.rest+1,'dorsal gun does not lift');
           const direction=point().set(0,0,1).applyQuaternion(rig.wpn.heavy.ref.getWorldQuaternion(q()));
-          check(new T.Raycaster(rig.muzzles.heavy.n.getWorldPosition(point()),direction,0,20).intersectObject(rig.head,true).length===0,'dorsal muzzle path strikes horn');
-          const body=[];unit.traverse(mesh=>{if(mesh.isMesh&&mesh.userData.authoredParts?.some(part=>part.startsWith('Dorsal cannon lift foot')))body.push(mesh);});
-          const down=point().set(0,-1,0).applyQuaternion(rig.dorsalLift.node.getWorldQuaternion(q()));
-          const travel=(rig.dorsalLift.height+.24)*rig.dorsalLift.node.getWorldScale(point()).y;
-          check(new T.Raycaster(rig.dorsalLift.node.getWorldPosition(point()),down,0,travel).intersectObjects(body,false).length>0,'raised dorsal gun loses its lift support');
+          const receiver=[];unit.traverse(mesh=>{if(mesh.isMesh&&mesh.userData.authoredParts?.includes('Twin dorsal cannon receiver'))receiver.push(mesh);});
+          check(receiver.length>0,'dorsal barrel receiver is missing');
+          for(const side of [-1,1]) {
+            const muzzle=unit.getObjectByName('heavy_recoil').localToWorld(point().set(side*rig.dorsalMount.barrelSpacing/2,0,1.65));
+            check(new T.Raycaster(muzzle,direction,0,20).intersectObject(rig.head,true).length===0,'dorsal muzzle path strikes horn');
+            check(new T.Raycaster(muzzle,direction.clone().negate(),0,20).intersectObjects(receiver,false).length>0,'dorsal barrel does not connect to receiver');
+          }
         }
         if(id==='s10'&&action==='run') {
           const before=rig.tailSegs.map(n=>n.quaternion.clone());for(let i=0;i<20;i++)tick(1/60);
@@ -149,6 +190,17 @@ try {
         for(const [view,offset] of [['oblique',[1.25,.55,1.6]],['front',[0,.25,2.2]],['side',[2.2,.25,0]],['back',[0,.25,-2.2]],['top',[0,2.2,.01]]]) {
           camera.position.copy(center).add(point().fromArray(offset).multiplyScalar(span));camera.lookAt(center);renderer.render(scene,camera);
           pictures[action+'-'+view]=renderer.domElement.toDataURL('image/png').split(',')[1];
+        }
+        if(id==='t06' && action==='run') {
+          let maximumTurnBend=0;
+          for(let frame=0;frame<270;frame++) {
+            const previousYaw=unit.rotation.y;unit.rotation.y+=1.25/60;now+=1/60;
+            stepCombatFx(ent,now,1/60);stepLocomotion(ent,1/60,now,0,-speed/60,previousYaw);
+            const bend=Math.abs(rig.tailSegs.reduce((sum,n)=>sum+n.rotation.y,0));
+            maximumTurnBend=Math.max(maximumTurnBend,bend);
+            check(bend<Math.PI,'turning coils the monkey tail into a full loop');
+          }
+          metrics[action].maximumTurnBend=maximumTurnBend;
         }
         scene.remove(unit);disposeTree(unit);
       }

@@ -1,6 +1,47 @@
 // Event-driven presentation shares the shipped rig clock without modifying authority state.
 import { stepAuthoredCombat } from './forge/combatAsset.js';
 import { stepShieldMaterial, SHIELD_PRESENTATION_EXPAND } from './vfx.js';
+import { frictionFPS } from './data.js';
+
+/** Pre: one immutable event per accepted shot. Post: each slot advances once, including skipped LOD frames. */
+export function fireReferenceWeapon(rig, event) {
+  if (!rig || !event || !Number.isFinite(event.t0)) return null;
+  const slot = event.slot || 'light', sequence = rig.weaponSequences?.[slot];
+  if (!sequence) return null;
+  if (sequence.event === event) return sequence.entries[sequence.index];
+  sequence.event = event;
+  sequence.index = (sequence.index + 1) % sequence.entries.length;
+  const active = sequence.entries[sequence.index];
+  active.firedAt = event.t0;
+  if (active.payload) active.payload.scale.setScalar(.001);
+  rig.wpn[slot].ref = active.ref;
+  rig.wpn[slot].muz = active.muzzle;
+  rig.muzzles[slot].n = sequence.entries[(sequence.index + 1) % sequence.entries.length].muzzle;
+  if (rig.alternating?.slot === slot) rig.alternating.index = sequence.index;
+  const emitterNames = new Set(sequence.entries.map(entry => entry.muzzle.name));
+  for (const [name, parent] of rig.combat?.joints || []) {
+    if (emitterNames.has(parent)) active.muzzle.add(rig.combat.nodes.get(name));
+  }
+  for (const flame of rig.flames?.[slot] || []) active.muzzle.add(flame);
+  const hair = rig.hairFlick;
+  if (slot === 'light' && hair) {
+    if (event.t0 - hair.firedAt > hair.burstGap) hair.startedAt = event.t0;
+    hair.firedAt = event.t0;
+  }
+  return active;
+}
+
+/** Payload omission represents an ejected round; visible missiles retain their authored rigid dimensions. */
+export function poseWeaponPayloads(rig, now) {
+  for (const [slot, sequence] of Object.entries(rig?.weaponSequences || {})) {
+    const duration = rig.combat?.clips[slot]?.duration || .55;
+    for (const entry of sequence.entries) {
+      if (!entry.payload) continue;
+      const age = now - entry.firedAt;
+      entry.payload.scale.setScalar(age >= 0 && age < duration ? .001 : 1);
+    }
+  }
+}
 
 export function stepUnitSpinners(nodes, dt) {
   if (!nodes || !Number.isFinite(dt) || dt <= 0) return;
@@ -24,8 +65,13 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
     for (const track of tracks) {
       const phase = track.trigger === 'heavy' ? Math.max(0, rig._chg || 0, rig._aimH || 0) : weight;
-      const active = track.barrel == null || track.barrel === rig.alternating?.index;
-      track.node[track.channel][track.axis] = track.rest + track.amplitude * (active ? phase : 0);
+      const fired = tracks === motion.fire ? track.emitters : null;
+      const pulse = fired?.length ? Math.max(...fired.map(({ slot, entry }) => {
+        const age = now - entry.firedAt;
+        return age >= 0 && Number.isFinite(age) ? frictionFPS(7, age) * (slot === 'heavy' ? 1 : .45) : 0;
+      })) : phase;
+      const active = fired?.length || track.barrel == null || track.barrel === rig.alternating?.index;
+      track.node[track.channel][track.axis] = track.rest + track.amplitude * (active ? pulse : 0);
     }
   }
   if (rig.launcher) {

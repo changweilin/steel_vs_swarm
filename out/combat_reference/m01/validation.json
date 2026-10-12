@@ -2,18 +2,18 @@
   "asset": "m01",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 12918,
+    "triangles": 14534,
     "meshes": 122,
-    "joints": 50,
+    "joints": 60,
     "source": {
-      "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
-      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-      "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
+      "contract": "36dca79aa62df1c72362d695b9c0c7eb765ba067e1734da8750bb34615ad82c2",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "532d2f52b46812ed674fd38db7fcc3c21a2fabbe86db8f1a185246c3fa53bb84",
       "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-      "combat": "9edca8af62e9ae5e691de14b34c1e2922b3e5e012a0bf694560e91a9c55e64ed",
+      "combat": "06151fbfe9b55bf70b8c61b89215f858260f104a338145fe7bea93183e4ccb8a",
       "intent": "07abd378fc0382184f10b970d53af3251e04fed156b88a47477a9c35b5f6f159",
-      "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-      "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
+      "sharedContract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "sharedCatalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c"
     }
   },
   "clips": [
@@ -39,9 +39,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "f8d5798951ad751d326c7c35b5374c0759f7f2879f88d428480171f3b13a5af0",
-    "blend": "21f0e5b6db2f72888d0bb0497cfcf8ac81ac9259d298f3bf5a268be6b1c4cd1e",
-    "glb": "8188d242cbed86cbfad24ece561cb69c682d13fdb84b37749af4c354962e77e9"
+    "runtime": "aa96addcf52c6c88e9794e2ba025c9bd98983387d8b8dd386256f3f48f3612a7",
+    "blend": "e2bd01ad1d8f08318c56b970b665da80d3ee103000e3046bfc441ef1b60df0f3",
+    "glb": "75e7f45c35c811b9fbed7a959425558d46b21daefad82495a0ec023dca881031"
   },
   "gates": {
     "structure": "pass",

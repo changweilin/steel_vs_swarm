@@ -1,6 +1,6 @@
 {
-  "blend": "e82b6804289fcc8814eefddceb4e032bd07bcdc4c44177f8e441f9f653342e9b",
-  "bones": 102,
+  "blend": "6c136792dc8296d410ae949dd12d633a6b89e616838e82abbd2e7e9f3a583021",
+  "bones": 108,
   "clips": [
     "idle",
     "run",
@@ -25,61 +25,65 @@
     "articulation": {
       "waist": "waist",
       "heldWeapons": 0
-    }
+    },
+    "sealedCoreMeshes": 2
   },
   "bakedSource": {
-    "contractSource": "out/anatomical_motion/before/t11-25c7cf40dedf.blend",
-    "contractSourceHash": "25c7cf40dedf0000a4b9b9ae86eb8aba3b90ef55d8727c207ef2f84f90a5c7e3",
+    "contractSource": "out/anatomical_motion/before/t11-338833006e1a.blend",
+    "contractSourceHash": "338833006e1a2b20f925cd0dc0d374b5d7cf260fd47f83dd8c2f1b3f9ab2eff9",
     "motionVerification": "out/anatomical_motion/after/blender-validation.json"
   },
-  "foldedLimbBoundsInHullCoordinates": {
+  "deliveredShieldAlignment": {
+    "maximumLateralError": 0.014409780502319336,
+    "normalAlignment": 1.0
+  },
+  "foldedLimbBoundsInHullCoordinates": {},
+  "limbVerticesOutsideHull": 0,
+  "exposedLimbBoundsInHullCoordinates": {
     "hip_l": {
       "min": [
-        -0.10120005905628204,
+        0.6715999841690063,
         -0.3396639823913574,
-        -0.34960001707077026
+        -0.38600003719329834
       ],
       "max": [
-        0.4811999797821045,
-        1.3996000289916992,
-        0.14960001409053802
+        1.4412000179290771,
+        1.4359999895095825,
+        0.18599998950958252
       ]
     },
     "hip_r": {
       "min": [
-        -0.48120003938674927,
+        -1.4412000179290771,
         -0.3396639823913574,
-        -0.34960001707077026
+        -0.38600003719329834
       ],
       "max": [
-        0.10119999200105667,
-        1.3996000289916992,
-        0.14960001409053802
+        -0.6715999841690063,
+        1.4359999895095825,
+        0.18599998950958252
       ]
-    }
-  },
-  "limbVerticesOutsideHull": 0,
-  "exposedLimbBoundsInHullCoordinates": {
+    },
     "shoulder_l": {
       "min": [
-        -0.08379102498292923,
+        0.13142958283424377,
         -0.2967979609966278,
-        -0.8250000476837158
+        -0.846000075340271
       ],
       "max": [
-        3.204688549041748,
+        3.4446887969970703,
         2.201559543609619,
         -0.249999538064003
       ]
     },
     "shoulder_r": {
       "min": [
-        -3.204688549041748,
+        -3.4446887969970703,
         -0.2967980206012726,
-        -0.8250000476837158
+        -0.846000075340271
       ],
       "max": [
-        0.08379102498292923,
+        -0.13142958283424377,
         2.201559543609619,
         -0.249999538064003
       ]

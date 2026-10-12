@@ -117,4 +117,10 @@ export function stepAuthoredCombat(rig, ent, now) {
       track.target.visible = true;
     }
   }
+  const charge = Math.max(0,Math.min(1,rig._chg || 0));
+  if (charge > 0) for (const name of combat.charging || []) {
+    const node = combat.nodes.get(name);
+    node.visible = true;
+    node.scale.set(1,.45+.55*charge,.45+.55*charge);
+  }
 }

@@ -1,22 +1,22 @@
 {
   "source": {
-    "contract": "9f49b6867fa859b3e911c9e8b4ff3c5517d359b0e25cb0f496bf9aa6e6c63e20",
-    "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-    "catalog": "aa16df1bda665bb403c2377216e4aaa517f819bcbde19cd925e2c1c4467141ce",
+    "contract": "36dca79aa62df1c72362d695b9c0c7eb765ba067e1734da8750bb34615ad82c2",
+    "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+    "catalog": "532d2f52b46812ed674fd38db7fcc3c21a2fabbe86db8f1a185246c3fa53bb84",
     "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
-    "sharedContract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-    "sharedCatalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2"
+    "sharedContract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+    "sharedCatalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c"
   },
   "hashes": {
-    "runtime": "86020baa08c02f7a9576a7b7bb8f2c02d588cc2639e3775b46ba8ca985b585b5",
-    "glb": "8e39b6188f284886c7132a894fda288aed9bc358b8a440e2836439996b8a0650"
+    "runtime": "e728781a2c1264c064cd291f46cccc4f5e73aeda5f9cab41ee1d8bf4f54bff2b",
+    "glb": "a31b5abdd75679023251149e455a6e5f3bcf92c1d735dbe96319cb015beea5f0"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 12064,
+    "trianglesPerVisibleForm": 12588,
     "effectTriangles": 3978,
     "effectMeshes": 30,
-    "retainedTriangles": 28106,
-    "meshesPerVisibleForm": 92,
+    "retainedTriangles": 29154,
+    "meshesPerVisibleForm": 84,
     "pairs": {
       "pair": 129,
       "soft": 0,

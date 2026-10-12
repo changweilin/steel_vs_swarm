@@ -46,7 +46,7 @@ import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
+import { fireUnitMotion, stepUnitSpinners, fireReferenceWeapon } from './unitMotion.js';
 import { buildBaseBattery } from './buildingUnitModels.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep, scopeRadiusPx } from './cull.js';
@@ -1732,6 +1732,16 @@ export class BattleClient {
    */
   _syncCockpitWeapon() {
     const fly = !!this.flight;
+    const self = [...(this.ents?.values() || [])].find(ent => ent.isSelf), rig = self?.mesh?.userData.rig;
+    this.gunGroup?.traverse(node => {
+      for (const pair of node.userData.weaponPresentation || []) {
+        const source = rig?.combat?.nodes.get(pair.name);
+        if (!source) continue;
+        pair.target.scale.copy(source.scale);
+        if (pair.rotate) pair.target.quaternion.copy(source.quaternion);
+        if (pair.translate && pair.target.parent?.name === source.parent?.name) pair.target.position.copy(source.position);
+      }
+    });
     // **狙擊模式不出現機體零件**(2026-08-15 使用者定案):進鏡 ⇒ 座艙件整組收起。
     // 三條:
     //  ① 收的是**全部**座艙件(機體剪影 / 武裝 / 持械機構 / 艙框),MUST NOT 只收「擋到鏡圈的
@@ -1763,8 +1773,14 @@ export class BattleClient {
       if (c !== this.flash && c !== this._gunG && c !== this._gunA) c.visible = !hide;
     }
     const set = (this.isMorph && fly) ? this._muzzles?.A : this._muzzles?.G;
-    if (!set) return;
     const id = this.aiming && this.wdef?.heavy ? 'heavy' : 'light';   // 與 _curWeapon 同一條選槽規則
+    const emitter = this._cockpitEmission(id);
+    if (emitter) {
+      this._muzzle.copy(this.gunGroup.worldToLocal(emitter.getWorldPosition(new THREE.Vector3())));
+      this.flash?.position.copy(this._muzzle);
+      return;
+    }
+    if (!set) return;
     const mz = set[id] || set.light || set.heavy;
     if (mz && this._muzzle !== mz) { this._muzzle = mz; this.flash.position.copy(mz); }
   }
@@ -2045,7 +2061,8 @@ export class BattleClient {
     const LEN = (COCK_WLEN[mount] ?? 1.0) * s;
     const muzNodes = {};
     let cloned = null;
-    if (set?.nodes?.length && set.ref) cloned = this._cloneWpnSet(set);
+    if (set?.nodes?.length && set.ref) cloned = this._cloneWpnSet(set,
+      slots.flatMap(slot => rig3p.weaponSequences?.[slot]?.entries.map(entry => entry.muzzle) || []));
     // ⚠ 2026-08-14(新版建模):複製過來的子樹**量不出砲管軸線**時 MUST 退回 podWeapon。
     //   軸線 = 「量體中心 → 最遠槍口」;槍口離中心太近(t06 尾梢熔核砲、t10 雙肩 VLS 都是
     //   短而胖的量體)⇒ 那條向量短到方向本身是雜訊,規則 ④ 的不動點迭代因此收不到準星上
@@ -2060,7 +2077,7 @@ export class BattleClient {
         const mz = wpn[sl]?.muz && cloned.pairs.get(wpn[sl].muz);
         if (mz) lever = Math.max(lever, mz.getWorldPosition(new THREE.Vector3()).sub(c0).length());
       }
-      if (lever < 0.22 * Math.max(sz0.x, sz0.y, sz0.z)) cloned = null;
+      if (lever < 0.22 * Math.max(sz0.x, sz0.y, sz0.z) && wtype !== 'beam' && !(slot0 === 'light' && rig3p.hairFlick)) cloned = null;
     }
     if (cloned) {
       const rot = WPN_FWD_ROT[set.fwd || 'z'] || WPN_FWD_ROT.z;
@@ -2069,6 +2086,15 @@ export class BattleClient {
       inner.add(cloned.grp);
       wrap.add(inner);
       for (const sl of slots) muzNodes[sl] = (wpn[sl]?.muz && cloned.pairs.get(wpn[sl].muz)) || null;
+      wrap.userData.emissionMuzzles = Object.fromEntries(slots.map(sl => [sl,
+        (rig3p.weaponSequences?.[sl]?.entries || []).map(entry => cloned.pairs.get(entry.muzzle))]));
+      wrap.userData.emissionAir = air;
+      const digits = slots.includes('light') && rig3p.hairFlick
+        ? [rig3p.hairFlick.index,rig3p.hairFlick.middle,rig3p.hairFlick.thumb,rig3p.hairFlick.tuft] : [];
+      const payloads = slots.flatMap(sl => (rig3p.weaponSequences?.[sl]?.entries || []).map(entry => entry.payload).filter(Boolean));
+      const recoils = slots.flatMap(sl => (rig3p.weaponSequences?.[sl]?.entries || []).map(entry => entry.recoil).filter(Boolean));
+      wrap.userData.weaponPresentation = [...new Set([...digits,...payloads,...recoils])].map(source =>
+        ({name:source.name,target:cloned.pairs.get(source),rotate:digits.includes(source),translate:recoils.includes(source)})).filter(pair => pair.target);
     } else {
       const inner = new THREE.Group();
       inner.rotation.y = Math.PI;
@@ -2189,7 +2215,7 @@ export class BattleClient {
    * 座艙統一重描)與待機槍口焰(隱形死件);複本共享來源幾何/材質(已含 paintUnit 塗裝)
    * → 標 noPaint 避免座艙塗裝二次上色。來源機體從未 render,幾何/材質由複本續用,MUST NOT dispose。
    */
-  _cloneWpnSet(set) {
+  _cloneWpnSet(set, emitters = []) {
     const grp = new THREE.Group();
     const pairs = new Map();   // 原節點 → 複本節點(槍口對應查找)
     const refInv = set.ref.matrixWorld.clone().invert();
@@ -2197,7 +2223,13 @@ export class BattleClient {
       pairs.set(o, cl);
       for (let i = 0; i < o.children.length; i++) walk(o.children[i], cl.children[i]);
     };
-    for (const node of set.nodes) {
+    const roots = set.nodes.slice();
+    for (const emitter of emitters) {
+      let covered = false;
+      for (let owner = emitter; owner; owner = owner.parent) if (roots.includes(owner)) { covered = true; break; }
+      if (!covered) roots.push(emitter);
+    }
+    for (const node of roots) {
       if (!node) continue;
       const cl = node.clone(true);
       walk(node, cl);
@@ -7820,11 +7852,13 @@ export class BattleClient {
    *  一個 pid 底下可能有三架(蜂群小隊)—— 全數標記,僚機齊射的視覺一致。
    *  重武器擊發同步標記 heavyFx(掛點反向過衝/槍口焰):bot 英雄沒有 heavyFire 訊息,
    *  只靠 shot 事件走到這裡,不標記就看不到重武器的擊發演出。 */
-  _markFire(pid, slot, t0, aim) {
+  _markFire(pid, slot, t0, aim, includeSelf = false) {
     if (pid == null) return;
     for (const ent of this.ents.values()) {
-      if (ent.pid !== pid || ent.isSelf) continue;
+      if (ent.pid !== pid || (ent.isSelf && !includeSelf)) continue;
       ent.fireFx = { t0, slot: slot === 'heavy' ? 'heavy' : 'light' };
+      const morph = ent.mesh?.userData.morph;
+      for (const rig of morph ? [morph.ground,morph.air] : [ent.mesh?.userData.rig]) fireReferenceWeapon(rig,ent.fireFx);
       if (slot === 'heavy') ent.heavyFx = { phase: 'fire', t0 };
       // 交戰面向(2026-07-22 規則 1):記下攻擊目標 —— 靜止的 bot/僚機在 _updateEnts
       // 轉身面向它(槍口朝攻擊方向;移動中照舊面向移動方向)
@@ -8273,6 +8307,20 @@ export class BattleClient {
     this._gLaser = { group, beam, ring };
   }
 
+  _cockpitEmission(slot, next = false) {
+    const self = [...(this.ents?.values() || [])].find(ent => ent.isSelf);
+    const sequence = self?.mesh?.userData.rig?.weaponSequences?.[slot];
+    if (!sequence || !this.gunGroup) return null;
+    const index = next ? (sequence.index + 1) % sequence.entries.length : Math.max(0, sequence.index);
+    let anchor = null;
+    this.gunGroup.traverse(node => {
+      if (this.isMorph && node.userData.emissionAir !== !!this.flight) return;
+      const muzzle = node.userData.emissionMuzzles?.[slot]?.[index];
+      if (muzzle) anchor = muzzle;
+    });
+    return anchor;
+  }
+
   _selfMuzzle(dir, rng = 100, slot = 'light') {
     if (this.viewMode === 'tps') {
       const eyeH = this._eyeH();
@@ -8289,6 +8337,13 @@ export class BattleClient {
         dir.copy(targetPoint).sub(muz).normalize();
       }
       return muz;
+    }
+    const anchor = this._cockpitEmission(slot, true);
+    if (anchor) {
+      const point = anchor.getWorldPosition(new THREE.Vector3());
+      this._muzzle.copy(this.gunGroup.worldToLocal(point.clone()));
+      this.flash?.position.copy(this._muzzle);
+      return point;
     }
     return this.gunGroup
       ? this.gunGroup.localToWorld(this._muzzle.clone())
@@ -8403,6 +8458,7 @@ export class BattleClient {
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(this._fireDir || (this._fireDir = new THREE.Vector3()));
     const muzzle = this._selfMuzzle(dir, rng, id);
+    this._markFire(this.youId, id, now, null, true);
 
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
     // 位移懲罰在 _updatePlayer 依 `_recoilMoveF()` 夾住(係數 ← 後座量);'back' 每發沿槍口反向擊退。
@@ -8578,6 +8634,7 @@ export class BattleClient {
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(this._echoDir || (this._echoDir = new THREE.Vector3()));
     const muzzle = this._selfMuzzle(dir, rng, id);
+    this._markFire(this.youId, id, performance.now() / 1000, null, true);
 
     // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
     const fly = this._flying();

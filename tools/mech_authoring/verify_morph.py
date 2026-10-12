@@ -9,7 +9,7 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain, open_contract_source
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain, open_contract_source, authored_spec
 contract = json.loads((HERE / 'morphers.json').read_text())
 output = (HERE / contract['authoring']['outputs']).resolve()
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -45,13 +45,31 @@ def clip_frames(spec, clip):
     return range(int(action.frame_range[0]), int(action.frame_range[1]) + 1)
 
 
+def verify_defense_alignment(spec, frame, tolerance, minimum_alignment):
+    activate_clip(spec, 'shield_deploy', frame)
+    hinge, barrier = [bpy.data.objects[name] for name in ['rotor_hinge_l', 'barrier']]
+    center, target = hinge.matrix_world.translation, barrier.matrix_world.translation
+    error = max(abs(center.x-target.x), abs(center.z-target.z))
+    alignment = abs((hinge.matrix_world.to_quaternion() @ Vector((0,-1,0))).dot(
+        barrier.matrix_world.to_quaternion() @ Vector((0,-1,0))))
+    assert error < tolerance, 'Defense shield is off center'
+    assert alignment > minimum_alignment, 'Defense shield is not parallel to projection'
+    return {'maximumLateralError': error, 'normalAlignment': alignment}
+
+
 for id in ids:
-    spec = contract['assets'][id]
+    spec = authored_spec(contract['assets'][id])
     directory = output / id
     blend = directory / (id + '.blend')
     report = json.loads((directory / 'validation.json').read_text())
     assert report['hashes']['blend'] == sha(blend), 'Stale Blender source: ' + id
     baked_source = open_contract_source(blend, report)
+    delivered_shield = None
+    if id == 't11' and baked_source:
+        # Sampled tracks replace the decorative template membrane; breathing uses the runtime posture guard's tolerance.
+        bpy.ops.wm.open_mainfile(filepath=str(blend))
+        delivered_shield = verify_defense_alignment(spec, clip_frames(spec, 'shield_deploy').stop-1, .03, .9995)
+        bpy.ops.wm.open_mainfile(filepath=str(HERE.parents[1] / report['motionSource']['inputBlend']))
     rest_pose = {name: bpy.data.objects[name].matrix_local.copy() for name, _, _ in spec['joints']}
     skeleton = bpy.data.objects[id + '_skeleton']
     assert len(skeleton.data.bones) == len(spec['joints'])
@@ -62,6 +80,18 @@ for id in ids:
         assert set(spec['clips']).issubset({t.name for t in joint.animation_data.nla_tracks})
     meshes=[obj for obj in bpy.data.objects if obj.type=='MESH']
     anatomy={'articulation':verify_articulated_body(spec,meshes)}
+    if spec.get('cavity'):
+        core=[obj for obj in meshes if obj.parent.name==spec['cavity']['owner'] and
+              any(label in obj.name.lower() for label in ['pelvic croup','lumbar waist','thoracic cage','ventral hull'])]
+        assert core, 'Sealed flight core missing: '+id
+        for obj in core:
+            edges={}
+            for face in obj.data.polygons:
+                for i,v in enumerate(face.vertices):
+                    edge=tuple(sorted((v,face.vertices[(i+1)%len(face.vertices)])))
+                    edges[edge]=edges.get(edge,0)+1
+            assert edges and all(count==2 for count in edges.values()), 'Open flight core: '+obj.name
+        anatomy['sealedCoreMeshes']=len(core)
     if id == 't06':
         assert len(spec['rig']['tailSegs']) == 8, 't06: monkey tail missing'
         assert any(obj.name.startswith('Tapered anatomical tail vertebra armor') for obj in meshes), 't06: tail has no visible geometry'
@@ -112,11 +142,21 @@ for id in ids:
             assert all(math.isfinite(v) for row in joint.matrix_world for v in row), clip + ': nonfinite joint'
             if name != 'barrier':
                 stow=next((w for w in spec['rig'].get('stowedWeapons',[]) if w['node']==name),None)
-                if stow:
+                held=next((w for w in spec['rig'].get('heldWeapons',[]) if w['grip']==name),None)
+                if held:
+                    # Grip compensation preserves grasp dimensions relative to the wrist during weapon stow.
+                    assert all(abs(joint.scale[i]*joint.parent.scale[i]-1)<1e-6 for i in range(3)), clip+': resized grasp'
+                    contact=held['contact']
+                    expected=bpy.data.objects[held['hand']].matrix_world @ Vector((contact[0],-contact[2],contact[1]))
+                    assert (joint.matrix_world.translation-expected).length<1e-5, clip+': detached grasp'
+                elif stow:
                     assert all(stow['scale']-1e-6<=v<=1+1e-6 for v in joint.scale), clip+': weapon exceeds stow range'
                     assert max(joint.scale)-min(joint.scale)<1e-6, clip+': distorted weapon stow'
+                elif name in spec['rig'].get('visibilityControls', []):
+                    assert max(joint.scale)-min(joint.scale)<1e-6, clip+': distorted visibility control'
+                    assert any(abs(joint.scale[0]-v)<1e-6 for v in [.001,1]), clip+': invalid visibility control'
                 else:
-                    assert all(abs(v - 1) < 1e-6 for v in joint.scale), clip + ': resized rigid joint'
+                    assert all(abs(v - 1) < 1e-6 for v in joint.scale), clip + ': resized rigid joint ' + name
         if id == 't11':
             head = bpy.data.objects['head'].matrix_world.to_quaternion()
             if clip in ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract']:
@@ -164,13 +204,8 @@ for id in ids:
         base = min(vertex.co.z for vertex in helmet.data.vertices) + helmet.location.z
         face = bpy.data.objects['Atlas black observation face']
         assert max(vertex.co.z for vertex in face.data.vertices) + face.location.z < base, 'Observation face is hidden by helmet'
-        activate_clip(spec, 'shield_deploy', 31)
-        hinge, barrier = [bpy.data.objects[name] for name in ['rotor_hinge_l', 'barrier']]
-        center, target = hinge.matrix_world.translation, barrier.matrix_world.translation
-        assert abs(center.x - target.x) < 1e-5 and abs(center.z - target.z) < 1e-5, 'Defense shield is off center'
-        normal = hinge.matrix_world.to_quaternion() @ Vector((0, -1, 0))
-        forward = barrier.matrix_world.to_quaternion() @ Vector((0, -1, 0))
-        assert abs(normal.dot(forward)) > .99999, 'Defense shield is not parallel to projection'
+        if not baked_source:
+            verify_defense_alignment(spec, 31, 1e-5, .99999)
     if id == 'm05':
         activate_clip(spec, 'to_flight', 1)
         # Transform clips start from the bind pose, not an arbitrary phase of live idle motion.
@@ -258,6 +293,7 @@ for id in ids:
         assert len([n for n, _, _ in spec['joints'] if n.startswith(('hip_', 'shoulder_'))]) == 4
     result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'], 'validatedClips': len(spec['clips']), 'anatomy': anatomy,
               'bakedSource': baked_source,
+              'deliveredShieldAlignment': delivered_shield,
               'foldedLimbBoundsInHullCoordinates': envelopes, 'limbVerticesOutsideHull': len(outside),
               'exposedLimbBoundsInHullCoordinates': exposed,
               'outsideExamples': outside[:4], 'editable_source': 'pass',

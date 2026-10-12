@@ -49,6 +49,7 @@ def create(base, spec):
             super().reset()
             form = getattr(self, '_pose_form', 'ground')
             apply_form(self, form)
+            self.grip_pose()
             for obj in getattr(self, 'exhaust', []):
                 obj.hide_render = form != 'flight'
 
@@ -69,6 +70,7 @@ def create(base, spec):
                         ends.append((Vector((p[0], -p[2], p[1])), rotation(r)))
                     node.location = ends[0][0].lerp(ends[1][0], u)
                     node.rotation_euler = ends[0][1].slerp(ends[1][1], u).to_euler()
+                self.grip_pose()
                 return
             flight = clip.startswith('flight_')
             self._pose_form = 'flight' if flight else 'ground'
@@ -114,6 +116,7 @@ def create(base, spec):
                 if spinner:
                     self.rotate(self.nodes[spinner['node']], spinner['axis'], t * spinner['rate'] * math.sin(math.pi * t) ** 2)
             self.aim_hands(math.sin(math.pi*t)**2 if clip.removeprefix('flight_') in ('light','heavy','skill','ult') else 0)
+            self.grip_pose()
 
         def render(self, directory):
             evidence = super().render(directory)
@@ -185,10 +188,6 @@ def vampire(a):
         a.loft('Layered shoulder pauldron', 'shoulder_' + n, [(-.38, .55, .44), (.04, .70, .50),
                (.25, .50, .38)], 'armor', (side * .06, 0, 0))
         bands(a, 'shoulder_' + n, (side * .06, .12, .275), .58, .06)
-        a.box('Rigid armored hand', 'wrist_' + n, (.29, .20, .32), (0, -.05, .06), 'shade', .025)
-        for x in [-.09,-.03,.03,.09]:
-            a.box('Closed vampire weapon grip digit','wrist_'+n,(.05,.13,.10),(x,-.19,.09),'armor',.01)
-        a.box('Opposed vampire grip thumb','wrist_'+n,(.07,.12,.13),(side*.15,-.07,.03),'armor',.01)
         a.loft('Pointed grounded armored boot', 'ankle_' + n, [(-.24, .32, .32), (.02, .39, .65),
                (.14, .32, .41)], 'armor', (0, 0, .15))
         a.box('Boot sole', 'ankle_' + n, (.38, .065, .76), (0, -.24, .14), 'dark', .015)
@@ -222,12 +221,12 @@ def vampire(a):
         angle = i * math.tau / 6
         x, y = .17 * math.cos(angle), .17 * math.sin(angle)
         a.tube('Right gatling open barrel', 'gun_spin', .058, .038, p['gunLength'] - .55,
-               (x, y, (p['gunLength'] + .55) / 2), 'steel', segments=10)
+               (x, y, (p['gunLength'] + .55) / 2), 'steel', segments=10, emission='light')
     a.tube('Six barrel forward clamp', 'gun_spin', .26, .225, .11, (0, 0, p['gunLength'] - .20), 'shade')
     a.disk('Light muzzle emission', 'light_muzzle', .025, .012, (0, 0, 0), 'glow')
     a.box('Anatomical left twin missile box', 'heavy', (.60, .49, 1.0), (0, 0, .27), 'shade', .04)
     for x in [-.155, .155]:
-        a.tube('Left twin missile launch cell', 'heavy', .14, .105, 1.08, (x, 0, .36), 'steel', segments=12)
+        a.tube('Left twin missile launch cell', 'heavy', .14, .105, 1.08, (x, 0, .36), 'steel', segments=12, emission='heavy')
         a.disk('Missile cell red indicator', 'heavy', .064, .015, (x, 0, -.19), 'red')
     a.box('Missile charge shutter', 'charge_hinge', (.49, .07, .39), (0, 0, 0), 'armor', .02)
     a.disk('Heavy muzzle emission', 'heavy_muzzle', .04, .01, (0, 0, 0), 'glow')
@@ -284,8 +283,10 @@ def morph_limb(a, parent, delta, width):
                  (length*.28,width*1.12,width*.96), (length*.76,width*.80,width*.74),
                  (length*.91,width*.56,width*.52)], 'armor')
     obj.rotation_euler = Vector((delta[0],-delta[2],delta[1])).to_track_quat('Z','Y').to_euler()
-    a.disk('Exposed limb articulation axle',parent,width*.48,width*.90,(0,0,0),'dark','x')
-    a.disk('Limb silver axle cap',parent,width*.24,width*.94,(0,0,0),'brass','x')
+    # Proximal girdles own these sockets; duplicate collars overlap them and add material batches.
+    if not parent.startswith(('hip_','shoulder_')):
+        a.disk('Exposed limb articulation axle',parent,width*.48,width*.90,(0,0,0),'dark','x')
+        a.disk('Limb silver axle cap',parent,width*.24,width*.94,(0,0,0),'brass','x')
 
 
 def limb_inventory(a):
@@ -312,6 +313,8 @@ def limb_inventory(a):
                 a.box('Elephant foot nail', owner, (.14, .12, .09), (x, -.10, .39), 'white', .02)
         elif raptor:
             fore = 'F' in leg['root']
+            if any(h['hand']==owner for h in a.spec['rig'].get('heldWeapons',[])):
+                continue
             a.box('Three digit claw palm' if fore else 'Raptor distal toe pad', owner, (.22, .17 if fore else .14, .24), (0, -.05, .06), 'shade', .025)
             for x in ([-.12, 0, .12] if fore else [0, leg['side']*.14]):
                 spike(a, 'Raptor grasping digit' if fore else 'Raptor toe claw', owner, (x, -.12, .14), (x, -.20, .42), .052, 'white')
@@ -338,12 +341,19 @@ def limb_inventory(a):
             for root, child, factor in [('shoulder_', 'elbow_', 1), ('elbow_', 'wrist_', .88)]:
                 morph_limb(a, root+n, positions[child+n], a.p['limb']*factor)
             a.loft('Independent shoulder cap', 'shoulder_'+n, [(-.22, .57, .50), (.16, .66, .53)], 'armor')
+            if any(h['hand']=='wrist_'+n for h in a.spec['rig'].get('heldWeapons',[])):
+                continue
+            if a.spec['rig'].get('hairFlick',{}).get('hand')=='wrist_'+n:
+                continue
             a.box('Articulated palm', 'wrist_'+n, (.28, .22, .22), (0, -.08, .04), 'shade', .025)
             for x in [-.09, 0, .09]:
                 if a.spec['id'] == 'm05':
                     a.strut('Open wolf proximal finger','wrist_'+n,(x,-.15,.09),(x*1.55,-.26,.30),.038,'armor')
-                    a.plate('Retractable triple knuckle blade','wrist_'+n,
-                            [(-.045,0),(.045,0),(.035,.59),(0,.78),(-.032,.60)],.035,(x*1.55,-.22,.22),'steel').rotation_euler = rotation((math.pi/2,0,0)).to_euler()
+                    tip=positions['wrist_'+n]
+                    blade=a.plate('Retractable triple knuckle blade','elbow_'+n,
+                            [(-.045,0),(.045,0),(.035,.59),(0,.78),(-.032,.60)],.035,
+                            (tip[0]+x*1.55,tip[1]-.13,tip[2]+.18),'steel')
+                    blade.rotation_euler=Vector((tip[0],-tip[2],tip[1])).to_track_quat('Z','Y').to_euler()
                 else:
                     a.box('Armored finger', 'wrist_'+n, (.06, .18, .08), (x, -.22, .12), 'armor', .009)
 
@@ -569,6 +579,10 @@ def beetle(a):
     ellipsoid(a,'Insect pronotum no neck','chest',(2.20,1.25,1.35),(0,.27,.13),'armor',20,10)
     ellipsoid(a,'Insect head directly on thorax','head',(1.16,.81,.83),(0,.05,.25),'armor',16,8)
     path=a.p['hornPath']
+    origin=path[0]
+    angle=a.p.get('hornPitch',0)
+    path=[(x,origin[1]+(y-origin[1])*math.cos(angle)-(z-origin[2])*math.sin(angle),
+           origin[2]+(y-origin[1])*math.sin(angle)+(z-origin[2])*math.cos(angle)) for x,y,z in path]
     for i,(start,end) in enumerate(zip(path,path[1:])):
         a.strut('Large curved metallic rhinoceros horn','head',start,end,.19-i*.039,'steel')
     for s,n in [(1,'l'),(-1,'r')]:
@@ -631,77 +645,82 @@ def weapons(a):
     light_len=a.nodes['light_muzzle'].location.y*-1
     heavy_len=a.nodes['heavy_muzzle'].location.y*-1
     if id=='s03':
-        a.box('Ear radar beam receiver','gun_recoil',(.29,.18,.25),(0,0,.08),'shade',.025)
-        a.disk('High frequency beam aperture','gun_recoil',.10,.028,(0,0,light_len),'cyan')
-        a.box('Forehead microwave emitter matrix','heavy_recoil',(.42,.22,.23),(0,0,.06),'shade',.03)
-        for x in [-.12,0,.12]:
-            a.disk('Forehead phased microwave cell','heavy_recoil',.055,.02,(x,0,.19),'glow',segments=8)
+        a.disk('Trunk horn terminal beam lens','gun',.033,.018,(0,0,0),'glow',segments=10)
+        a.emission('light','gun',(0,0,.009))
+        a.disk('Intertusk EMP field focus','heavy',.065,.022,(0,0,0),'cyan')
+        a.emission('heavy','heavy',(0,0,.012))
     elif id=='t06':
         a.tube('Long handheld golden plasma staff','heavy_recoil',.085,.047,4.4,(0,0,0),'steel',segments=16)
         for z in [-2.08,-1.87,1.84,2.06]:
             a.tube('Plasma staff golden terminal ring','heavy_recoil',.14,.088,.14,(0,0,z),'brass')
-        a.tube('Plasma staff open crown muzzle','heavy_recoil',.135,.085,.12,(0,0,2.18),'glow')
-        a.box('Micro silent chest gun','gun_recoil',(.19,.22,.34),(0,0,.1),'shade',.02)
-        a.tube('Micro silent chest barrel','gun_recoil',.075,.032,.76,(0,0,.55),'dark',segments=10)
+        a.tube('Plasma staff open crown muzzle','heavy_recoil',.135,.085,.12,(0,0,2.18),'glow', emission='heavy')
+        a.box('Articulated monkey flick palm','wrist_l',(.25,.20,.23),(0,-.10,.03),'shade',.025)
+        for name,at in [('flick_index',(-.075,-.19,.11)),('flick_middle',(0,-.19,.11)),('flick_thumb',(.15,-.12,.08))]:
+            a.joint(name,'wrist_l',at)
+            a.box('Independent monkey flick digit',name,(.065,.15,.07),(0,-.07,.035),'armor',.012)
+        a.joint('hair_tuft','flick_thumb',(0,-.06,.10))
+        for x in [-.018,0,.018]:
+            a.strut('Plucked golden monkey hair','hair_tuft',(x,0,0),(x,.24,.07),.006,'brass')
+        a.emission('light','flick_middle',(0,-.15,.08),ref='gun')
     elif id=='t11':
         for owner in ['gun_recoil','heavy_recoil']:
             a.box('Balanced shoulder combined weapon receiver',owner,(.52,.40,.68),(0,0,.14),'shade',.045)
             for x in [-.16,.16]:
-                a.tube('Balanced shoulder machine gun barrel',owner,.065,.038,light_len-.22,(x,-.10,(light_len+.22)/2),'steel')
-            a.tube('Balanced shoulder recoilless cannon',owner,.105,.06,heavy_len-.28,(0,.13,(heavy_len+.28)/2),'steel')
+                a.tube('Balanced shoulder machine gun barrel',owner,.065,.038,light_len-.22,(x,-.10,(light_len+.22)/2),'steel', emission='light')
+            a.tube('Balanced shoulder recoilless cannon',owner,.105,.06,heavy_len-.28,(0,.13,(heavy_len+.28)/2),'steel', emission='heavy')
             a.box('Shoulder weapon service grip',owner,(.14,.18,.30),(0,-.24,-.10),'dark',.025)
     elif id=='m05':
         a.box('Back right folded three barrel receiver','gun_recoil',(.59,.40,.67),(0,0,.13),'shade',.07)
         for i in range(3):
             angle=i*math.tau/3
-            a.tube('Right triple electromagnetic barrel','gun_recoil',.095,.062,1.30,(.18*math.cos(angle),.18*math.sin(angle),.85),'steel',segments=12)
+            a.tube('Right triple electromagnetic barrel','gun_recoil',.095,.062,1.30,(.18*math.cos(angle),.18*math.sin(angle),.85),'steel',segments=12, emission='light')
         a.box('Back left micro missile pod','heavy_recoil',(.55,.42,.67),(0,0,.1),'armor',.06)
         for x in [-.14,.14]:
             for y in [-.10,.10]:
-                a.tube('Micro missile launch cell','heavy_recoil',.086,.062,.60,(x,y,.38),'steel',segments=10)
+                a.tube('Micro missile launch cell','heavy_recoil',.086,.062,.60,(x,y,.38),'steel',segments=10, emission='heavy')
     elif id=='m08':
-        a.box('Ventral suppressed microburst receiver','gun_recoil',(.27,.20,.4),(0,0,.07),'shade',.04)
-        a.tube('Microburst gun suppressor','gun_recoil',.10,.040,.62,(0,0,.60),'dark')
+        for s in [-1,1]:
+            a.box('Paired ventral microburst receiver','gun_recoil',(.27,.20,.4),(s*.65,0,.07),'shade',.04)
+            a.tube('Microburst gun suppressor','gun_recoil',.10,.040,.62,(s*.65,0,.60),'dark', emission='light')
         for s in [-1,1]:
             a.box('Symmetric shoulder anti-materiel sniper receiver','heavy_recoil',(.34,.29,.78),(s*.65,0,.13),'shade',.035)
             a.tube('Long matte sniper barrel','heavy_recoil',.055,.030,1.35,(s*.65,0,1.20),'steel')
-            a.tube('Heavy sniper suppressor','heavy_recoil',.105,.043,.46,(s*.65,0,2.12),'dark')
+            a.tube('Heavy sniper suppressor','heavy_recoil',.105,.043,.46,(s*.65,0,2.12),'dark', emission='heavy')
             a.tube('Shoulder sniper sight','heavy_recoil',.095,.056,.45,(s*.65,.24,.17),'dark')
             a.disk('Muted blue sniper lens','heavy_recoil',.055,.02,(s*.65,.24,.40),'glow')
     elif id=='s10':
         a.box('Handheld raptor phase laser receiver','gun_recoil',(.29,.25,.46),(0,0,.13),'shade',.03)
-        a.tube('Handheld raptor phase laser barrel','gun_recoil',.065,.032,light_len-.20,(0,0,(light_len+.20)/2),'steel')
+        a.tube('Handheld raptor phase laser barrel','gun_recoil',.065,.032,light_len-.20,(0,0,(light_len+.20)/2),'steel', emission='light')
         a.tube('Handheld raptor electromagnetic lance shaft','heavy_recoil',.085,.045,heavy_len+1.0,(0,0,(heavy_len-1.0)/2),'steel')
         a.tube('Handheld raptor lance coil collar','heavy_recoil',.16,.11,.38,(0,0,heavy_len-.22),'armor')
         spike(a,'Handheld raptor electromagnetic lance tip','heavy_recoil',(0,0,heavy_len-.10),(0,0,heavy_len+.43),.10,'brass')
     else:
         if id=='m07':
-            lift=a.spec['rig']['dorsalLift']
-            a.disk('Dorsal cannon lift foot','chest',.35,.18,(0,lift['rest']-.18,-.68),'armor','y',16)
-            a.tube('Dorsal cannon telescopic socket','chest',.28,.22,.44,(0,lift['rest']-.02,-.68),'shade','y',12)
-            a.tube('Dorsal cannon sliding lift ram','heavy',.10,.06,lift['height']+.24,
-                   (0,-(lift['height']+.24)/2+.10,0),'steel','y',12)
+            mount=a.spec['rig']['dorsalMount']
+            a.disk('Dorsal fixed cannon bearing','chest',.43,.20,(0,mount['height']-.21,-.68),'steel','y',20)
+            a.box('Twin dorsal cannon receiver','heavy_recoil',(mount['receiverWidth'],.40,.72),(0,0,.18),'shade',.04)
             a.disk('Dorsal central twin AA turret','heavy',.43,.23,(0,-.04,0),'armor','y',20)
             count=2
             for s in [-1,1]:
-                a.tube('Mouth defense plasma nozzle','gun_recoil',.13,.09,.36,(s*.38,-.12,.50),'steel')
+                a.tube('Mouth defense plasma nozzle','gun_recoil',.13,.09,.36,(s*.38,-.12,.50),'steel', emission='light')
         else:
             count=2 if id=='t11' else 1
             a.box('Forward dorsal weapon receiver','heavy_recoil',(.42,.36,.65),(0,0,.15),'shade',.04)
             a.box('Short laser or machine gun receiver','gun_recoil',(.38,.32,.53),(0,0,.16),'shade',.03)
             for i in range(2 if id=='t11' else 1):
-                a.tube('Twin tray top machine gun barrel' if id=='t11' else 'Short dorsal phase laser barrel','gun_recoil',.071,.040,light_len-.25,((i-.5)*.18 if id=='t11' else 0,0,(light_len+.25)/2),'steel')
+                a.tube('Twin tray top machine gun barrel' if id=='t11' else 'Short dorsal phase laser barrel','gun_recoil',.071,.040,light_len-.25,((i-.5)*.18 if id=='t11' else 0,0,(light_len+.25)/2),'steel', emission='light')
         for i in range(count):
-            x=(i-.5)*(1.0 if id=='m07' else .3) if count==2 else 0
+            x=(i-.5)*(a.spec['rig']['dorsalMount']['barrelSpacing'] if id=='m07' else .3) if count==2 else 0
             a.tube('Twin 35mm anti-aircraft open barrel' if id=='m07' else 'Tray top recoilless cannon' if id=='t11' else 'Long dorsal electromagnetic lance tube',
-                   'heavy_recoil',.105 if id!='s10' else .09,.06,heavy_len-.28,(x,0,(heavy_len+.28)/2),'steel')
+                   'heavy_recoil',.105 if id!='s10' else .09,.06,heavy_len-.28,(x,0,(heavy_len+.28)/2),'steel', emission='heavy')
         if id=='s10':
             spike(a,'Electromagnetic dorsal lance tip','heavy_recoil',(0,0,heavy_len-.16),(0,0,heavy_len+.43),.10,'brass')
     a.box('Articulated charge shutter','charge_hinge',(.32,.06,.28),(0,0,0),'armor',.018)
     if id=='t11':
         a.box('Articulated charge shutter','charge_hinge_r',(.32,.06,.28),(0,0,0),'armor',.018)
-    for name in ['light_muzzle','heavy_muzzle']:
-        a.disk('Weapon muzzle energy aperture',name,.025,.01,(0,0,0),'glow')
+    for slot in ['light','heavy']:
+        if not a.emissions[slot]:
+            a.disk('Weapon muzzle energy aperture',slot+'_muzzle',.025,.01,(0,0,0),'glow')
 
 
 def morpher(a):

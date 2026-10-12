@@ -675,8 +675,34 @@ export function lanceDischarge(scene, effects, from, to, def, color) {
   // The styled core can taper; the constant-width channel still exposes the full hit cylinder.
   if (COMBAT_ASSETS[def.ch]) beamLine(scene, effects, from, to, color,
     { ttl: def.type === 'beam' ? .5 : .26, w: radius, op: .14 });
+  const emp = COMBAT_ASSETS[def.ch]?.combat.charging?.length && def.slot === 'heavy';
+  const burstStart = effects.length;
+  if (emp) {
+    shockRing(scene, effects, from.x, from.y, from.z, radius * 1.25, color);
+    starburst(scene, effects, from.x, from.y, from.z, radius * .4, color);
+  }
   if (def.type === 'beam') {
     gundamBeam(scene, effects, from, to, color, { r: radius, ttl: .5, def });
+    if (emp) for (const effect of effects.slice(burstStart)) {
+      const duration = effect.ttl, fade = effect.fade, delay = .09;
+      effect.ttl += delay; effect.obj.visible = false;
+      effect.fade = (o, f, dt) => {
+        const age = (1 - f) * (duration + delay) - delay;
+        o.visible = age >= 0;
+        if (age >= 0) fade?.(o, Math.max(0, 1 - age / duration), dt);
+      };
+    }
+    return;
+  }
+  if (COMBAT_ASSETS[def.ch]?.combat.payloads?.[def.slot || 'heavy']) {
+    const origin = from.clone(), target = to.clone(), direction = target.clone().sub(origin);
+    if (direction.lengthSq() < .0001) return;
+    const missile = projectileMesh(def, { hue: color, heavy: true });
+    missile.position.copy(origin);
+    missile.quaternion.setFromUnitVectors(_FWD, direction.normalize());
+    scene.add(missile);
+    effects.push({ obj: missile, ttl: Math.max(.08, Math.min(.65, shotFlightS(def, origin.distanceTo(target)))),
+      fade(o, f) { o.position.lerpVectors(origin, target, 1 - f); stepProjectileFx(o); } });
     return;
   }
   if (combatDischarge(scene, effects, from, to, def, 'bullet', radius, .26)) return;

@@ -50,6 +50,7 @@ export function buildReferenceAsset(asset, spec) {
     if (pose.position) node.position.fromArray(pose.position);
     if (pose.rotation) node.rotation.fromArray(pose.rotation);
   }
+  for (const [name, angles] of Object.entries(asset.rig.emissionRest || {})) nodeOf(name).rotation.fromArray(angles);
   const rig = { ...asset.rig, ...form?.rig, kind: form?.kind || asset.kind, s: 1,
     moveSig: spec.moveSig, castSig: spec.castSig };
   // The quadruped driver requires a collection even when the reference has no tail.
@@ -84,6 +85,9 @@ export function buildReferenceAsset(asset, spec) {
   if (rig.archery) {
     rig.archery.arrowRest = rig.archery.arrow.position.clone();
     rig.archery.arrowRotation = rig.archery.arrow.quaternion.clone();
+    rig.archery.bowRotation = rig.archery.bow.quaternion.clone();
+    rig.archery.bowCarry = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),rig.archery.bowHand.position.clone().normalize());
+    rig.archery.arrowCarry = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),rig.archery.hand.position.clone().normalize());
   }
   // Parent-space yaw brings the holding hand inward instead of twisting a hanging arm.
   if (rig.archery) rig.armSh[0].rotation.order = 'YXZ';
@@ -96,9 +100,28 @@ export function buildReferenceAsset(asset, spec) {
     lift: nodeOf(rig.launcher.lift), pivot: nodeOf(rig.launcher.pivot),
     pods: rig.launcher.pods?.map(pod => ({...pod,node:nodeOf(pod.node)})) };
   if (rig.dorsalLift) rig.dorsalLift = {...rig.dorsalLift,node:nodeOf(rig.dorsalLift.node)};
+  if (rig.dorsalMount) rig.dorsalMount = {...rig.dorsalMount,node:nodeOf(rig.dorsalMount.node)};
   if (rig.stowedWeapons) rig.stowedWeapons = rig.stowedWeapons.map(weapon => ({...weapon,node:nodeOf(weapon.node)}));
   if (rig.alternating) rig.alternating = {...rig.alternating,index:-1,
     weapons:rig.alternating.weapons.map(nodeOf),muzzles:rig.alternating.muzzles.map(nodeOf),recoils:rig.alternating.recoils.map(nodeOf)};
+  rig.weaponSequences = Object.fromEntries(Object.entries(asset.rig.weaponSequences || {}).map(([slot, entries]) =>
+    [slot, {index: -1, event: null, entries: entries.map(entry => {
+      const ref = nodeOf(slot === 'light' && asset.rig.hairFlick ? asset.rig.hairFlick.middle : entry.ref);
+      // Receiver recoil translates the emitter; aiming belongs to its mounted parent frame.
+      return {...entry, muzzle: nodeOf(entry.muzzle), ref: entry.ref === entry.recoil ? ref.parent : ref,
+        recoil: entry.recoil ? nodeOf(entry.recoil) : null,
+        payload: entry.payload ? nodeOf(entry.payload) : null, firedAt: -Infinity};
+    })}]));
+  if (rig.alternating && rig.weaponSequences[rig.alternating.slot]) {
+    const entries = rig.weaponSequences[rig.alternating.slot].entries;
+    rig.alternating.weapons = entries.map(entry => entry.ref);
+    rig.alternating.muzzles = entries.map(entry => entry.muzzle);
+    rig.alternating.recoils = entries.map(entry => entry.recoil);
+    rig.alternating.sides = entries.map(entry => entry.side);
+  }
+  if (rig.hairFlick) rig.hairFlick = {...rig.hairFlick,
+    ...Object.fromEntries(['head','shoulder','elbow','hand','index','middle','thumb','tuft'].map(key => [key,nodeOf(rig.hairFlick[key])])),
+    startedAt: -Infinity, firedAt: -Infinity};
   if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
     w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),
@@ -118,7 +141,13 @@ export function buildReferenceAsset(asset, spec) {
   for (const [slot, weapon] of Object.entries(asset.rig.wpn)) {
     const muzzle = nodeOf(weapon.muzzle);
     W.muzzles[slot] = { n: muzzle, r: weapon.r };
-    W.wpn[slot] = { nodes: weapon.nodes.map(nodeOf), ref: nodeOf(weapon.ref), muz: muzzle, fwd: weapon.fwd || 'z',
+    const weaponNodes = weapon.nodes.map(nodeOf);
+    for (const entry of rig.weaponSequences[slot]?.entries || []) {
+      let covered = false;
+      for (let owner = entry.ref; owner; owner = owner.parent) if (weaponNodes.includes(owner)) { covered = true; break; }
+      if (!covered) weaponNodes.push(entry.ref);
+    }
+    W.wpn[slot] = { nodes: weaponNodes, ref: slot === 'light' && rig.hairFlick ? rig.hairFlick.middle : nodeOf(weapon.ref), muz: muzzle, fwd: weapon.fwd || 'z',
       ...(weapon.aimJoint ? { aimJoint: nodeOf(weapon.aimJoint) } : {}), alwaysForward: !!weapon.alwaysForward };
     muzzle.traverse(mesh => {
       if (mesh.isMesh && mesh.material.emissiveIntensity) W[`${slot}GlowM`].push(mesh);
@@ -150,7 +179,12 @@ export function buildReferenceAsset(asset, spec) {
     }
   }
   rig.referenceMotion = {
-    fire: asset.motion.fire.map(bindTrack), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
+    fire: asset.motion.fire.map(track => {
+      const bound = bindTrack(track);
+      bound.emitters = Object.entries(rig.weaponSequences).flatMap(([slot, sequence]) =>
+        sequence.entries.filter(entry => entry.recoil === bound.node).map(entry => ({ slot, entry })));
+      return bound;
+    }), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
     fireSpin: asset.motion.fireSpin ? bindTrack(asset.motion.fireSpin) : null,
   };
   for (const tracks of [rig.referenceMotion.fire, rig.referenceMotion.charge, rig.referenceMotion.cast]) {

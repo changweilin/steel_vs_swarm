@@ -1,0 +1,17 @@
+{
+  "assets": [
+    "m01",
+    "s03",
+    "s10",
+    "t06",
+    "t11",
+    "m05",
+    "m07",
+    "m08"
+  ],
+  "geometryAndRuntimeData": "identical_except_source_fingerprint",
+  "exceptions": {
+    "t11": "Flight joint offsets changed; motion samples refreshed",
+    "m08": "Folded wing articulation changed; exposed forelimb contacts preserved; motion samples refreshed"
+  }
+}

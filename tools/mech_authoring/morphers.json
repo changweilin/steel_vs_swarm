@@ -2,7 +2,8 @@
   "inherit": "assets.json",
   "requirements": {
     "project": "assets.json#/requirements",
-    "scope": "All eight morphers, with a single rigid part inventory for both forms"
+    "scope": "All eight morphers, with a single rigid part inventory for both forms",
+    "limbAttachments": "Shoulder, pelvic and coxal roots remain visible outside the sealed core in both forms; the flight belly does not conceal proximal articulation."
   },
   "authoring": {
     "builder": "build.py",
@@ -178,7 +179,7 @@
           "hip_l",
           "hips",
           [
-            0.4,
+            0.47,
             -0.1,
             0
           ]
@@ -250,7 +251,7 @@
           "hip_r",
           "hips",
           [
-            -0.4,
+            -0.47,
             -0.1,
             0
           ]
@@ -323,8 +324,17 @@
           "wrist_r",
           [
             0,
-            -0.23,
-            0.16
+            -0.22,
+            0.581
+          ]
+        ],
+        [
+          "grip_gun",
+          "gun",
+          [
+            0,
+            -0.481,
+            -0.1
           ]
         ],
         [
@@ -359,8 +369,17 @@
           "wrist_l",
           [
             0,
-            -0.23,
-            0.16
+            -0.22,
+            0.581
+          ]
+        ],
+        [
+          "grip_heavy",
+          "heavy",
+          [
+            0,
+            -0.481,
+            -0.1
           ]
         ],
         [
@@ -526,12 +545,26 @@
           {
             "node": "gun",
             "hand": "wrist_r",
-            "staff": false
+            "staff": false,
+            "grip": "grip_gun",
+            "contact": [
+              0,
+              -0.12,
+              0.1
+            ],
+            "gripLength": 0.701
           },
           {
             "node": "heavy",
             "hand": "wrist_l",
-            "staff": false
+            "staff": false,
+            "grip": "grip_heavy",
+            "contact": [
+              0,
+              -0.12,
+              0.1
+            ],
+            "gripLength": 0.701
           }
         ],
         "gunR": {
@@ -728,6 +761,20 @@
                 0,
                 0
               ]
+            },
+            "gun": {
+              "position": [
+                0,
+                -0.22,
+                0.581
+              ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.22,
+                0.581
+              ]
             }
           },
           "rig": {}
@@ -756,7 +803,7 @@
             },
             "hip_l": {
               "position": [
-                0.25,
+                0.47,
                 -0.1,
                 -0.08
               ],
@@ -782,7 +829,7 @@
             },
             "shoulder_l": {
               "position": [
-                0.57,
+                0.96,
                 0.93,
                 -0.24
               ],
@@ -808,7 +855,7 @@
             },
             "hip_r": {
               "position": [
-                -0.25,
+                -0.47,
                 -0.1,
                 -0.08
               ],
@@ -834,7 +881,7 @@
             },
             "shoulder_r": {
               "position": [
-                -0.57,
+                -0.96,
                 0.93,
                 -0.24
               ],
@@ -856,6 +903,20 @@
                 -2.9607963267948962,
                 0,
                 0
+              ]
+            },
+            "gun": {
+              "position": [
+                0,
+                -0.22,
+                0.581
+              ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.22,
+                0.581
               ]
             }
           },
@@ -1097,7 +1158,7 @@
           "leg_FL",
           "chest",
           [
-            1.0555999999999999,
+            1.3156,
             -0.12,
             0.5800000000000001
           ]
@@ -1133,7 +1194,7 @@
           "leg_FR",
           "chest",
           [
-            -1.0555999999999999,
+            -1.3156,
             -0.12,
             0.5800000000000001
           ]
@@ -1178,7 +1239,7 @@
           "leg_HL",
           "pelvis",
           [
-            1.0555999999999999,
+            1.4756,
             0,
             0
           ]
@@ -1214,7 +1275,7 @@
           "leg_HR",
           "pelvis",
           [
-            -1.0555999999999999,
+            -1.4756,
             0,
             0
           ]
@@ -1401,11 +1462,11 @@
         ],
         [
           "gun",
-          "chest",
+          "trunk_5",
           [
-            -0.94,
-            0.08,
-            0.78
+            0,
+            0,
+            1.15
           ]
         ],
         [
@@ -1428,11 +1489,11 @@
         ],
         [
           "heavy",
-          "chest",
+          "head",
           [
             0,
-            0.18,
-            1.25
+            -0.32,
+            0.57
           ]
         ],
         [
@@ -1581,7 +1642,7 @@
           "transforms": {
             "leg_FL": {
               "position": [
-                0.56,
+                1.53,
                 -0.12,
                 0.04999999999999993
               ],
@@ -1607,7 +1668,7 @@
             },
             "leg_FR": {
               "position": [
-                -0.56,
+                -1.53,
                 -0.12,
                 0.04999999999999993
               ],
@@ -1633,7 +1694,7 @@
             },
             "leg_HL": {
               "position": [
-                0.46,
+                1.4,
                 0,
                 0.3999999999999999
               ],
@@ -1659,7 +1720,7 @@
             },
             "leg_HR": {
               "position": [
-                -0.46,
+                -1.4,
                 0,
                 0.3999999999999999
               ],
@@ -1902,7 +1963,13 @@
           "flight_shield_retract"
         ],
         "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
-        "gateOwner": "../../tools/audit_reference_morph.mjs"
+        "gateOwner": "../../tools/audit_reference_morph.mjs",
+        "flightExposedRoots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_HL",
+          "leg_HR"
+        ]
       },
       "decisions": [
         "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
@@ -1959,7 +2026,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.08
+            "r": 0.08,
+          "aimJoint": "trunk_5"
           },
           "heavy": {
             "nodes": [
@@ -1967,7 +2035,8 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.12
+            "r": 0.12,
+            "visualType": "emp"
           }
         },
         "limb": {
@@ -2118,12 +2187,7 @@
           0,
           0
         ],
-        "roots": [
-          "leg_FL",
-          "leg_FR",
-          "leg_HL",
-          "leg_HR"
-        ],
+        "roots": [],
         "profile": "ellipse",
         "regionCuts": [
           -0.75,
@@ -2347,7 +2411,7 @@
           "flap_l",
           "wing_l",
           [
-            0,
+            0.01,
             0,
             0
           ]
@@ -2401,7 +2465,7 @@
           "flap_r",
           "wing_r",
           [
-            0,
+            -0.02,
             0,
             0
           ]
@@ -2627,8 +2691,17 @@
           "toe_FR",
           [
             0,
-            -0.23,
-            0.16
+            0.09732,
+            0.5406
+          ]
+        ],
+        [
+          "grip_gun",
+          "gun",
+          [
+            0,
+            -0.481,
+            -0.1
           ]
         ],
         [
@@ -2654,8 +2727,17 @@
           "toe_FL",
           [
             0,
-            -0.18,
-            0.06
+            -0.12,
+            0.1
+          ]
+        ],
+        [
+          "grip_heavy",
+          "heavy",
+          [
+            0,
+            0,
+            0
           ]
         ],
         [
@@ -3077,6 +3159,20 @@
                 0,
                 0
               ]
+            },
+            "gun": {
+              "position": [
+                0,
+                0.09732,
+                0.5406
+              ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.12,
+                0.1
+              ]
             }
           },
           "rig": {}
@@ -3215,6 +3311,20 @@
                 0,
                 0
               ]
+            },
+            "gun": {
+              "position": [
+                0,
+                0.09732,
+                0.5406
+              ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.12,
+                0.1
+              ]
             }
           },
           "rig": {
@@ -3235,7 +3345,8 @@
                 "sgn": 1,
                 "dihedral": 0.32,
                 "elbowSweep": -0.18,
-                "wristSweep": 0.26
+                "wristSweep": 0.26,
+                "membrane": false
               },
               {
                 "w": "flap_r",
@@ -3244,7 +3355,8 @@
                 "sgn": -1,
                 "dihedral": 0.32,
                 "elbowSweep": -0.18,
-                "wristSweep": 0.26
+                "wristSweep": 0.26,
+                "membrane": false
               }
             ],
             "limb": {
@@ -3492,13 +3604,27 @@
             "node": "gun",
             "hand": "toe_FR",
             "staff": false,
-            "forearmTip": "ankle_FR"
+            "forearmTip": "ankle_FR",
+            "grip": "grip_gun",
+            "contact": [
+              0,
+              -0.12,
+              0.1
+            ],
+            "gripLength": 0.701
           },
           {
             "node": "heavy",
             "hand": "toe_FL",
             "staff": true,
-            "forearmTip": "ankle_FL"
+            "forearmTip": "ankle_FL",
+            "grip": "grip_heavy",
+            "contact": [
+              0,
+              -0.12,
+              0.1
+            ],
+            "gripLength": 0.46
           }
         ],
         "weap": {
@@ -3783,7 +3909,7 @@
           "hip_l",
           "hips",
           [
-            0.43,
+            0.47,
             -0.1,
             0
           ]
@@ -3810,7 +3936,7 @@
           "shoulder_l",
           "chest",
           [
-            0.98,
+            1.17,
             1.02,
             0
           ]
@@ -3846,7 +3972,7 @@
           "hip_r",
           "hips",
           [
-            -0.43,
+            -0.47,
             -0.1,
             0
           ]
@@ -3873,7 +3999,7 @@
           "shoulder_r",
           "chest",
           [
-            -0.98,
+            -1.17,
             1.02,
             0
           ]
@@ -4000,8 +4126,17 @@
           "wrist_l",
           [
             0,
-            -0.13,
-            0.1
+            -0.14,
+            0.16
+          ]
+        ],
+        [
+          "grip_gun",
+          "gun",
+          [
+            0,
+            -0.481,
+            -0.1
           ]
         ],
         [
@@ -4027,8 +4162,17 @@
           "wrist_r",
           [
             0,
-            -0.18,
-            0.06
+            -0.12,
+            0.1
+          ]
+        ],
+        [
+          "grip_heavy",
+          "heavy",
+          [
+            0,
+            0,
+            0
           ]
         ],
         [
@@ -4183,6 +4327,20 @@
                 0,
                 0
               ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.12,
+                0.1
+              ]
+            },
+            "gun": {
+              "position": [
+                0,
+                -0.14,
+                0.16
+              ]
             }
           },
           "rig": {}
@@ -4192,7 +4350,7 @@
           "transforms": {
             "hip_l": {
               "position": [
-                0.43,
+                0.47,
                 -0.1,
                 0
               ],
@@ -4218,7 +4376,7 @@
             },
             "shoulder_l": {
               "position": [
-                0.98,
+                1.17,
                 1.02,
                 0
               ],
@@ -4244,7 +4402,7 @@
             },
             "hip_r": {
               "position": [
-                -0.43,
+                -0.47,
                 -0.1,
                 0
               ],
@@ -4270,7 +4428,7 @@
             },
             "shoulder_r": {
               "position": [
-                -0.98,
+                -1.17,
                 1.02,
                 0
               ],
@@ -4311,6 +4469,20 @@
                 0,
                 0,
                 0
+              ]
+            },
+            "heavy": {
+              "position": [
+                0,
+                -0.12,
+                0.1
+              ]
+            },
+            "gun": {
+              "position": [
+                0,
+                -0.14,
+                0.16
               ]
             }
           },
@@ -4522,7 +4694,7 @@
         "wpn": {
           "light": {
             "nodes": [
-              "gun"
+              "wrist_l"
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
@@ -4545,12 +4717,14 @@
           {
             "node": "heavy",
             "hand": "wrist_r",
-            "staff": true
-          },
-          {
-            "node": "gun",
-            "hand": "wrist_l",
-            "staff": false
+            "staff": true,
+            "grip": "grip_heavy",
+            "contact": [
+              0,
+              -0.12,
+              0.1
+            ],
+            "gripLength": 0.46
           }
         ],
         "gunR": {
@@ -4585,27 +4759,44 @@
         },
         "stowedWeapons": [
           {
-            "node": "gun",
-            "slot": "light",
-            "rotation": [
-              0,
-              0,
-              0
-            ],
-            "scale": 0.46,
-            "clearance": 0.06
-          },
-          {
             "node": "heavy",
             "slot": "heavy",
             "rotation": [
               0,
-              0,
+              -1.5707963267948966,
               0
             ],
             "scale": 0.28,
-            "clearance": 0.06
+            "clearance": 0.06,
+            "carryAxis": [
+              -1,
+              0,
+              0
+            ]
           }
+        ],
+        "tailSway": {
+          "frequency": 0.55,
+          "idle": 0.2,
+          "travel": 0.13,
+          "delay": 0.42,
+          "pitch": -0.16,
+          "pitchWave": 0.012
+        },
+        "hairFlick": {
+          "head": "head",
+          "shoulder": "shoulder_l",
+          "elbow": "elbow_l",
+          "hand": "wrist_l",
+          "index": "flick_index",
+          "middle": "flick_middle",
+          "thumb": "flick_thumb",
+          "tuft": "hair_tuft",
+          "pluckDuration": 0.18,
+          "burstGap": 0.65
+        },
+        "visibilityControls": [
+          "hair_tuft"
         ]
       },
       "cavity": {
@@ -4670,13 +4861,6 @@
           ]
         },
         "fire": [
-          {
-            "node": "gun_recoil",
-            "channel": "position",
-            "axis": "z",
-            "rest": 0,
-            "amplitude": -0.07
-          },
           {
             "node": "heavy_recoil",
             "channel": "position",
@@ -4918,7 +5102,7 @@
           "hip_l",
           "hips",
           [
-            0.43,
+            0.52,
             -0.1,
             0
           ]
@@ -4954,7 +5138,7 @@
           "shoulder_l",
           "wing_l",
           [
-            0.73,
+            0.97,
             -0.04,
             0.5
           ]
@@ -4990,7 +5174,7 @@
           "hip_r",
           "hips",
           [
-            -0.43,
+            -0.52,
             -0.1,
             0
           ]
@@ -5026,7 +5210,7 @@
           "shoulder_r",
           "wing_r",
           [
-            -0.73,
+            -0.97,
             -0.04,
             0.5
           ]
@@ -6123,7 +6307,7 @@
           "transforms": {
             "hip_l": {
               "position": [
-                0.19,
+                1.15,
                 1.78,
                 -0.1
               ],
@@ -6175,7 +6359,7 @@
             },
             "hip_r": {
               "position": [
-                -0.19,
+                -1.15,
                 1.78,
                 -0.1
               ],
@@ -6259,6 +6443,11 @@
               ]
             },
             "wing_l": {
+              "position": [
+                0.49,
+                1.06,
+                -0.5
+              ],
               "rotation": [
                 -1.5707963267948966,
                 0,
@@ -6266,6 +6455,11 @@
               ]
             },
             "wing_r": {
+              "position": [
+                -0.49,
+                1.06,
+                -0.5
+              ],
               "rotation": [
                 -1.5707963267948966,
                 0,
@@ -6796,6 +6990,8 @@
         "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
         "gateOwner": "../../tools/audit_reference_morph.mjs",
         "flightExposedRoots": [
+          "hip_l",
+          "hip_r",
           "shoulder_l",
           "shoulder_r"
         ]
@@ -6975,10 +7171,7 @@
           0,
           -0.08
         ],
-        "roots": [
-          "hip_l",
-          "hip_r"
-        ],
+        "roots": [],
         "regionCuts": [
           -0.08
         ]
@@ -7068,6 +7261,7 @@
               ]
             }
           ],
+          "projectionAnchor": "rotor_hinge_l",
           "mounts": [
             {
               "node": "emitter_l",
@@ -8225,7 +8419,7 @@
           "transforms": {
             "hip_l": {
               "position": [
-                0.5,
+                0.51,
                 -0.1,
                 0
               ],
@@ -8277,7 +8471,7 @@
             },
             "hip_r": {
               "position": [
-                -0.5,
+                -0.51,
                 -0.1,
                 0
               ],
@@ -8528,7 +8722,7 @@
         "armBase": -0.68,
         "sway": 0.045,
         "hop": false,
-        "knuckle": false,
+        "knuckle": true,
         "tinyArms": false,
         "tuckArms": true,
         "grounded": false,
@@ -8621,7 +8815,8 @@
         "legBase": -0.4,
         "limb": {
           "foreRole": "grasp",
-          "hind": "digitigrade"
+          "hind": "digitigrade",
+          "fore": "plantigrade"
         },
         "tailSegs": [
           "tail_0",
@@ -8745,25 +8940,26 @@
           ],
           [
             0,
-            0.45,
-            0.98
+            0.75,
+            0.92
           ],
           [
             0,
-            0.85,
-            1.5
+            1.45,
+            1.04
           ],
           [
             0,
-            1.12,
-            2.04
+            2.05,
+            0.94
           ],
           [
             0,
-            1.19,
-            2.43
+            2.43,
+            0.72
           ]
-        ]
+        ],
+        "hornPitch": 0.32
       },
       "materials": {
         "armor": {
@@ -8884,7 +9080,7 @@
           "leg_FL",
           "chest",
           [
-            0.64,
+            0.75,
             -0.12,
             0.45
           ]
@@ -8974,7 +9170,7 @@
           "leg_FR",
           "chest",
           [
-            -0.64,
+            -0.75,
             -0.12,
             0.45
           ]
@@ -9064,7 +9260,7 @@
           "leg_ML",
           "mesothorax",
           [
-            0.68,
+            1.19,
             0,
             0.02
           ]
@@ -9154,7 +9350,7 @@
           "leg_MR",
           "mesothorax",
           [
-            -0.68,
+            -1.19,
             0,
             0.02
           ]
@@ -9244,7 +9440,7 @@
           "leg_HL",
           "metathorax",
           [
-            0.68,
+            1.29,
             0,
             -0.18
           ]
@@ -9334,7 +9530,7 @@
           "leg_HR",
           "metathorax",
           [
-            -0.68,
+            -1.29,
             0,
             -0.18
           ]
@@ -9542,7 +9738,7 @@
           "chest",
           [
             0,
-            0.94,
+            1.23,
             -0.68
           ]
         ],
@@ -9559,7 +9755,7 @@
           "heavy_muzzle",
           "heavy_recoil",
           [
-            0.5,
+            0.55,
             0,
             1.65
           ]
@@ -9669,7 +9865,7 @@
                 -1.2679114584199243
               ],
               "position": [
-                0.28,
+                1.25,
                 -0.12,
                 -1
               ]
@@ -9695,7 +9891,7 @@
                 1.2679114584199243
               ],
               "position": [
-                -0.28,
+                -1.25,
                 -0.12,
                 -1
               ]
@@ -9721,7 +9917,7 @@
                 -1.2679114584199243
               ],
               "position": [
-                0.28,
+                1.27,
                 0,
                 -0.5
               ]
@@ -9747,7 +9943,7 @@
                 1.2679114584199243
               ],
               "position": [
-                -0.28,
+                -1.27,
                 0,
                 -0.5
               ]
@@ -9773,7 +9969,7 @@
                 -1.2679114584199243
               ],
               "position": [
-                0.28,
+                1.27,
                 0.03,
                 0
               ]
@@ -9799,7 +9995,7 @@
                 1.2679114584199243
               ],
               "position": [
-                -0.28,
+                -1.27,
                 0.03,
                 0
               ]
@@ -10231,7 +10427,15 @@
           "flight_shield_retract"
         ],
         "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
-        "gateOwner": "../../tools/audit_reference_morph.mjs"
+        "gateOwner": "../../tools/audit_reference_morph.mjs",
+        "flightExposedRoots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_ML",
+          "leg_MR",
+          "leg_HL",
+          "leg_HR"
+        ]
       },
       "decisions": [
         "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
@@ -10501,14 +10705,11 @@
             "axis": "z"
           }
         ],
-        "dorsalLift": {
+        "dorsalMount": {
           "node": "heavy",
-          "height": 1.55,
-          "rest": 0.94,
-          "slot": "heavy"
-        },
-        "fireLead": {
-          "heavy": 0.28
+          "height": 1.23,
+          "receiverWidth": 1.55,
+          "barrelSpacing": 1.1
         }
       },
       "cavity": {
@@ -10551,14 +10752,7 @@
           0,
           0
         ],
-        "roots": [
-          "leg_FL",
-          "leg_FR",
-          "leg_ML",
-          "leg_MR",
-          "leg_HL",
-          "leg_HR"
-        ]
+        "roots": []
       },
       "motion": {
         "shield": {
@@ -10777,7 +10971,7 @@
           "flap_l",
           "wing_l",
           [
-            0,
+            0.44,
             0,
             0
           ]
@@ -10795,7 +10989,7 @@
           "leg_FL",
           "forewing_link_l",
           [
-            0.57,
+            0.83,
             -0.12,
             0.3400000000000001
           ]
@@ -10840,7 +11034,7 @@
           "flap_r",
           "wing_r",
           [
-            0,
+            -0.44,
             0,
             0
           ]
@@ -10858,7 +11052,7 @@
           "leg_FR",
           "forewing_link_r",
           [
-            -0.57,
+            -0.83,
             -0.12,
             0.3400000000000001
           ]
@@ -10903,7 +11097,7 @@
           "leg_HL",
           "pelvis",
           [
-            0.57,
+            0.83,
             0,
             0
           ]
@@ -10939,7 +11133,7 @@
           "leg_HR",
           "pelvis",
           [
-            -0.57,
+            -0.83,
             0,
             0
           ]
@@ -11075,7 +11269,7 @@
           "chest",
           [
             0,
-            -0.38,
+            -0.64,
             0.6
           ]
         ],
@@ -11196,7 +11390,7 @@
               ],
               "rotation": [
                 0,
-                1.74,
+                1.725,
                 0
               ]
             },
@@ -11208,7 +11402,7 @@
               ],
               "rotation": [
                 0,
-                -1.74,
+                -1.725,
                 0
               ]
             },
@@ -11220,7 +11414,7 @@
               ],
               "rotation": [
                 0,
-                2.22,
+                2.15,
                 0
               ]
             },
@@ -11232,7 +11426,7 @@
               ],
               "rotation": [
                 0,
-                -2.22,
+                -2.15,
                 0
               ]
             },
@@ -11253,29 +11447,29 @@
             "forewing_link_l": {
               "rotation": [
                 0,
-                -1.74,
+                -1.725,
                 0
               ]
             },
             "leg_FL": {
               "position": [
-                0.08999999999999997,
+                0.493486161865,
                 -0.51,
-                0.56
+                0.561062589294
               ]
             },
             "forewing_link_r": {
               "rotation": [
                 0,
-                1.74,
+                1.725,
                 0
               ]
             },
             "leg_FR": {
               "position": [
-                -0.08999999999999997,
+                -0.493486161865,
                 -0.51,
-                0.56
+                0.561062589294
               ]
             }
           },
@@ -11286,7 +11480,7 @@
           "transforms": {
             "leg_FL": {
               "position": [
-                0,
+                0.47,
                 0,
                 0
               ],
@@ -11312,7 +11506,7 @@
             },
             "leg_FR": {
               "position": [
-                0,
+                -0.47,
                 0,
                 0
               ],
@@ -11338,7 +11532,7 @@
             },
             "leg_HL": {
               "position": [
-                0.43,
+                0.56,
                 -0.25,
                 0.44000000000000006
               ],
@@ -11364,7 +11558,7 @@
             },
             "leg_HR": {
               "position": [
-                -0.43,
+                -0.56,
                 -0.25,
                 0.44000000000000006
               ],
@@ -11501,7 +11695,8 @@
                 "sgn": 1,
                 "dihedral": 0.32,
                 "elbowSweep": -0.18,
-                "wristSweep": 0.26
+                "wristSweep": 0.26,
+                "membrane": false
               },
               {
                 "w": "flap_r",
@@ -11510,7 +11705,8 @@
                 "sgn": -1,
                 "dihedral": 0.32,
                 "elbowSweep": -0.18,
-                "wristSweep": 0.26
+                "wristSweep": 0.26,
+                "membrane": false
               }
             ]
           }

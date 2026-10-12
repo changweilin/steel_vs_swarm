@@ -4,11 +4,11 @@
   "measurements": {
     "triangles": 15468,
     "meshes": 56,
-    "joints": 22,
+    "joints": 35,
     "source": {
-      "contract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-      "catalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2",
+      "contract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c",
       "image": "8594939b9bcfd6fae905fdc845035f49ff056cbbc485028585535b6ce9098d32"
     }
   },
@@ -24,17 +24,23 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "b3d7ace91148467ed26cd90f567badd3a09a739af39fbd4d46f3758d2c078735",
-    "blend": "b9252bc6684df5e5cf7d3081f410b9a2f089351ae1b3860c209cea87d6c0c3eb",
-    "glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25"
+    "runtime": "a7cec55df2be1fa3aad7d442220313e69ca1300218933a41b1148e1aed26277c",
+    "blend": "766834fbbd7587f7e07c727a4025f358f35521e90b6ca7c49e0ec82fcc2c5e50",
+    "glb": "12fb111dcb606a96be18725f514e6b22fb4ca1ffe79640883e8050985c847abc"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
-    "user_signoff": "pending_user_review"
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "editable_source": "pass"
+  },
+  "reviewEvidence": {
+    "weapons": "out/weapon_revision/runtime/validation.json",
+    "visual": "out/weapon_revision/visual-review.json",
+    "delivery": "out/weapon_revision/delivery-validation.json"
   }
 }

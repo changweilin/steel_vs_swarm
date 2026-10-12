@@ -246,6 +246,16 @@ def construct(asset, intent, xyz):
     center = [(low[0] + high[0]) / 2, (low[2] + high[2]) / 2, -low[1] + gap]
     width = max(height * .55, (high[0] - low[0]) * .48)
     shield_height = height * .62
+    anchor=asset.spec['motion']['shield'].get('projectionAnchor')
+    if anchor:
+        asset.pose('shield_deploy',1)
+        bpy.context.view_layer.update()
+        at=asset.root.matrix_world.inverted() @ asset.nodes[anchor].matrix_world.translation
+        center[0],center[1]=at.x,at.z
+        width=max(width,center[0]-low[0]+gap,high[0]-center[0]+gap)
+        shield_height=max(shield_height,center[1]-low[2]+gap,high[2]-center[1]+gap)
+        if 'forms' in asset.spec: asset._pose_form=previous_form
+        asset.reset()
     for name, color, opacity, emission in [('fx_color', intent['color'], .7, 2),
                                             ('fx_accent', intent['accent'], .8, 3),
                                             ('fx_core', 0xffffff, .9, 4),
@@ -272,14 +282,8 @@ def construct(asset, intent, xyz):
 
     def joint(name, parent, at=(0, 0, 0)):
         name = 'fx_' + name
-        node = bpy.data.objects.new(name, None)
-        node.parent = asset.nodes[parent] if parent else asset.root
-        node.location = xyz(at)
-        bpy.context.collection.objects.link(node)
-        asset.nodes[name] = node
-        entry = [name, parent, list(at)]
-        joints.append(entry)
-        asset.spec['joints'].append(entry)
+        asset.joint(name, parent, at)
+        joints.append(asset.spec['joints'][-1])
         return name
 
     def track(slot, name, channel, axis, keys):
@@ -313,13 +317,16 @@ def construct(asset, intent, xyz):
                     (b[0] - tangent[0], b[1] - tangent[1], .025),
                     (b[0] + tangent[0], b[1] + tangent[1], .025), height * .005, 'fx_accent')
 
+    charging=[]
     for slot, weapon in intent['weapons'].items():
         muzzle = asset.spec['rig']['wpn'][slot]['muzzle']
         radius = height * (.045 if slot == 'light' else .075)
-        type = weapon['type']
+        visual=asset.spec['rig']['wpn'][slot].get('visualType')
+        type = 'beam' if visual=='emp' else weapon['type']
+        payload=next((entry for entry in asset.spec['rig'].get('weaponSequences',{}).get(slot,[]) if entry.get('payload')),None)
         text = weapon['description']
         acoustic = '音波' in text
-        microwave = '微波' in text
+        microwave = '微波' in text or visual=='emp'
         scan = '掃描' in text or '偵蒐' in text
         phase = '相控' in text
         suppressed = '微聲' in text or '消音' in text
@@ -344,7 +351,7 @@ def construct(asset, intent, xyz):
                 asset.strut('Released bowstring' if bow else 'Acceleration fork', node,
                             (side * radius * (3 if bow else 1.3), 0, 0),
                             (0, 0, radius * (1.4 if bow else 3)), radius * .09, 'fx_core')
-        elif type in ['launcher', 'missile']:
+        elif type in ['launcher', 'missile'] or payload:
             asset.loft('Ignition jet', node, [(0, radius * .7, radius * .7), (-radius * 4, radius * 1.8, radius * 1.1)], 'fx_core', axis='z')
         else:
             for i in range(2 if suppressed else 6 if rotary else 4 if weapon['fan'] else 3):
@@ -367,7 +374,7 @@ def construct(asset, intent, xyz):
                 for side in [-1, 1]:
                     asset.strut('Collapsing capacitor bracket', wake, (side * radius * 2, -radius, 0),
                                 (side * radius * 2, radius, 0), radius * .15, 'fx_accent')
-            elif type in ['launcher', 'missile']:
+            elif type in ['launcher', 'missile'] or payload:
                 asset.loft('Cold ejection vapour' if cold else 'Backblast wedge', wake,
                            [(-radius, radius, radius), (-radius * 5, radius * 3, radius * 2)], 'fx_muted', axis='z')
             else:
@@ -380,6 +387,17 @@ def construct(asset, intent, xyz):
             track(slot, wake, 'scale', 'x', [[0, .8], [.24, .22], [.34, 1], [.7, .4], [1, .001]])
         else:
             track(slot, wake, 'position', 'z', [[0, 0], [.2, -radius], [1, -height * .16]])
+        if visual=='emp':
+            induction=joint('heavy_induction','heavy')
+            path=[(-.48+i*.12,0 if i in [0,8] else .09*(-1)**i,.06*math.sin(i*math.pi/2)) for i in range(9)]
+            for start_point,end_point in zip(path,path[1:]):
+                asset.strut('Intertusk alternating induction current',induction,start_point,end_point,.012,'fx_accent')
+            for x in [-.48,.48]:
+                asset.tube('Tusk induction corona',induction,.09,.074,.02,(x,0,0),'fx_core')
+            track(slot,induction,'scale','x',[[0,1],[1,1]])
+            for axis in ['y','z']:
+                track(slot,induction,'scale',axis,[[0,.001],[.12,1],[.35,.3],[.5,.001],[1,.001]])
+            charging.append(induction)
         if type in ['launcher', 'missile']:
             rocket = joint(slot + '_rocket', muzzle)
             cannon = '加農' in text or '無後座力' in text
@@ -441,8 +459,21 @@ def construct(asset, intent, xyz):
             pulse(slot, beam, curve=envelope)
         else:
             bullet = joint(slot + '_bullet', muzzle)
-            asset.loft('Kinetic penetrator' if type == 'rail' else 'Ballistic tracer body', bullet,
-                       [(-radius * 4, .01, .01), (0, radius * .4, radius * .4), (radius * 3, .01, .01)], 'fx_core', axis='z')
+            if payload:
+                bpy.context.view_layer.update()
+                owner=asset.nodes[payload['payload']]
+                inverse=owner.matrix_world.inverted()
+                tip=inverse @ asset.nodes[muzzle].matrix_world.translation
+                for source in asset.parts[:start]:
+                    if source.parent!=owner:
+                        continue
+                    points=[inverse @ source.matrix_world @ vertex.co-tip for vertex in source.data.vertices]
+                    vertices=[(point.x,point.z,-point.y) for point in points]
+                    asset.mesh('Ejected authored feather missile',bullet,vertices,
+                               [tuple(face.vertices) for face in source.data.polygons],'fx_color')
+            else:
+                asset.loft('Kinetic penetrator' if type == 'rail' else 'Ballistic tracer body', bullet,
+                           [(-radius * 4, .01, .01), (0, radius * .4, radius * .4), (radius * 3, .01, .01)], 'fx_core', axis='z')
             if type == 'rail':
                 if bow:
                     for side in [-1, 1]:
@@ -495,9 +526,11 @@ def construct(asset, intent, xyz):
         low, high = min(-point.y for point in points), max(-point.y for point in points)
         discharges[slot] = {'node': name, 'radialScale': weapon['lanceRadius'] / radial,
                             'lengthScale': weapon['range'] / (high - low), 'origin': low}
-    asset.combat = {'intent': intent, 'joints': joints, 'clips': clips, 'discharges': discharges, 'fans': fans,
+    payloads = {slot: True for slot, entries in asset.spec['rig']['weaponSequences'].items()
+                if any(entry.get('payload') for entry in entries)}
+    asset.combat = {'intent': intent, 'joints': joints, 'clips': clips, 'discharges': discharges, 'fans': fans, 'payloads': payloads,
                     'abilityHash': hashlib.sha256(Path(ability.__file__).read_bytes()).hexdigest(),
-                    'transported': transported, 'fields': fields,
+                    'transported': transported, 'fields': fields, 'charging': charging,
                     'shield': {'node': guard, 'center': center, 'halfWidth': width, 'halfHeight': shield_height, 'clearance': gap}}
     asset.combat_parts = asset.parts[start:]
     for obj in asset.combat_parts:

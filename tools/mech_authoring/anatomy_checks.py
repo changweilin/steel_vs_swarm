@@ -7,6 +7,24 @@ import bpy
 from mathutils import Vector
 
 
+def authored_spec(spec):
+    """Keep contract pivots exact while validating builder-derived emission and gesture joints."""
+    root = Path(__file__).resolve().parents[2]
+    runtime = json.loads((root / 'public/js/forge/assets' / (spec['id'] + '.js')).read_text(encoding='utf8')
+                         .split('export default ', 1)[1].rsplit(';', 1)[0])
+    authored = {name: [name, parent, position] for name, parent, position in runtime['joints']}
+    held = {entry[key] for entry in spec['rig'].get('heldWeapons', []) for key in ['node', 'grip']}
+    assert all(authored.get(joint[0], [])[:2] == joint[:2]
+               and (joint[0] in held or authored[joint[0]][2] == joint[2])
+               for joint in spec['joints']), 'Contract pivot provenance changed'
+    allowed = {'flick_index', 'flick_middle', 'flick_thumb', 'hair_tuft'} if spec['id'] == 't06' else set()
+    allowed.update(entry['muzzle'] for entries in runtime['rig'].get('weaponSequences', {}).values() for entry in entries)
+    allowed.update(entry['payload'] for entries in runtime['rig'].get('weaponSequences', {}).values()
+                   for entry in entries if entry.get('payload'))
+    assert set(authored) - {joint[0] for joint in spec['joints']} <= allowed, 'Undeclared derived joint'
+    return spec | {'joints': runtime['joints'], 'rig': runtime['rig']}
+
+
 def open_contract_source(blend, report):
     """Require verified baked motion and unchanged geometry before checking the recipe's rest pose."""
     bpy.ops.wm.open_mainfile(filepath=str(blend))
@@ -62,7 +80,13 @@ def verify_articulated_body(spec, meshes):
     for held in spec['rig'].get('heldWeapons', []):
         assert bpy.data.objects[held['node']].parent.name == held['hand'], 'Weapon is detached from the grasping hand'
         prefix = 'Long axial weapon hand grip' if held.get('staff') else 'Thermal weapon pistol grip'
-        assert any(obj.name.startswith(prefix) and obj.parent.name==held['node'] for obj in meshes), 'Held thermal weapon has no grip'
+        assert bpy.data.objects[held['grip']].parent.name==held['node'], 'Grip bypasses the held weapon'
+        assert any(obj.name.startswith(prefix) and obj.parent.name==held['grip'] for obj in meshes), 'Held thermal weapon has no grip'
+        sign=-1 if held['hand'].endswith(('l','L')) else 1
+        thumbs=[obj for obj in meshes if obj.parent.name==held['grip'] and obj.name.startswith('Opposed grasp thumb')]
+        assert len(thumbs)==1, 'Grasp lacks an opposed thumb'
+        center=sum((thumbs[0].matrix_local @ v.co for v in thumbs[0].data.vertices),Vector())/len(thumbs[0].data.vertices)
+        assert center.x*sign>0, 'Grasp has the opposite hand anatomy'
     return {'waist':waist,'heldWeapons':len(spec['rig'].get('heldWeapons', []))}
 
 

@@ -19,7 +19,14 @@ export async function writeReview(target, content) {
   const targetPath = target instanceof URL ? fileURLToPath(target) : target;
   const temporary = targetPath + '.tmp';
   await writeFile(temporary, content);
-  await rename(temporary, targetPath);
+  // Windows background readers may briefly deny replacement; keep the complete candidate intact.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try { await rename(temporary, targetPath); return; }
+    catch (error) {
+      if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt === 7) throw error;
+      await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)));
+    }
+  }
 }
 // 伺服器路徑一律由本檔位置推導 —— 量測工具常從別的 cwd 呼叫,相對路徑會找不到 server.js
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));

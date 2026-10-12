@@ -2,13 +2,13 @@
   "asset": "t04",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 12636,
-    "meshes": 88,
-    "joints": 38,
+    "triangles": 13284,
+    "meshes": 90,
+    "joints": 40,
     "source": {
-      "contract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-      "catalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2",
+      "contract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c",
       "image": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea"
     }
   },
@@ -24,24 +24,24 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "2182e38ab7bc64f4d1b8a6fe8ab6199d558f4f4df0b0cbe83a5c5e010e19331a",
-    "blend": "992557326c6d4703ed446e4fbd55bbb731c73e567f55bb665c27e1b11d506d55",
-    "glb": "78e63645c3227774a806bd9e702ad8eb5c297499a53ff6603ea54cd3eb8fe0ae"
+    "runtime": "1a61b15002a8175985b26bf4a1ff70f9c3d118f3df9980d3c9e29fa5291ebab7",
+    "blend": "7215be8c608e9ea4c4495097759ed57d59e37de84489df47d303f55c8f65d21c",
+    "glb": "dfbf50c93c71688990d71c2c35fdf7993014d013935f84b90db07c48b2353d5e"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
     "motion": "pass_structural"
   },
   "motionSource": {
-    "samples": "bf4e964dc40882f5d2ab1199fbb1d6995da2fd62d732718803ddbb36c6f2e419",
-    "inputBlend": "out/anatomical_motion/before/t04-b601f22530c2.blend",
+    "samples": "34eacef8cb9982d201a32ebcd8252da1f5746e21a7eb1944c3384cedd97b586e",
+    "inputBlend": "out/anatomical_motion/before/t04-1d628d29508c.blend",
     "clips": [
       "idle",
       "run",
@@ -90,20 +90,28 @@
       "cast_dish",
       "emitter_l",
       "emitter_r",
-      "barrier"
+      "barrier",
+      "emission_light_0",
+      "emission_heavy_0"
     ],
     "drivers": {
-      "locomotion.js": "99ce9548328fee54ba8332012320ac7a62efb771c7b3603df4680d22040a6904",
-      "anatomicalPose.js": "b3c9a4746e8ab55ce4ae4164d8096f5236988a4b7455e5be4131410e737c9bfe",
-      "forge/referenceAsset.js": "18d20224dccccd17aae8cd25ead1c00fcac7832b05cdac4d845d1c7c236195f5",
+      "locomotion.js": "533b1bab31b176687f9a26542e50cb30bd22d7d5ade985698eac12cd5cccd9ba",
+      "anatomicalPose.js": "416f04e566954c35855b3670885c3978bf06509ca68b085beec6f6f6a05e35dd",
+      "forge/referenceAsset.js": "dbc4ee783631ac66ace195bb27107f9804188ced67ae63ce36ceea395f7b9e63",
       "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
       "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
-      "unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e"
+      "unitMotion.js": "931ccf20c8aaecfceabd22bdc9388ff581820a9d93cfe2c986ec1922327aa2eb",
+      "models.js": "1a1ff9fd5dd4cd2175b3551d97a7a4ee7f691f6bf994b75c0317706b8e82d3a9"
     },
-    "baker": "c8b4f8a62242d12f1bdeaf7db54d2a54daca08c3ce19c2aeb9c42ff938397e07",
+    "baker": "28cb44de20289947ca5e89dd28db4f83bdc0e6565f18fe9dd65d27e333e0139b",
     "fps": 60,
-    "sampler": "dd8d1b45832226c05777a6348d8b1fa3702a3c594128601424ab9c2c3eab42f9",
+    "sampler": "f1a848912d95710bde3fd9debbc770034eedb4401d85ae8faa106eb6d9310dae",
     "encoder": "01a56f665216dc676ce59443e7013dd149aff790473d0e18b1c7e5eed5ce875d",
     "restorer": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf"
+  },
+  "reviewEvidence": {
+    "weapons": "out/weapon_revision/runtime/validation.json",
+    "visual": "out/weapon_revision/visual-review.json",
+    "delivery": "out/weapon_revision/delivery-validation.json"
   }
 }

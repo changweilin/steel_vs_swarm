@@ -11,6 +11,7 @@ from mathutils import Quaternion
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sampled_glb import encode_tracks
 from motion_source import snapshot_rest, restore_rest
+from artifacts import replace_artifact
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = ROOT / 'out/anatomical_motion/after'
@@ -119,7 +120,7 @@ for id in ids:
                      'encoder': sha(Path(__file__).with_name('sampled_glb.py')),
                      'restorer': sha(Path(__file__).with_name('motion_source.py'))}
     if actions_only:
-        temporary_blend.replace(blend)
+        replace_artifact(temporary_blend, blend)
         glb = ROOT / 'public/assets/models/reference' / (id + '.glb')
         encode_tracks(glb, samples, baked_clips)
         report['hashes']['blend'], report['hashes']['glb'] = sha(blend), sha(glb)
@@ -164,8 +165,8 @@ for id in ids:
     for obj in meshes:
         bpy.data.objects.remove(obj, do_unlink=True)
     restore_rest(nodes, rest)
-    temporary_blend.replace(blend)
-    temporary.replace(glb)
+    replace_artifact(temporary_blend, blend)
+    replace_artifact(temporary, glb)
     report['hashes']['blend'], report['hashes']['glb'] = sha(blend), sha(glb)
     report['motionSource'] = source_record
     report.pop('motionInputBlend', None)

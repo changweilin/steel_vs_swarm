@@ -1,6 +1,6 @@
 {
-  "blend": "e86ac0e3077f232203b6e72b462089336b0a94f9c8e094d3cac18e664009e6f4",
-  "bones": 66,
+  "blend": "aa14ec86d57069acfbe977b8149e091673571dd8ac2d6bd0bc5aea21f0c3e5dd",
+  "bones": 73,
   "clips": [
     "idle",
     "run",
@@ -28,10 +28,11 @@
     }
   },
   "bakedSource": {
-    "contractSource": "out/anatomical_motion/before/m05-c888a3d1c43b.blend",
-    "contractSourceHash": "c888a3d1c43b7a2f7f0a4520191e08ae635c9a9d5df2cebb51f328cfcd3af67f",
+    "contractSource": "out/anatomical_motion/before/m05-090a864b3318.blend",
+    "contractSourceHash": "090a864b33182c541cb66a1944eb5afb04b80a2685c28bf1b324f9074f79d573",
     "motionVerification": "out/anatomical_motion/after/blender-validation.json"
   },
+  "deliveredShieldAlignment": null,
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,
   "exposedLimbBoundsInHullCoordinates": {},

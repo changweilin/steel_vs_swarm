@@ -12,7 +12,7 @@ const baseline = process.argv.includes('--baseline');
 const selected = process.argv.indexOf('--asset');
 const ids = selected < 0 ? Object.keys(CHARACTERS) : process.argv[selected + 1].split(',');
 const output = 'out/anatomical_motion/' + (baseline ? 'before' : 'after');
-const files = ['locomotion.js', 'anatomicalPose.js', 'forge/referenceAsset.js', 'forge/forge.js', 'gaitcurve.js', 'unitMotion.js'];
+const files = ['locomotion.js', 'anatomicalPose.js', 'forge/referenceAsset.js', 'forge/forge.js', 'gaitcurve.js', 'unitMotion.js', 'models.js'];
 const sources = {};
 for (const file of files) {
   if (baseline && file === 'anatomicalPose.js') continue;
@@ -70,7 +70,9 @@ try {
             stepCombatFx(ent,now,1/60);stepLocomotion(ent,1/60,now,0,-speed/60,0);unit.updateMatrixWorld(true);
           };
           ent.df=action==='shield_retract';
-          for(let i=0;i<240;i++)tick(speed, ['light','heavy'].includes(action)?action:null);
+          const warmupSlot = action === 'light' && unit.userData.rig.hairFlick ? null
+            : ['light','heavy'].includes(action) ? action : null;
+          for(let i=0;i<240;i++)tick(speed, warmupSlot);
           ent.df=action==='shield_deploy';
           if(action==='skill'||action==='ult')ent.castFx={t0:now,slot:action==='skill'?'def':'atk'};
           const rig=unit.userData.rig;

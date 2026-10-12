@@ -1,5 +1,6 @@
 """Reference-specific construction; dimensions and articulation belong to assets.json."""
 import math
+import bpy
 
 
 def ellipsoid(a, name, parent, size, at, material, segments=16, rings=8):
@@ -275,14 +276,16 @@ def arms(a, chest='chest'):
                 for x in [-.11, 0, .11]:
                     a.strut('Exposed living arm tendon bundle', parent, (x, -.12, -.11),
                             (end[0] + x, end[1] + .12, end[2] - .11), .065, 'shade')
-        if r == 'trex':
+        held = any(h['hand']==wrist for h in a.spec['rig'].get('heldWeapons',[]))
+        if held:
+            pass
+        elif r == 'trex':
             for x in [-.09, .09]: spike(a, 'Short empty foreclaw', wrist, (x, 0, .04), (x, -.17, .25), .05, 'brass')
         elif r == 'roo':
             ellipsoid(a,'Kangaroo compact forepaw',wrist,(width*.9,width*.55,width*.65),(0,-.05,.1),'shade',10,5)
             for x in [-.08,0,.08]: spike(a,'Kangaroo forepaw digit',wrist,(x,0,.12),(x,-.13,.27),.027,'steel')
         else:
             a.box('Armored palm', wrist, (width * 1.1, width * .7, width * .65), (0, -.1, .06), 'shade')
-            held = any(parent == wrist and name in ['gun', 'heavy'] for name, parent, _ in a.spec['joints'])
             for i in range(4):
                 at = ((i - 1.5) * width * .24, -.13 if held else -width * .48, .17 if held else width * .25)
                 a.box('Closed weapon grip finger' if held else 'Individual armored finger', wrist,
@@ -390,17 +393,49 @@ def waist_shell(a, parent='waist', profile=None):
 
 def weapon_grips(a):
     for held in a.spec['rig'].get('heldWeapons', []):
-        owner = held['node']
+        owner = held['grip']
         if held.get('staff'):
-            a.tube('Long axial weapon hand grip',owner,.12,.08,.42,(0,0,0),'shade')
+            a.tube('Long axial weapon hand grip',owner,.12,.08,held['gripLength'],(0,0,0),'shade')
             for z in [-.23,.23]:
                 a.tube('Axial grip retaining flange',owner,.15,.105,.045,(0,0,z),'steel')
         else:
-            a.box('Thermal weapon pistol grip',owner,(.14,.32,.18),(0,-.16,-.10),'shade',.025)
-            for y in [-.25,-.18,-.11]:
-                a.box('Pistol grip friction rib',owner,(.155,.025,.19),(0,y,-.10),'steel',.004)
-            for start,end in [((0,-.08,.07),(0,-.27,.07)),((0,-.27,.07),(0,-.27,-.05))]:
+            length=held['gripLength']
+            a.box('Thermal weapon pistol grip',owner,(.14,length,.18),(0,length*.5-.16,0),'shade',.025)
+            for y in [-.12,-.04,.04,.12]:
+                a.box('Pistol grip friction rib',owner,(.155,.025,.19),(0,y,0),'steel',.004)
+            for start,end in [((0,.18,.10),(0,-.17,.20)),((0,-.17,.20),(0,-.17,.06))]:
                 a.strut('Closed weapon trigger guard',owner,start,end,.022,'steel')
+        # The grasp frame follows the actual weapon, including stow rotation, without shrinking the hand.
+        staff=held.get('staff')
+        hand_sign=-1 if held['hand'].endswith(('l','L')) else 1
+        def at(x,y,z): return (hand_sign*x,z,y) if staff else (hand_sign*x,y,z)
+        a.box('Grasping armored palm',owner,(.30,.29,.09) if not staff else (.30,.09,.29),at(0,0,-.14),'shade',.018)
+        for y in [-.105,-.035,.035,.105]:
+            a.strut('Closed grip proximal phalanx',owner,at(-.11,y,-.13),at(-.13,y,.08),.043,'armor')
+            a.strut('Closed grip middle phalanx',owner,at(-.13,y,.08),at(.05,y,.14),.043,'armor')
+            a.strut('Closed grip distal phalanx',owner,at(.05,y,.14),at(.095,y,.04),.035,'armor')
+        a.strut('Opposed grasp thumb',owner,at(.13,.08,-.12),at(.13,-.04,.02),.052,'armor')
+        a.strut('Grasp thumb contact',owner,at(.13,-.04,.02),at(.075,-.08,.06),.043,'armor')
+
+
+def limb_girdles(a):
+    if a.spec.get('recipe')=='octopod': return
+    import re
+    for name,parent,at in a.spec['joints']:
+        if not re.fullmatch(r'(shoulder_[lr]|hip_[lr]|leg_[FMH][LR]|(?:fore|hind)_hip_[lr])',name): continue
+        side=1 if at[0]>0 else -1
+        width=a.p.get('limb',.32)
+        if a.spec.get('recipe')=='trex' and name.startswith('shoulder'): width*=.38
+        role='Scapular' if name.startswith(('shoulder','leg_F','fore_hip')) else 'Coxal' if a.spec.get('recipe')=='rhino_beetle' else 'Pelvic'
+        a.strut(role+' load socket bridge',name,(-side*width*.92,0,0),(0,0,0),width*.30,'steel')
+        a.tube(role+' exposed joint socket',name,width*.55,width*.36,width*.85,(0,0,0),'shade','x',12)
+        a.disk(role+' outboard articulation cap',name,width*.31,width*.10,(side*width*.46,0,0),'steel','x',12)
+    wings=a.spec.get('forms',{}).get('flight',{}).get('rig',{}).get('wings',a.spec['rig'].get('wings',[]))
+    for entry in wings:
+        if not entry.get('hand'): continue
+        name,side=entry['w'],entry['sgn']
+        a.strut('Wing scapular load bridge',name,(-side*.48,0,0),(0,0,0),.085,'steel')
+        a.tube('Exposed wing shoulder socket',name,.17,.12,.24,(0,0,0),'shade','x',12)
 
 
 def ground(a):
@@ -725,7 +760,13 @@ def flyer_body(a):
                 a.strut('Long mechanical whisker','sensor',(side*.31,-.07,.92),(side*1.01,-.20,1.44),.030,'steel')
                 for z in [.30,.50,.70,.88]: spike(a,'Dragon visible tooth','sensor',(side*(.35-.10*z),.015,z),(side*(.34-.10*z),-.16,z+.03),.057,'steel')
             for i in range(5):
-                for side in [-1, 1]: a.plate('Sakura petal marking', 'tilt', [(0, 0), (.09, .11), (0, .2), (-.09, .11)], .014, (side * .43, .08, -.75 + i * .28), 'red')
+                for side in [-1, 1]:
+                    obj=a.plate('Sakura petal marking', 'tilt', [(0, 0), (.09, .11), (0, .2), (-.09, .11)], .014, (side * .43, .08, -.75 + i * .28), 'red')
+                    bpy.context.view_layer.update()
+                    world=obj.matrix_world.copy()
+                    owner=min(a.spec['rig']['bodySegments'],key=lambda name:(a.nodes[name].matrix_world.translation-world.translation).length)
+                    obj.parent=a.nodes[owner]
+                    obj.matrix_world=world
         else:
             ellipsoid(a, 'Raptor sensor head', 'sensor', (.5, .55, .65), (0, .2, 0), 'armor')
             if r == 'eagle':
@@ -857,10 +898,15 @@ def weapons(a):
 
 def light_weapon(a, length):
     p, r = a.p, a.spec['recipe']
+    if r == 'dragon':
+        for side in [-1, 1]:
+            a.disk('Dragon optical eye aperture','gun',.055,.012,(side*.432,0,.014),'glow')
+            a.emission('light','gun',(side*.432,0,.020))
+        return
     if r == 'trex':
         for owner, muzzle in [('gun_recoil','light_muzzle'),('gun_l_recoil','light_muzzle_l')]:
             a.box('Outboard forearm gun receiver',owner,(.24,.25,.43),(0,0,.10),'dark',.035)
-            a.tube('Independent forearm gun barrel',owner,.065,.035,length-.14,(0,0,(length+.14)/2),'steel',segments=12)
+            a.tube('Independent forearm gun barrel',owner,.065,.035,length-.14,(0,0,(length+.14)/2),'steel',segments=12, emission='light')
             a.tube('Forearm gun cooling collar',owner,.095,.065,.08,(0,0,length*.60),'shade',segments=12)
             a.disk('Light muzzle emission',muzzle,.035,.014,(0,0,0),'glow')
         return
@@ -872,9 +918,10 @@ def light_weapon(a, length):
             a.box('Paired medical sniper receiver','gun_recoil',(.27,.29,.50),(x,0,.15),'shade',.03)
             a.tube('Paired medical sniper scope','gun',.07,.038,.42,(x,.25,.2),'shade',segments=12)
         if r == 'zero': a.box('Paired wingroot shotgun pod', 'gun_recoil', (.28, .28, .5), (x, 0, .15), 'shade')
-        a.tube('Light weapon open bore', 'gun_recoil', .065 if count > 1 else .09, .035 if count > 1 else .052, length - .2, (x, 0, (length + .2) / 2), 'steel', segments=12)
+        a.tube('Light weapon open bore', 'gun_recoil', .065 if count > 1 else .09, .035 if count > 1 else .052, length - .2, (x, 0, (length + .2) / 2), 'steel', segments=12, emission='light')
         for z in [.3, length * .65]: a.tube('Weapon cooling collar', 'gun_recoil', .09 if count > 1 else .12, .065 if count > 1 else .09, .06, (x, 0, z), 'shade', segments=12)
-    a.disk('Light muzzle emission', 'light_muzzle', .045, .014, (0, 0, 0), 'glow')
+    if not a.emissions['light']:
+        a.disk('Light muzzle emission', 'light_muzzle', .045, .014, (0, 0, 0), 'glow')
     if r in ['glider', 'medical']:
         for side in [-1, 1]: a.strut('Sniper electromagnetic rail', 'gun_recoil', (side * .14, .11, .25), (side * .14, .11, length), .045, 'brass')
         if r!='medical':
@@ -893,25 +940,25 @@ def heavy_weapon(a):
         for i in range(6):
             th = math.tau * i / 6
             a.tube('Revolver chamber bore', 'heavy', .105, .075, .64, (.35 * math.cos(th), .35 * math.sin(th), .24), 'steel', segments=12)
-        a.tube('Revolver axe cannon bore', 'heavy', .24, .16, 1.05, (0, 0, 1), 'steel')
+        a.tube('Revolver axe cannon bore', 'heavy', .24, .16, 1.05, (0, 0, 1), 'steel', emission='heavy')
         a.strut('Revolver axe reinforced handle','heavy',(0,-.9,.44),(0,.38,.44),.18,'dark')
         blade = wing(a,'Crescent axe blade','heavy',[(.08,.35),(.30,.34),(.70,.56),(.96,1.0),(.96,1.45),(.69,1.73),(.29,1.55),(.10,1.18)],(0,-.14,0),'armor',.18)
         edge = wing(a,'Axe sharpened curved cutting edge','heavy',[(.70,.56),(.96,1.0),(.96,1.45),(.69,1.73),(.61,1.55),(.82,1.36),(.82,1.02),(.59,.69)],(0,-.14,0),'steel',.20)
         for obj in [blade,edge]: a.rotate(obj,'z',-math.pi/2)
         for i in range(5): a.box('Cyan axe rune','heavy',(.026,.06,.10),(-.11,-.60-i*.065,.79+i*.14),'glow',.005)
     elif r == 'colossus':
-        a.tube('Recessed forehead electromagnetic aperture','forehead_bore',.17,.125,.18,(0,0,.05),'dark',segments=16)
+        a.tube('Recessed forehead electromagnetic aperture','forehead_bore',.17,.125,.18,(0,0,.05),'dark',segments=16, emission='heavy')
         a.tube('Internal forehead coil','forehead_bore',.125,.09,.035,(0,0,.13),'steel',segments=16)
         a.plate('Closed forehead cannon shutter','charge_hinge',[(-.29,0),(.29,0),(.29,-.39),(-.29,-.39)],.09,(0,0,0),'armor')
         a.box('Forehead shutter central seam','charge_hinge',(.026,.34,.012),(0,-.19,.052),'shade',.002)
     elif r == 'dragon':
-        a.tube('Recessed dragon oral sonic resonator','heavy',.18,.12,.26,(0,0,.41),'dark',segments=16)
+        a.tube('Recessed dragon oral sonic resonator','heavy',.18,.12,.26,(0,0,.41),'dark',segments=16, emission='heavy')
     elif r in ['colossus', 'trex', 'crane', 'seraph', 'gorilla', 'hound', 'pterosaur', 'dragon', 'canard', 'glider', 'zero']:
         length = positions['heavy_muzzle'][2]
         width = .1 if r == 'glider' else .16 if r == 'pterosaur' else .2 if r in ['crane', 'seraph'] else .26
         a.loft('Heavy electromagnetic receiver', 'heavy', [(-.2, width * 2.2, width * 1.9), (.3, width * 2, width * 1.8)], 'shade', axis='z')
         barrel_parent = 'throat_barrel' if r == 'trex' else 'heavy'
-        a.tube('Heavy weapon open bore', barrel_parent, width * .6, width * .36, length, (0, 0, length * .5), 'steel', segments=16)
+        a.tube('Heavy weapon open bore', barrel_parent, width * .6, width * .36, length, (0, 0, length * .5), 'steel', segments=16, emission='heavy')
         for i in range(5): a.tube('Heavy accelerator ring', barrel_parent, width, width * .68, .08, (0, 0, .15 + i * length / 6), 'shade' if r == 'seraph' else 'armor', segments=16)
         if r == 'seraph':
             for side in [-1,1]:
@@ -927,7 +974,10 @@ def heavy_weapon(a):
     elif r == 'eagle':
         for side in [-1, 1]:
             for j in range(2):
-                a.loft('Exactly four feather missiles', 'heavy', [(-.5, .12, .12), (.6, .12, .12), (.8, .012, .012)], 'steel', (side * (.6 + j * .22), .12, 0), axis='z')
+                at=(side * (.6 + j * .22), .12, 0)
+                payload=a.joint('feather_missile_'+str(len(a.emissions['heavy'])),'heavy',at)
+                a.loft('Exactly four feather missiles', payload, [(-.5, .12, .12), (.6, .12, .12), (.8, .012, .012)], 'steel', axis='z')
+                a.emission('heavy','heavy',(at[0],at[1],.8),payload=payload)
                 a.box('Feather missile release rail', 'heavy', (.07, .06, 1.1), (side * (.6 + j * .22), .05, -.05), 'shade')
     elif r == 'stego':
         for side in [-1, 1]:
@@ -943,7 +993,7 @@ def heavy_weapon(a):
     elif r == 'delta':
         a.box('Honeycomb dorsal launch bay', 'heavy', (1.45, .35, 1.2), (0, .03, -.05), 'dark', .07)
         for row in range(3):
-            for col in range(4): a.tube('Honeycomb launch cell', 'heavy', .15, .12, .2, ((col - 1.5) * .32 + (row % 2) * .07, .28, (row - 1) * .32), 'brass', 'y', 6)
+            for col in range(4): a.tube('Honeycomb launch cell', 'heavy', .15, .12, .2, ((col - 1.5) * .32 + (row % 2) * .07, .28, (row - 1) * .32), 'brass', 'y', 6, emission='heavy')
     elif r == 'fpv':
         for side in [-1, 1]:
             a.box('Ventral microdrone release rail', 'heavy', (.1, .13, 1.1), (side * .32, -.65, -.1), 'steel')
@@ -954,7 +1004,7 @@ def heavy_weapon(a):
             for y in [-.16, .16]: a.disk('Plasma matrix aperture', 'heavy', .075, .035, (x, y, .34), 'glow', segments=12)
     elif r == 'slab':
         a.box('Single side thermal rocket housing', 'heavy', (.6, .7, .85), (0, 0, .1), 'shade')
-        a.tube('Single large thermal rocket port', 'heavy', .3, .23, .8, (0, 0, .4), 'steel', segments=16)
+        a.tube('Single large thermal rocket port', 'heavy', .3, .23, .8, (0, 0, .4), 'steel', segments=16, emission='heavy')
     elif r == 'centaur':
         a.box('Dorsal launcher mounting saddle','launcher_base',(.84,.17,.74),(0,-.08,0),'dark',.045)
         for side in [-1,1]:
@@ -972,21 +1022,22 @@ def heavy_weapon(a):
             a.strut('Telescopic launcher crossarm',owner,(0,.08+side*.05,0),(-side*pod_x,.08+side*.05,0),.075,'steel')
             a.box('Dorsal multi-rocket armored rack',owner,(.42,1.28,.72),(0,.40,0),'shade',.06)
             for z in [-.22,0,.22]:
-                a.tube('Dorsal rocket launch cell',owner,.105,.079,1.40,(0,.48,z),'steel','y',12)
+                a.tube('Dorsal rocket launch cell',owner,.105,.079,1.40,(0,.48,z),'steel','y',12, emission='heavy')
     else:
         vertical = False
         size = (.75, 1.45, .7) if vertical else (.8, .55, .85)
         a.box('Heavy payload armored housing', 'heavy', size, (0, .3 if vertical else 0, 0), 'shade', .055)
         for x in [-.2, .2]:
-            a.tube('Payload launcher open cell', 'heavy', .15, .115, .9, (x, .5 if vertical else 0, .3 if not vertical else 0), 'steel', 'y' if vertical else 'z', 12)
+            a.tube('Payload launcher open cell', 'heavy', .15, .115, .9, (x, .5 if vertical else 0, .3 if not vertical else 0), 'steel', 'y' if vertical else 'z', 12, emission='heavy')
         if r == 'twinboom':
             for side in [-1, 1]:
                 a.box('Underwing rocket pod', 'heavy', (.45, .45, 1), (side * 1.7, -.6, 0), 'shade')
-                for x in [-.1, .1]: a.tube('Underwing rocket bore', 'heavy', .075, .052, .8, (side * 1.7 + x, -.6, .3), 'steel', segments=10)
+                for x in [-.1, .1]: a.tube('Underwing rocket bore', 'heavy', .075, .052, .8, (side * 1.7 + x, -.6, .3), 'steel', segments=10, emission='heavy')
     if r not in ['colossus','dragon']:
         a.box('Reversible heavy charge aperture', 'charge_hinge', (.46, .06, .42), (0, 0, .2), 'armor', .015)
         a.box('Charge aperture luminous edge', 'charge_hinge', (.35, .025, .02), (0, .04, .4), 'glow', .003)
-    a.disk('Heavy muzzle emission', 'heavy_muzzle', .07, .012, (0, 0, 0), 'glow')
+    if not a.emissions['heavy']:
+        a.disk('Heavy muzzle emission', 'heavy_muzzle', .07, .012, (0, 0, 0), 'glow')
 
 
 def emitters(a):

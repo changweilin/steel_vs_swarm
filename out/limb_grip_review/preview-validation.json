@@ -1,0 +1,11 @@
+{
+  "file": "out/limb_grip_review/m08-flight-review.blend",
+  "sha256": "ea3cdc4d1e23ce14eb77a2793a0b6a94302e689fb9158dd1a19fca74b4d26602",
+  "owner": "out/morph_reference/m08/m08.blend",
+  "ownerSha256": "64d4e294aafc1fe7dd867007fd5c788167d4dfc0fe07201cb6c1e2c193e5dc45",
+  "clip": "flight_idle",
+  "frame": 61,
+  "fps": 60,
+  "animatedNodes": 50,
+  "objects": 431
+}

@@ -1,0 +1,6 @@
+{
+  "gate": "pass",
+  "weapons": 512,
+  "abilities": 512,
+  "characterRules": "exact except name/rw"
+}

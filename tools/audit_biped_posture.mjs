@@ -43,7 +43,8 @@ try {
         const rig = morph ? morph.ground : unit.userData.rig;
         const gripMounts = new Map((rig.heldWeapons || []).map(held => {
           const node = tree.getObjectByName(held.node);
-          return [node, node.quaternion.clone()];
+          const deployed = rig.anatomical?.controls.find(control => control.node === node)?.q;
+          return [node, (deployed || node.quaternion).clone()];
         }));
         const ent = { id, mesh: unit, heroY: 0, df: false, sp: 1 };
         const dt = 1 / fps;
@@ -103,7 +104,7 @@ try {
           }
           for (const [index, side] of ['L', 'R'].entries()) {
             const wrist = rig[`armChain${side}`][1].g, elbow = rig[`armChain${side}`][0].g;
-            if (!Object.values(rig.wpn).some(weapon=>weapon.aimJoint===wrist)) continue;
+            if (!Object.values(rig.wpn).some(weapon=>weapon.aimJoint===wrist && weapon.ref!==rig.hairFlick?.middle)) continue;
             const stowed = rig.stowedWeapons?.find(control => control.node.parent===wrist && control.slot!==(rig._aimSlot || 'light'));
             if (stowed) {
               check(stowed.node.scale.x <= stowed.scale+1e-5, `${id}: inactive weapon does not stow`);

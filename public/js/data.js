@@ -3947,14 +3947,14 @@ export const CHARACTERS = {
     // 2026-08-16 換機:武器/招式**只改顯示字串**(翼面/羽冠/頸羽/羽面 → 耳廓/額隆/雙耳/隔艙稜線)——
     // 那幾個名字指的是機體上的**實體零件**,機體換了就不存在;數值(dmg/rate/mag/range/vs/vsSp…)
     // 一格未動 ⇒ bal 與 e2e 的期望值逐位元不變。武器本身仍是綁角色的(§2.1 角色機種),沒有搬給 s10。
-    light: { name: '「靈羽」相位相控波束槍', rw: '耳廓相控陣高頻波束・高能相干光束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
+    light: { name: '「靈羽」鼻尖相位波束', rw: '象鼻／獨角尖端相控波束・高能相干光束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
       dmg: [17, 23, 29], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 220, crit: 0.06,
       vs: { flesh: 0.75, armor: 0.85, air: 1.3, building: 0.5 } },
     // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
     // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
     // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
     // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
-    heavy: { name: '「天穹裂帛」定向高功率微波', rw: '額隆微波集束發射矩陣・高能 EMP 射束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.35,
+    heavy: { name: '「天穹裂帛」定向高功率微波', rw: '雙象牙感應蓄電・高能 EMP 射束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.35,
       dmg: [44, 66, 96], mag: 5, reload: 8, range: 320, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.95, air: 2.0, building: 0.4 } },
@@ -4271,7 +4271,7 @@ export const CHARACTERS = {
     element: '震波／動能',
     visual: { hue: 0xffb84d, pod: 'blade', flight: 'uav', ground: 'monkey', bulk: 0.95, paint: 'minimal' },
     mods: { hp: 1.05, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
-    light: { name: '「疾風」191 特裝突擊步槍', rw: '新型高初速步槍・5.8mm 微聲穿甲彈・初速 930m/s', type: 'gun', mv: 930, elem: 'physical',
+    light: { name: '「疾風」拔毫彈指', rw: '拔取猴毛後連續彈指・金光飛毫穿甲・初速 930m/s', type: 'gun', mv: 930, elem: 'physical',
       dmg: [15, 18, 23], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 0.75, armor: 0.9, air: 1.0, building: 0.5 } },
     heavy: { name: '「如意金箍」天罡震地杖', rw: '多節超合金長棍前捲重擊・天罡震波扇面裂地・動能重擊破陣', type: 'plasma', arc: 10, elem: 'shockwave', elemBuildup: 40,
@@ -4312,7 +4312,7 @@ export const CHARACTERS = {
     element: '音波／諧振',
     visual: { hue: 0xffc7dd, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon', paint: 'sakura' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 6 },
-    light: { name: '「清商」光電諧振步槍', rw: '聲電複合調頻雷射槍・相干光束・光速直擊', type: 'beam', elem: 'sonic', elemBuildup: 12,
+    light: { name: '「清商」雙目諧振射線', rw: '雙眼聲電複合調頻射線・相干光束・光速直擊', type: 'beam', elem: 'sonic', elemBuildup: 12,
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 220, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     // 護盾軸示範 ②【反護盾】:諧振頻率對準護盾場的共振點,場一垮就沒戲唱了 —— 與 s03 同型,
@@ -4498,7 +4498,7 @@ export const CHARACTERS = {
     light: { name: '「鷹爪」精準微聲戰鬥步槍', rw: '高精度射手步槍・微聲穿甲彈・初速 780m/s', type: 'gun', mv: 780, elem: 'physical',
       dmg: [17, 21, 25], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
-    heavy: { name: '「天穹破甲」20mm 鷹眼重砲', rw: '大口徑遠程穿甲反器材砲・初速 900m/s', type: 'gun', mv: 900, elem: 'physical',
+    heavy: { name: '「天穹破甲」四連羽形飛彈', rw: '背部四枚羽形穿甲飛彈輪射・初速 900m/s', type: 'gun', mv: 900, elem: 'physical',
       dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
     def: { name: '迷障・神鷹蒼雲', fx: 'fog', r: 24, dur: [6, 7, 8], spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] }, elem: 'physical',

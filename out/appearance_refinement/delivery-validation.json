@@ -1,0 +1,41 @@
+{
+  "assets": {
+    "s07": {
+      "runtime": "b06a3d2d0edfac72829245de3736a7e7c0072c20801481921ee909a3f8201695",
+      "blend": "c12382a0c701bd2abc29ea286740f858715effe50ca2bd614fdda06a8939d1b7",
+      "glb": "592a155f6b03e439269be0b20c2cc2dea7dac508f6483aa120b0c721159d16ab"
+    },
+    "t06": {
+      "runtime": "37461764299fa0c843b10dfb11d169c459bcd200c560b8de2af49f45e9a29e7d",
+      "blend": "c93cc477bedf0bb161688fd36664f025342f20b5f30f8586ee1c704b131feb33",
+      "glb": "b3aae78701de64350d8e1675f9d00d541b2d980a3651b5e51bece82ecc140046"
+    },
+    "m05": {
+      "runtime": "274f7d398a01aa796172c3387136e232b5cfb6d290d631db8bfff35dc0151050",
+      "blend": "ced6477c2afeb0eeee84dad0622ba42ed6bdd02392c7a4b27cde751b89151a90",
+      "glb": "e410cb74da30c7e1fb2039c1b63ac28064e89d01027ee1c85de4a84cc4ca9648"
+    },
+    "m07": {
+      "runtime": "96056a26bbf33d1a5abd62c919f3e1bfe12154c4c5a9d76f9884589bf0d2c29c",
+      "blend": "3add99d8cdafe3f5682b90c8af5265008ec5f7d9be7fb45cc13198c9833dd86d",
+      "glb": "ffb350ff9f3becb26922fcfc5584fe03a71611dd18338b90e9b78673f4a19385"
+    },
+    "s06": {
+      "runtime": "de206f22a6f0dcdafbaecc25465ea4f423079eca72e4c13148ded2ea576f6886",
+      "blend": "5eecbdfa510d314bb4aa6bad653de34fc06bd79d4510c7e440bec2c23fd5ac86",
+      "glb": "6fe72d7d0d5f7f6147d5e5d709088498ca7a4d280e623c0123793a03e066049d"
+    }
+  },
+  "motionAssets": 23,
+  "blenderJointSamples": 2852735,
+  "glbJointSamples": 485035,
+  "gates": {
+    "source": "pass",
+    "motion": "pass",
+    "exactExport": "pass",
+    "runtimeEquipment": "pass",
+    "cleanRebuild": "pass",
+    "visualReview": "pass",
+    "userSignoff": "pending_user_review"
+  }
+}

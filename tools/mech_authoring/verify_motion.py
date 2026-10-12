@@ -31,6 +31,9 @@ for file in sorted(SAMPLES.glob('*.json')):
     sample_hash = hashlib.sha256(file.read_bytes()).hexdigest()
     bpy.ops.wm.open_mainfile(filepath=str(directory / (id + '.blend')))
     nodes = {name: bpy.data.objects[name] for name in report['motionSource']['nodes']}
+    claws = [obj for obj in bpy.data.objects if obj.name.startswith('Retractable triple knuckle blade')] if id == 'm05' else []
+    if id == 'm05':
+        assert len(claws) == 6, 'Wolf must retain three blades on each forearm'
     count, error = 0, 0
     verified_clips = []
     for clip, data in sampled['clips'].items():
@@ -48,6 +51,12 @@ for file in sorted(SAMPLES.glob('*.json')):
                     obj.animation_data.action_slot = track.strips[0].action_slot
         for frame in range(1, len(data['frames']) + 1):
             bpy.context.scene.frame_set(frame)
+            for blade in claws:
+                assert blade.parent.name in ['elbow_l','elbow_r'], 'Wolf blade is not owned by the forearm'
+                wrist = nodes['wrist_' + blade.parent.name[-1]]
+                forearm = (wrist.matrix_world.translation - blade.parent.matrix_world.translation).normalized()
+                direction = blade.matrix_world.to_quaternion() @ Vector((0,0,1))
+                assert direction.dot(forearm) > .999, f'{id}/{clip}/{frame}: claw is perpendicular to the forearm'
             for name, position, rotation, scale in data['frames'][frame - 1]:
                 if name.startswith('fx_'):
                     continue

@@ -293,6 +293,7 @@ function attachMuzzleFlames(rig) {
       new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.9,
         blending: THREE.AdditiveBlending, depthWrite: false }));
     f.userData.noOutline = true;
+    f.userData.presentationEffect = true;
     f.userData.noPaint = true;
     f.userData.geoKeep = true;   // LOD MUST NOT touch: stepCombatFx owns visible every heavy frame
     f.visible = false;

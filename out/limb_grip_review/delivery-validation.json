@@ -1,0 +1,2031 @@
+{
+  "blender": "5.2.0 LTS",
+  "assets": {
+    "s01": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s01/s01.blend",
+      "effectAuthoringOwner": "out/combat_reference/s01/s01.blend",
+      "artifacts": {
+        "out/mech_reference/s01/s01.blend": "7337404b914ea0c58d9e5c67c18887295a562053c928b04dc83d503096bc3a28",
+        "public/assets/models/reference/s01.glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25",
+        "public/js/forge/assets/s01.js": "f3bcbce1a09f05f4978259ed59fcce0eff5b5ecd2dd642f842f60e549fce1b4e",
+        "out/combat_reference/s01/s01.blend": "9a21a52dea7f27470e991061ed8e152c6c94c0d5e4a6bb65ee8a727615a8f30b",
+        "public/assets/models/combat/s01.glb": "77dfb4548a551fd2d0f69b8e6a8f727cda29bd46d8e61202dc18d0429244b411",
+        "public/js/forge/combatAssets/s01.js": "07c44273986eb9a01ff6bbdce7babb6a904a0be74ce36c41133b23b16368b872"
+      },
+      "resources": {
+        "triangles": 15468,
+        "meshes": 56,
+        "joints": 22,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "8594939b9bcfd6fae905fdc845035f49ff056cbbc485028585535b6ce9098d32"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s01.js": "f3bcbce1a09f05f4978259ed59fcce0eff5b5ecd2dd642f842f60e549fce1b4e",
+          "public/assets/models/reference/s01.glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25"
+        }
+      }
+    },
+    "t10": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t10/t10.blend",
+      "effectAuthoringOwner": "out/combat_reference/t10/t10.blend",
+      "artifacts": {
+        "out/mech_reference/t10/t10.blend": "66ba3b97312044603888f33d8b9db4b48182b93e50b8ccdc77958803e0c0966d",
+        "public/assets/models/reference/t10.glb": "10c7d4ddc1cf650288d0499168514de98d3f523493ba2149314fc0238aa95849",
+        "public/js/forge/assets/t10.js": "472cfe8396c73aac1261340becce128786bc83130acd06356a1b8cd5ccad4e8a",
+        "out/combat_reference/t10/t10.blend": "35cef362b384348901422e83b6a0810664750e25c31952c4a14a0ff4f3f4a0ab",
+        "public/assets/models/combat/t10.glb": "18a46e162ac61af70b46e95ba864a4300197ed2315d70752420a43e52d922098",
+        "public/js/forge/combatAssets/t10.js": "6c182a7a99a97a8499422d496a86cd4b8f5e5958332719f95a0edd2c6da0039a"
+      },
+      "resources": {
+        "triangles": 14660,
+        "meshes": 86,
+        "joints": 30,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "850fbee0f4ba80e09bb4d5d49a21ea562efe257f100f148ee2db6a3810f17843"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "run",
+          "idle",
+          "skill",
+          "ult",
+          "heavy",
+          "light",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_l": 0.10933289821124259,
+            "hip_r": 0.10933289821124259,
+            "shoulder_l": 0.22258066202301452,
+            "shoulder_r": 0.22258066202301452
+          },
+          "maximumContactError": 4.965068306494546e-16,
+          "maximumScaleError": 6.280369834735101e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t10.js": "472cfe8396c73aac1261340becce128786bc83130acd06356a1b8cd5ccad4e8a",
+          "public/assets/models/reference/t10.glb": "10c7d4ddc1cf650288d0499168514de98d3f523493ba2149314fc0238aa95849"
+        }
+      }
+    },
+    "s02": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s02/s02.blend",
+      "effectAuthoringOwner": "out/combat_reference/s02/s02.blend",
+      "artifacts": {
+        "out/mech_reference/s02/s02.blend": "ed75fbbdb210316e604f600f5ec9e04a4f9ee621a4ff7908b28a009e2c864a17",
+        "public/assets/models/reference/s02.glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9",
+        "public/js/forge/assets/s02.js": "e8e8886a69da06569c76f7cb2150b2214013cbec66f868b7af05ccd8cdf87593",
+        "out/combat_reference/s02/s02.blend": "52fa49ab1163446ba9bbd8215b6b70c59a4f8d0a22cbeb3801ebe352d6d7e397",
+        "public/assets/models/combat/s02.glb": "d2b3c40272ced4fbba405e2caf2bd3854c508a69e5538301b2dfe4b91390e51b",
+        "public/js/forge/combatAssets/s02.js": "1b9db22fdc960705b398fccfa03a87afd01da783158427108ec263b541b10377"
+      },
+      "resources": {
+        "triangles": 9588,
+        "meshes": 28,
+        "joints": 18,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s02.js": "e8e8886a69da06569c76f7cb2150b2214013cbec66f868b7af05ccd8cdf87593",
+          "public/assets/models/reference/s02.glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9"
+        }
+      }
+    },
+    "s04": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s04/s04.blend",
+      "effectAuthoringOwner": "out/combat_reference/s04/s04.blend",
+      "artifacts": {
+        "out/mech_reference/s04/s04.blend": "fd9492d028e3a25ff5ead7d295363624f4cbce05c17af52ee2a7fa6a23805542",
+        "public/assets/models/reference/s04.glb": "e379a12cf9584f8eb5342f809c3faf4020003f87763bda62c16b54ce9d8217cf",
+        "public/js/forge/assets/s04.js": "47771aff43cf4cfb7d1865d1d136724e2b10b40538301113135c54fba94b4761",
+        "out/combat_reference/s04/s04.blend": "4329d4e4892cd3df435220a30cac447acb6b842f6af69d54ffae4df29dc4bbba",
+        "public/assets/models/combat/s04.glb": "a55a3c9414bc12fcc9f59c3ff9c475ac439de42ad5edefaa1f5db10d1d0ef67a",
+        "public/js/forge/combatAssets/s04.js": "04b229fd3d8f8f0c23efcc6cfee685b870a2c64b4a6a10db257ea3406f4c9a18"
+      },
+      "resources": {
+        "triangles": 8636,
+        "meshes": 25,
+        "joints": 13,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "6189be70855f29c79a5ea793f0b692d11e5dfc8a1e423267f963746ba3784f86"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s04.js": "47771aff43cf4cfb7d1865d1d136724e2b10b40538301113135c54fba94b4761",
+          "public/assets/models/reference/s04.glb": "e379a12cf9584f8eb5342f809c3faf4020003f87763bda62c16b54ce9d8217cf"
+        }
+      }
+    },
+    "s05": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s05/s05.blend",
+      "effectAuthoringOwner": "out/combat_reference/s05/s05.blend",
+      "artifacts": {
+        "out/mech_reference/s05/s05.blend": "8ca07e949f7c3403abc3dc93a2d94032d90f357e4eab764014e85aee9082a4a1",
+        "public/assets/models/reference/s05.glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126",
+        "public/js/forge/assets/s05.js": "ef3ab21e21b1cd303bf0ee677f0446ddb89432b66ae2ce6aea727f81b0be9ebe",
+        "out/combat_reference/s05/s05.blend": "ca9e99103c1d6de6588b1db5fc1f501c09cb9c4e3cfb83627a6851fa1e431ef4",
+        "public/assets/models/combat/s05.glb": "f8c8686c3f704aefe1c1da7d89564891a1c4a44dc4ff2f5c8f46276747cf90f3",
+        "public/js/forge/combatAssets/s05.js": "aaf0f5f32323d3e036252d305e8195a73fbafeebf00174bdc13259391979ad9a"
+      },
+      "resources": {
+        "triangles": 8192,
+        "meshes": 30,
+        "joints": 16,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "67cef56fb89e067c8f6958784842211b69d640fed7fc61f568997139f436daf6"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s05.js": "ef3ab21e21b1cd303bf0ee677f0446ddb89432b66ae2ce6aea727f81b0be9ebe",
+          "public/assets/models/reference/s05.glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126"
+        }
+      }
+    },
+    "s08": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s08/s08.blend",
+      "effectAuthoringOwner": "out/combat_reference/s08/s08.blend",
+      "artifacts": {
+        "out/mech_reference/s08/s08.blend": "5e1764702513c9acbbdcdaf8072b404d986f9826a76c3be7cd5e096efd8aa42e",
+        "public/assets/models/reference/s08.glb": "8eee0ddd80475e62919333b89f43635eab37d3ae32773d5619c9fd6c24f8e090",
+        "public/js/forge/assets/s08.js": "3b8089ed712bfb8128f42a5decc8d02526afdb887c6111410023fc80fceb63a7",
+        "out/combat_reference/s08/s08.blend": "fe2f0f118fd6c054f7e4d7eb06cb6a04e5105aebabed0a0b96464665a3d69aaf",
+        "public/assets/models/combat/s08.glb": "2fdf879173272dd16dc20e6ec55253115ffeffa621215e5af12ebd2aba3212d1",
+        "public/js/forge/combatAssets/s08.js": "24e803cde3cbb8057c32f5e0249e3b8685064bd04092a5410f4d4a4fdeb0a2aa"
+      },
+      "resources": {
+        "triangles": 8252,
+        "meshes": 26,
+        "joints": 14,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "b06e53dc4dd5175975802225072e01ab0acca1537e474cd84f91a6c129b74b1a"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s08.js": "3b8089ed712bfb8128f42a5decc8d02526afdb887c6111410023fc80fceb63a7",
+          "public/assets/models/reference/s08.glb": "8eee0ddd80475e62919333b89f43635eab37d3ae32773d5619c9fd6c24f8e090"
+        }
+      }
+    },
+    "s11": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s11/s11.blend",
+      "effectAuthoringOwner": "out/combat_reference/s11/s11.blend",
+      "artifacts": {
+        "out/mech_reference/s11/s11.blend": "93a7f01497fddc72c9074fd05d1341e01613032524fe8d66e1d79a9f4f307b0e",
+        "public/assets/models/reference/s11.glb": "d5323c7787fd84bb97eda6073ce05499d9990f07bdd771099f83571d30736b8d",
+        "public/js/forge/assets/s11.js": "326311a58773f21f6d5a073a6153250d8b8f26c566288e6e00c458d86911f519",
+        "out/combat_reference/s11/s11.blend": "33dd3cc0c1cf4a2711ff408218c50bb013d5d9b00a58690509ac6c5400c07af3",
+        "public/assets/models/combat/s11.glb": "5d6601a157c97b2d6321c02234aa582cac46142231c72ddaed110a7413ffb6a1",
+        "public/js/forge/combatAssets/s11.js": "3e8780af91461b8875a89ba53ed3da936d9ea846b1ff8149bc3940b9f508c3f9"
+      },
+      "resources": {
+        "triangles": 8228,
+        "meshes": 27,
+        "joints": 13,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "32dc4d947b40908224e594b8765ff256095f765d865ae5bc742a8d73ee218d5d"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s11.js": "326311a58773f21f6d5a073a6153250d8b8f26c566288e6e00c458d86911f519",
+          "public/assets/models/reference/s11.glb": "d5323c7787fd84bb97eda6073ce05499d9990f07bdd771099f83571d30736b8d"
+        }
+      }
+    },
+    "s12": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s12/s12.blend",
+      "effectAuthoringOwner": "out/combat_reference/s12/s12.blend",
+      "artifacts": {
+        "out/mech_reference/s12/s12.blend": "6af934adbd950b6f39e25102700a32c2b32bd3ebbeb6efcaa180e90ed354d61f",
+        "public/assets/models/reference/s12.glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9",
+        "public/js/forge/assets/s12.js": "b19ad0acbd13c1e7670e63298b50bdbe23d19eaa27286f1f3cff443fbb34bd8c",
+        "out/combat_reference/s12/s12.blend": "33aeae8df82c1a52d5d9fc4eda14924bf914c5b3119b797175531cd176ebdc07",
+        "public/assets/models/combat/s12.glb": "a7e5644a8c863825996f0278366e9a02659e91f9807da72f3b91701188aa8c10",
+        "public/js/forge/combatAssets/s12.js": "4887b03d324b85cc11c68ba0373804681fdf7b56827d5d6b1e8cce60b920242f"
+      },
+      "resources": {
+        "triangles": 8800,
+        "meshes": 33,
+        "joints": 16,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "a26c52cdc2232d0a4960c851c92c01e0484ecd2211b1a79ef85a370946a17a51"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s12.js": "b19ad0acbd13c1e7670e63298b50bdbe23d19eaa27286f1f3cff443fbb34bd8c",
+          "public/assets/models/reference/s12.glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9"
+        }
+      }
+    },
+    "t07": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t07/t07.blend",
+      "effectAuthoringOwner": "out/combat_reference/t07/t07.blend",
+      "artifacts": {
+        "out/mech_reference/t07/t07.blend": "0d75c11cf4d3a04792f1e7ce4a62983616b28266a1dad810021329e818e9264f",
+        "public/assets/models/reference/t07.glb": "f7a13db209262907f6d11ccaf8ab6843dfa586007dac1df1b4734f7fbb724bbe",
+        "public/js/forge/assets/t07.js": "21873705e2ddcf5f02b600b71cd912a3a70f708833994313bfe70ec2908acacb",
+        "out/combat_reference/t07/t07.blend": "ef38175a0c0e824f614c0d22e10603acd385023708a4fe63d905217b8b7c5964",
+        "public/assets/models/combat/t07.glb": "c945edfc925fa6615479aa1b022e29c2a8e8bec7c85f61a520b7b606514abdb8",
+        "public/js/forge/combatAssets/t07.js": "b9dfa1c79fd2fc0e3151eb625ecb1e693c63520de1141fb5793d761a93ebac37"
+      },
+      "resources": {
+        "triangles": 11680,
+        "meshes": 66,
+        "joints": 30,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {
+            "hind_hip_r": 0.10858124207336872,
+            "hind_hip_l": 0.10850913797515677,
+            "wing_r": 0.08804571120153415,
+            "wing_l": 0.08804477969634655
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [
+            [
+              1.1599218123564596,
+              0.25374182921127825,
+              0.1928363872973311,
+              0.18558380628860874
+            ],
+            [
+              1.1599218123564596,
+              0.25374182921127825,
+              0.1928363872973311,
+              0.18558380628860874
+            ]
+          ],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t07.js": "21873705e2ddcf5f02b600b71cd912a3a70f708833994313bfe70ec2908acacb",
+          "public/assets/models/reference/t07.glb": "f7a13db209262907f6d11ccaf8ab6843dfa586007dac1df1b4734f7fbb724bbe"
+        }
+      }
+    },
+    "t08": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t08/t08.blend",
+      "effectAuthoringOwner": "out/combat_reference/t08/t08.blend",
+      "artifacts": {
+        "out/mech_reference/t08/t08.blend": "a797b7d3574508fb137b35ba0e42e4789a1e86cf2e7c4a5c7b6fd4c12318cf9f",
+        "public/assets/models/reference/t08.glb": "49ee6fe1f55d0721d44485520be5d3f597bb18bac4e0199e6d040c51aba5bfc1",
+        "public/js/forge/assets/t08.js": "e57e6da299a3d251b3005b251621956537042cfececeba76328b0f0edb3109c5",
+        "out/combat_reference/t08/t08.blend": "06e12ce5d587af399a0768c9e8343d31745a8dc0d673eeba3c1efe2301b81c04",
+        "public/assets/models/combat/t08.glb": "563a6da0cc8d2f8f54774b7161a0938ad0b4b1611a2a6fd40601dc7b97417fb3",
+        "public/js/forge/combatAssets/t08.js": "3c2796a78aca615c0d8231f9a361c79f155f21730e449ee56ea61fa62f93de2b"
+      },
+      "resources": {
+        "triangles": 18212,
+        "meshes": 129,
+        "joints": 61,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "shield_deploy",
+          "shield_retract",
+          "skill",
+          "ult",
+          "idle",
+          "run",
+          "light",
+          "heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "fore_hip_r": 0.12967252801413648,
+            "fore_hip_l": 0.1263566468429016,
+            "hind_hip_r": 0.11137273947523707,
+            "hind_hip_l": 0.1113663343055411,
+            "wing_r": 0.07961209520139129,
+            "wing_l": 0.0796120489272032
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [
+            [
+              1.1599773884044093,
+              0.2537469420226553,
+              0.19284907237810833,
+              0.18559803504252964
+            ],
+            [
+              1.1599773884044093,
+              0.2537469420226553,
+              0.19284907237810833,
+              0.18559803504252964
+            ]
+          ],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t08.js": "e57e6da299a3d251b3005b251621956537042cfececeba76328b0f0edb3109c5",
+          "public/assets/models/reference/t08.glb": "49ee6fe1f55d0721d44485520be5d3f597bb18bac4e0199e6d040c51aba5bfc1"
+        }
+      }
+    },
+    "t09": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t09/t09.blend",
+      "effectAuthoringOwner": "out/combat_reference/t09/t09.blend",
+      "artifacts": {
+        "out/mech_reference/t09/t09.blend": "5764a5fbdc483df3dc952dbc61f7f93549fea9ef16c33132770dff29fc0abbb0",
+        "public/assets/models/reference/t09.glb": "01154e92859f1ebb0060676387b05dcb8f9324eba1506fb46d83fad8673781fd",
+        "public/js/forge/assets/t09.js": "66ce7672d9f1b6e7153e51dfb246ee40bfce8d839f261412ac11c0548d928dc6",
+        "out/combat_reference/t09/t09.blend": "f84177426f3d45b0661f9c98e354779a0bb2a32fbaacad92cb8a0e01ded35dcc",
+        "public/assets/models/combat/t09.glb": "cd984cb5c5f36c35561e31afb0f633b9a6306bf77797fe158195d0c003ec778c",
+        "public/js/forge/combatAssets/t09.js": "af6d015114101f852388d52031f2e3ae7bc4e1b8d809a6642db853a7a3c13701"
+      },
+      "resources": {
+        "triangles": 8136,
+        "meshes": 23,
+        "joints": 14,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "a4e45a5b8b16fc1dff850d2443a941ae8dd44c328e6c892ae7bd9bc13e25dc92"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t09.js": "66ce7672d9f1b6e7153e51dfb246ee40bfce8d839f261412ac11c0548d928dc6",
+          "public/assets/models/reference/t09.glb": "01154e92859f1ebb0060676387b05dcb8f9324eba1506fb46d83fad8673781fd"
+        }
+      }
+    },
+    "m03": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/m03/m03.blend",
+      "effectAuthoringOwner": "out/combat_reference/m03/m03.blend",
+      "artifacts": {
+        "out/mech_reference/m03/m03.blend": "52a5e0710c85cfa08d46aad460694bce78b8f901417703593b90bdb3844ac3a8",
+        "public/assets/models/reference/m03.glb": "35ba50a528f935dda65662f5673e5d9805a81b401d1d67226711d8380fd11058",
+        "public/js/forge/assets/m03.js": "ad5d44ebc2303117e83f2d286c2b87bbee9c9caee50b12b28ff17bcc17a4a58f",
+        "out/combat_reference/m03/m03.blend": "735e8e8ca5c399230e3b29f3bf7d68b0839c6ef915b73e60c537080b0eebf848",
+        "public/assets/models/combat/m03.glb": "b3ffb06d0ef879f5157c45895b3839d9662681228e60aa9d7b5c2fea8684bfa5",
+        "public/js/forge/combatAssets/m03.js": "31208032e5440932f83a07c3d83f8dbe5a2c532b828cb91806a2ad0946a278e5"
+      },
+      "resources": {
+        "triangles": 7572,
+        "meshes": 23,
+        "joints": 13,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "46d95c6b27b4efc7b8ca9f7e09979a06202f4e4977ddc76bd58483a2d73072db"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {},
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m03.js": "ad5d44ebc2303117e83f2d286c2b87bbee9c9caee50b12b28ff17bcc17a4a58f",
+          "public/assets/models/reference/m03.glb": "35ba50a528f935dda65662f5673e5d9805a81b401d1d67226711d8380fd11058"
+        }
+      }
+    },
+    "m04": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/m04/m04.blend",
+      "effectAuthoringOwner": "out/combat_reference/m04/m04.blend",
+      "artifacts": {
+        "out/mech_reference/m04/m04.blend": "1e969b62847a42a1980a4bda01ab73904f21882ac275a3d52684f844b786c6fa",
+        "public/assets/models/reference/m04.glb": "97f03fdfef25caae87536a3cfccf11972d15816de839a77ec707d7d0edcaf3fd",
+        "public/js/forge/assets/m04.js": "1745fb4e1959ab078fa67eee57d2daa824cf21892f3d7d286d7655556472cebb",
+        "out/combat_reference/m04/m04.blend": "914e3bca9a212476ab583e3185d93ef6ece4f52c669b8d98169ada27d3d8304d",
+        "public/assets/models/combat/m04.glb": "f4b0e80d63235e724e256a7480572aff60e528944303ec14e4e9fe0ca0884d8a",
+        "public/js/forge/combatAssets/m04.js": "0edd635b73e3daf88046bcfb7a3397a8ca3c7ae5a1dfe82079593dbee9589539"
+      },
+      "resources": {
+        "triangles": 13664,
+        "meshes": 70,
+        "joints": 31,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "f2fd8afa576c4ae134d5d14ea751981f8255413745c33abf7761f971fe7ced08"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {
+            "wing_r": 0.08028164471272431,
+            "wing_l": 0.08028067883230328
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [
+            [
+              1.159987731170225,
+              0.7248998812789259,
+              0.5509889734586104,
+              0.4407914563943526
+            ],
+            [
+              1.159987731170225,
+              0.7248998812789259,
+              0.5509889734586104,
+              0.4407914563943526
+            ]
+          ],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m04.js": "1745fb4e1959ab078fa67eee57d2daa824cf21892f3d7d286d7655556472cebb",
+          "public/assets/models/reference/m04.glb": "97f03fdfef25caae87536a3cfccf11972d15816de839a77ec707d7d0edcaf3fd"
+        }
+      }
+    },
+    "s06": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s06/s06.blend",
+      "effectAuthoringOwner": "out/combat_reference/s06/s06.blend",
+      "artifacts": {
+        "out/mech_reference/s06/s06.blend": "1d3e24258deedace383628fd7cdecf9af0402bfbb6e7e8d589af8d6869601a2a",
+        "public/assets/models/reference/s06.glb": "9caaa1081e73576afd6fec76c2924016bf7356c092e4a1aef7e1be9b87485a02",
+        "public/js/forge/assets/s06.js": "a749222ed378b8be81afb86ea2707b721d3c126368e32ea5053c89f1cc2e2cb7",
+        "out/combat_reference/s06/s06.blend": "8438faf93a49629505acb5ed5b0ebf5246a62be6312e80eccbb39b84ad3816aa",
+        "public/assets/models/combat/s06.glb": "c8142cb3cb14a003e6caf10ef4d711dd1617c999816ec065ad8e0b2253d62526",
+        "public/js/forge/combatAssets/s06.js": "f42153e3257f53d44a1d6a40140387b100a17acb4489c3c617a8fc146ebc0120"
+      },
+      "resources": {
+        "triangles": 15152,
+        "meshes": 119,
+        "joints": 54,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "c306aa4c5a235e254fe1ae3946178b4d61441b627a686193250c5e29d5513e03"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {
+            "shoulder_r": 0.33214286979364327,
+            "shoulder_l": 0.33214286979364327,
+            "leg_FL": 0.09729998282789942,
+            "leg_FR": 0.09729998282789942,
+            "leg_HL": 0.10350002861022944,
+            "leg_HR": 0.10350002861022933
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s06.js": "a749222ed378b8be81afb86ea2707b721d3c126368e32ea5053c89f1cc2e2cb7",
+          "public/assets/models/reference/s06.glb": "9caaa1081e73576afd6fec76c2924016bf7356c092e4a1aef7e1be9b87485a02"
+        }
+      }
+    },
+    "s07": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s07/s07.blend",
+      "effectAuthoringOwner": "out/combat_reference/s07/s07.blend",
+      "artifacts": {
+        "out/mech_reference/s07/s07.blend": "3da37c2c8c59ac1f0e707b22d8f98a214c831d38eaba392842231eaef175c5ed",
+        "public/assets/models/reference/s07.glb": "592a155f6b03e439269be0b20c2cc2dea7dac508f6483aa120b0c721159d16ab",
+        "public/js/forge/assets/s07.js": "9b57b0ff986d45853c949dd2971e610614ab3b9c3e76865ae2478c2fe658ab59",
+        "out/combat_reference/s07/s07.blend": "0a99b2eaf3580305fd4fd2c799d46050330061c403c35bf4f1f9e30721db351e",
+        "public/assets/models/combat/s07.glb": "05e0bd0a3081fddb9f6d2ede2525b0400a5dcfbe93f98a25fae250855eef3968",
+        "public/js/forge/combatAssets/s07.js": "1699e66edccc9bc10dd6e88090e7666f83391843c8de87f1786447000507f1b4"
+      },
+      "resources": {
+        "triangles": 21512,
+        "meshes": 121,
+        "joints": 118,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.1070270649733019,
+            "leg_FR": 0.1070248970270811,
+            "leg_HL": 0.10702489702707585,
+            "leg_HR": 0.10702706497330197,
+            "tent_0": 0.10870482285334693,
+            "tent_1": 0.08776010482956953,
+            "tent_2": 0.10870482285334693,
+            "tent_3": 0.08776010482956953
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s07.js": "9b57b0ff986d45853c949dd2971e610614ab3b9c3e76865ae2478c2fe658ab59",
+          "public/assets/models/reference/s07.glb": "592a155f6b03e439269be0b20c2cc2dea7dac508f6483aa120b0c721159d16ab"
+        }
+      }
+    },
+    "s09": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/s09/s09.blend",
+      "effectAuthoringOwner": "out/combat_reference/s09/s09.blend",
+      "artifacts": {
+        "out/mech_reference/s09/s09.blend": "5788ccd5fd520d2f907575390eacd10693014ce1bd98328e5b559e0233b0a021",
+        "public/assets/models/reference/s09.glb": "57fb87240b4fd5e4fdc3abce737e80c369d516064add731eb0b3488a501d62a9",
+        "public/js/forge/assets/s09.js": "643b722b3c621e45d2bed9a9776b6dbdcf5250cfd66696a20dd64692275950ee",
+        "out/combat_reference/s09/s09.blend": "c49437bfdae3682fb0f3c5db2d82b35a94aa181f39c7823356c78a3f33f0b090",
+        "public/assets/models/combat/s09.glb": "e9395f89c6d1c9c2dc4b2ce972498e5909bf6901407d9ac7ffeb3ec4a5f03ff5",
+        "public/js/forge/combatAssets/s09.js": "8d4f24afa1b91587b5b85814747694d0e0124b9c155d34c96ee002029c868b29"
+      },
+      "resources": {
+        "triangles": 13528,
+        "meshes": 84,
+        "joints": 36,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "5ad7953be8671b0839261e485df6dcbee6c8c4c87bf54d7f2eaa66256c62891c"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "shield_deploy",
+          "shield_retract",
+          "heavy",
+          "light",
+          "skill",
+          "ult"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.15437054180693088,
+            "shoulder_r": 0.23179013153947675,
+            "hip_l": 0.1543708113108737,
+            "shoulder_l": 0.2317924380744042
+          },
+          "maximumContactError": 4.965189522502828e-16,
+          "maximumScaleError": 3.1401849173675503e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s09.js": "643b722b3c621e45d2bed9a9776b6dbdcf5250cfd66696a20dd64692275950ee",
+          "public/assets/models/reference/s09.glb": "57fb87240b4fd5e4fdc3abce737e80c369d516064add731eb0b3488a501d62a9"
+        }
+      }
+    },
+    "t01": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t01/t01.blend",
+      "effectAuthoringOwner": "out/combat_reference/t01/t01.blend",
+      "artifacts": {
+        "out/mech_reference/t01/t01.blend": "f8320cd0233549d583cf7e00f04deafcb71d05a58e1b2690031baef4e4dc15e3",
+        "public/assets/models/reference/t01.glb": "ac2de7fafd76a8d53905ded6098e55595a12dde9178d776d7940d7e3313d279e",
+        "public/js/forge/assets/t01.js": "daef48169a99d92bcc6aa6497f9f868c3127102e4d2ed82f0e30ef1cdb82906e",
+        "out/combat_reference/t01/t01.blend": "de0e784d45cafb1f383974a41665eaf31cbe21d44194c3741eca6bf1da669cfb",
+        "public/assets/models/combat/t01.glb": "0995300f2d1c391d9c114b8b53dbb9d554933eefedda176dfd2504cbd8785c8f",
+        "public/js/forge/combatAssets/t01.js": "f040e65b06ab0686fbe3f35db5e77f6c7d6d7d8dd5f0b8a07bfbd9dff316379c"
+      },
+      "resources": {
+        "triangles": 13004,
+        "meshes": 78,
+        "joints": 28,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "97ba25c19ced1a3a2388100cf3b9202297dda2cff2209075306e6a2896b69649"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "skill",
+          "ult",
+          "light",
+          "heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.1916216114784388,
+            "shoulder_r": 0.5041666625274579,
+            "hip_l": 0.1916216114784388,
+            "shoulder_l": 0.5041666625274579
+          },
+          "maximumContactError": 5.087681048627601e-16,
+          "maximumScaleError": 6.473657049138938e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t01.js": "daef48169a99d92bcc6aa6497f9f868c3127102e4d2ed82f0e30ef1cdb82906e",
+          "public/assets/models/reference/t01.glb": "ac2de7fafd76a8d53905ded6098e55595a12dde9178d776d7940d7e3313d279e"
+        }
+      }
+    },
+    "t02": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t02/t02.blend",
+      "effectAuthoringOwner": "out/combat_reference/t02/t02.blend",
+      "artifacts": {
+        "out/mech_reference/t02/t02.blend": "dfc4bedf4dfef5a21de8924a01c701187d8bb426cd24954f6fc9d7fdbf468a69",
+        "public/assets/models/reference/t02.glb": "6ccabc6e6f7295fd1c54bec4a58c878b938ece13ae87905b524c4a444699eba7",
+        "public/js/forge/assets/t02.js": "4dbc7ec9c7cb861c113756ee8c2d656da09f461591a72b9580e1816f0b24baf2",
+        "out/combat_reference/t02/t02.blend": "c672b5ef899ec67838f72c64e1d0822ae354a9ef5ed68bd7369a20c5348104e3",
+        "public/assets/models/combat/t02.glb": "3729ecc289ca02c2aa0dbab9538c3622c0f9cf6a6ddd5beff0a185e1ad8a567b",
+        "public/js/forge/combatAssets/t02.js": "624a94ffc0d1f41069ad671433a8b5591e1a93728a39dd82222ace9eb8e484a8"
+      },
+      "resources": {
+        "triangles": 14772,
+        "meshes": 70,
+        "joints": 28,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "9b98b8c36c279d28d91bab19919439cf63e573e42b19b76aca69215bf95fb7e4"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "skill",
+          "ult",
+          "light",
+          "heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.08312500454659971,
+            "shoulder_r": 0.1998837146667497,
+            "hip_l": 0.08312500454659971,
+            "shoulder_l": 0.1998837146667497
+          },
+          "maximumContactError": 2.5438405243138006e-16,
+          "maximumScaleError": 4.775249788392736e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t02.js": "4dbc7ec9c7cb861c113756ee8c2d656da09f461591a72b9580e1816f0b24baf2",
+          "public/assets/models/reference/t02.glb": "6ccabc6e6f7295fd1c54bec4a58c878b938ece13ae87905b524c4a444699eba7"
+        }
+      }
+    },
+    "t03": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t03/t03.blend",
+      "effectAuthoringOwner": "out/combat_reference/t03/t03.blend",
+      "artifacts": {
+        "out/mech_reference/t03/t03.blend": "d9b621bb67bc9890c935f62c226a2e211c67e449d76501b50382e11a2f14920d",
+        "public/assets/models/reference/t03.glb": "15999de159619e4d76b1dce05f738ea71d7276bf824877de21e410fb8545b86c",
+        "public/js/forge/assets/t03.js": "feb3c1e3de77c5181d307a1e00db93c71536d4a57912419fda032e8cb5a3db01",
+        "out/combat_reference/t03/t03.blend": "1279c9c65408745601211655beab01d4592d0a599399bb23247ea25f4afb9c4a",
+        "public/assets/models/combat/t03.glb": "0300f9e5d7d0c65ecf031e4bda853a3ac0c84b732dbe592e2e158d11389fde7b",
+        "public/js/forge/combatAssets/t03.js": "91f28b29c3e611e36a1be778823c51b5bf6614d1af6d324be6b8d662a320fce6"
+      },
+      "resources": {
+        "triangles": 12764,
+        "meshes": 71,
+        "joints": 28,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "ec8a03e5503ffd562f0083aff798f7346a7b0a90c6cbf6fb1464606c81808ba4"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "skill",
+          "ult",
+          "light",
+          "heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.2018771085795199,
+            "shoulder_r": 0.3683749917477488,
+            "hip_l": 0.20187710857951968,
+            "shoulder_l": 0.36965832512123453
+          },
+          "maximumContactError": 5.438959822042073e-16,
+          "maximumScaleError": 8.15843973306311e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t03.js": "feb3c1e3de77c5181d307a1e00db93c71536d4a57912419fda032e8cb5a3db01",
+          "public/assets/models/reference/t03.glb": "15999de159619e4d76b1dce05f738ea71d7276bf824877de21e410fb8545b86c"
+        }
+      }
+    },
+    "t04": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t04/t04.blend",
+      "effectAuthoringOwner": "out/combat_reference/t04/t04.blend",
+      "artifacts": {
+        "out/mech_reference/t04/t04.blend": "b36c931bffc876b1778abcbc95348ea8c8e9d605f9d1bc4131b1b4f6910332ac",
+        "public/assets/models/reference/t04.glb": "11a6778fbbfc9b6f08d205aaf849c84a7afd617166428eea0b3c98e42d4553f7",
+        "public/js/forge/assets/t04.js": "3bafc0aeba62755bd5af6e06dd15f077e44a0038a0900d354720060814b3a2f8",
+        "out/combat_reference/t04/t04.blend": "bee5c0b9d435cea37a9305f9cf92e28fcd1260fca47e2cfa9bb0b2a7b7fb84be",
+        "public/assets/models/combat/t04.glb": "664dcfe7eadc4a0ef69030dd4172e498dca74e8deff4f18dcd07cd8bbafd9800",
+        "public/js/forge/combatAssets/t04.js": "e2343fd3d376985e7191d73901adc268650c28dcef0077b5c6c2069e842f766e"
+      },
+      "resources": {
+        "triangles": 13372,
+        "meshes": 92,
+        "joints": 38,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "skill",
+          "ult",
+          "light",
+          "heavy",
+          "run"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.0770705960560859,
+            "leg_FR": 0.0770705960560858,
+            "leg_HL": 0.08352001427829397,
+            "leg_HR": 0.08352001427829392
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t04.js": "3bafc0aeba62755bd5af6e06dd15f077e44a0038a0900d354720060814b3a2f8",
+          "public/assets/models/reference/t04.glb": "11a6778fbbfc9b6f08d205aaf849c84a7afd617166428eea0b3c98e42d4553f7"
+        }
+      }
+    },
+    "t05": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t05/t05.blend",
+      "effectAuthoringOwner": "out/combat_reference/t05/t05.blend",
+      "artifacts": {
+        "out/mech_reference/t05/t05.blend": "67a22e7d44cd7409693122d7072fdf8aa3b6c12c7aa2ccfd192a54c949c2a214",
+        "public/assets/models/reference/t05.glb": "3b0c0cdff044c5ca06c4f1b78ec675bb115dbea77f0296fb6e985da0ab0ad333",
+        "public/js/forge/assets/t05.js": "0322625e4951a72a2752f7bdc46bc77506db2379a612a05e3d5b248ce1700a4f",
+        "out/combat_reference/t05/t05.blend": "4038ae42621f23c54904a5f859838c3aa22ace17af80d0d32403dcf8bb9c7348",
+        "public/assets/models/combat/t05.glb": "ea99fe9337f61485adf543e4024324d5c2858299878a196ba5d30b9dbcdfbe56",
+        "public/js/forge/combatAssets/t05.js": "bde0bf7f8f0dfce64f3691bdf43e948595073344448e4d0c879f981d5e406b38"
+      },
+      "resources": {
+        "triangles": 14188,
+        "meshes": 83,
+        "joints": 33,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.07803704975461168,
+            "shoulder_r": 0.08270641527851752,
+            "hip_l": 0.07803703821211494,
+            "shoulder_l": 0.08270604404154569
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t05.js": "0322625e4951a72a2752f7bdc46bc77506db2379a612a05e3d5b248ce1700a4f",
+          "public/assets/models/reference/t05.glb": "3b0c0cdff044c5ca06c4f1b78ec675bb115dbea77f0296fb6e985da0ab0ad333"
+        }
+      }
+    },
+    "t12": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/t12/t12.blend",
+      "effectAuthoringOwner": "out/combat_reference/t12/t12.blend",
+      "artifacts": {
+        "out/mech_reference/t12/t12.blend": "a95c1e47039f01f0fab6b464f34de68968c52b976440693f5c07af1b11fa7934",
+        "public/assets/models/reference/t12.glb": "54cf63894762e314a415913e89afc38f1988cdd2e91f3ea8054f77589df51025",
+        "public/js/forge/assets/t12.js": "f76248af79389582c07357bafecd66c87d776eb0e20141d14b58211821d3b9c3",
+        "out/combat_reference/t12/t12.blend": "4c0b3c41ac589939035f2cc00a988e54e20f37cb6563d672712d394ac77a953c",
+        "public/assets/models/combat/t12.glb": "6ebae3f9accfb9ef261a0bc23b69e913ed466629ffde0f1032f7f956aa768f39",
+        "public/js/forge/combatAssets/t12.js": "2cc09ad8b80753ab9596aff85279d7c57e32905d72409f459c3a4b40919100be"
+      },
+      "resources": {
+        "triangles": 11812,
+        "meshes": 63,
+        "joints": 28,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "8eda38a83b12a0494b91d0674607c2ad03081ed5662d69e5f4ca8c580419ea5c"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "skill",
+          "ult",
+          "heavy",
+          "light"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.20155556413222786,
+            "shoulder_r": 0.3657142623042584,
+            "hip_l": 0.20155556413222786,
+            "shoulder_l": 0.3657142623042584
+          },
+          "maximumContactError": 2.7194799110210365e-16,
+          "maximumScaleError": 4.710277376051325e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t12.js": "f76248af79389582c07357bafecd66c87d776eb0e20141d14b58211821d3b9c3",
+          "public/assets/models/reference/t12.glb": "54cf63894762e314a415913e89afc38f1988cdd2e91f3ea8054f77589df51025"
+        }
+      }
+    },
+    "m02": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/m02/m02.blend",
+      "effectAuthoringOwner": "out/combat_reference/m02/m02.blend",
+      "artifacts": {
+        "out/mech_reference/m02/m02.blend": "3fe6914bd7c8c704eafd20914853350bf748f7e0a12e3b83dd96d2b03c12199d",
+        "public/assets/models/reference/m02.glb": "171958e3ed927ba0b1b2a74360f4e292de53c5a559e5a809ed244f30806a91e0",
+        "public/js/forge/assets/m02.js": "1299ce61c2757c8ebd0280ca77b9f376abf23cb801f0f004f868bd1cfdb5181b",
+        "out/combat_reference/m02/m02.blend": "6f79b7701d96dd9e4bfc6d5d989727ec81bdd3c783ffa383242495223f057761",
+        "public/assets/models/combat/m02.glb": "bfc3894787cb6a8e3671dba36f54f80f7ac4fdef1ffda64dfc31f1cd1105e3b8",
+        "public/js/forge/combatAssets/m02.js": "16e400765d00960aae79bdef65db57b33674296b4d5799b192a20ca8bc5f055d"
+      },
+      "resources": {
+        "triangles": 13828,
+        "meshes": 88,
+        "joints": 41,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "f8f8ffcc16bfcacd30b691f97eff10a415b20b563a249be9afb76be726f5b9d8"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_r": 0.17308858421563872,
+            "shoulder_r": 0.2688463906311056,
+            "hip_l": 0.17309705086116745,
+            "shoulder_l": 0.2659484849779523
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m02.js": "1299ce61c2757c8ebd0280ca77b9f376abf23cb801f0f004f868bd1cfdb5181b",
+          "public/assets/models/reference/m02.glb": "171958e3ed927ba0b1b2a74360f4e292de53c5a559e5a809ed244f30806a91e0"
+        }
+      }
+    },
+    "m06": {
+      "forms": [
+        "ground"
+      ],
+      "bodyMotionOwner": "out/mech_reference/m06/m06.blend",
+      "effectAuthoringOwner": "out/combat_reference/m06/m06.blend",
+      "artifacts": {
+        "out/mech_reference/m06/m06.blend": "fa5e47a8873bec5bbf45f3f22b2adcaecaef2524e79ba714a39bbb3c3e502669",
+        "public/assets/models/reference/m06.glb": "0e86bdf40b6420ef77a5c5d18ff904bbea3e7bbe6328dd61a71ed435c8040679",
+        "public/js/forge/assets/m06.js": "6c003fb47bdb87da5edf637102b5d06ac17c489c7b9f9a1f0d3abf17b8063138",
+        "out/combat_reference/m06/m06.blend": "8c10dea5e4e7991c9e488e0415c28d989664e05321d413d779a6dc5f9e70c8cf",
+        "public/assets/models/combat/m06.glb": "5fd4d6dfb030c353c1c301fa260539b05b3e74089f22c0b13035b8688ef58684",
+        "public/js/forge/combatAssets/m06.js": "d800c77bf2e833b08338dae638f88d645d1726354f98f71162a9d4132cb7b3a2"
+      },
+      "resources": {
+        "triangles": 13684,
+        "meshes": 90,
+        "joints": 38,
+        "source": {
+          "contract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+          "image": "efd9cd117b8de16d594c02a88ed84b1b48f7a8da6db74d64ea6c6aa4b32d555c"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "idle",
+          "shield_deploy",
+          "shield_retract",
+          "skill",
+          "ult",
+          "light",
+          "heavy",
+          "run"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.17399999935810362,
+            "leg_FR": 0.17399999935810362,
+            "leg_HL": 0.1451500008950024,
+            "leg_HR": 0.1451500008950024
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m06.js": "6c003fb47bdb87da5edf637102b5d06ac17c489c7b9f9a1f0d3abf17b8063138",
+          "public/assets/models/reference/m06.glb": "0e86bdf40b6420ef77a5c5d18ff904bbea3e7bbe6328dd61a71ed435c8040679"
+        }
+      }
+    },
+    "m01": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/m01/m01.blend",
+      "effectAuthoringOwner": "out/combat_reference/m01/m01.blend",
+      "artifacts": {
+        "out/morph_reference/m01/m01.blend": "be83690e1babffbf69d9b9853d825f4a0d7990c5b87d0992a56fee4df9c75aa6",
+        "public/assets/models/reference/m01.glb": "dab6655ff38776c890cdb11aa0df75718f59496ec0cc890a2f987fa746b17b73",
+        "public/js/forge/assets/m01.js": "4db60dafa9f0c57f40892d628aa2ce90addbb2d894d6e3e1a8bd2935a55f02a7",
+        "out/combat_reference/m01/m01.blend": "2f153b091e7f023431e2714946511f36c09babb5661d055c231483538fada32f",
+        "public/assets/models/combat/m01.glb": "8c581786798a1422a31581f728dae102c0be577c6cc7e4e8bd1a586200e3df68",
+        "public/js/forge/combatAssets/m01.js": "4649c771c437a54228994918806d3817e26781db52d1db4b012f019eee9ffe18"
+      },
+      "resources": {
+        "triangles": 13428,
+        "meshes": 103,
+        "joints": 35,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "run",
+          "skill",
+          "ult",
+          "flight_skill",
+          "flight_ult",
+          "light",
+          "heavy",
+          "flight_light",
+          "flight_heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_l": 0.10090909061024539,
+            "shoulder_l": 0.11207860880075093,
+            "hip_r": 0.10090909061024539,
+            "shoulder_r": 0.11207860880075093
+          },
+          "maximumContactError": 4.967007407645019e-16,
+          "maximumScaleError": 6.280369834735101e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "hip_l": 0.1009090906102455,
+            "shoulder_l": 0.1052102560789292,
+            "hip_r": 0.10090909061024544,
+            "shoulder_r": 0.10957981805186512
+          },
+          "maximumContactError": 4.611102534756203e-16,
+          "maximumScaleError": 6.280369834735101e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m01.js": "4db60dafa9f0c57f40892d628aa2ce90addbb2d894d6e3e1a8bd2935a55f02a7",
+          "public/assets/models/reference/m01.glb": "dab6655ff38776c890cdb11aa0df75718f59496ec0cc890a2f987fa746b17b73"
+        }
+      }
+    },
+    "s03": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/s03/s03.blend",
+      "effectAuthoringOwner": "out/combat_reference/s03/s03.blend",
+      "artifacts": {
+        "out/morph_reference/s03/s03.blend": "76c7fb4773baacf59d5a795ad239b4da21dbe08676655051b9cd5a810fd8b241",
+        "public/assets/models/reference/s03.glb": "c0635430c05eb15418d4d407037eaf388d9166e2839f0b79aea7ab3c721204ac",
+        "public/js/forge/assets/s03.js": "93e5531029d77144dbd4949c8e4fe26fecb890fe23afe0a3c83ff0e614e48e94",
+        "out/combat_reference/s03/s03.blend": "d68284f2410712e8dd4bcf753baf2630ece39f7e121150c9078511e64454cc6c",
+        "public/assets/models/combat/s03.glb": "aa6d8fb1864e415b768d5585509e3869dc62df360affbc574aadfbb41a57fc51",
+        "public/js/forge/combatAssets/s03.js": "176e551a96b039c54b8b85d79be59943aaed13ec2d4579495af3da79043341cf"
+      },
+      "resources": {
+        "triangles": 17044,
+        "meshes": 95,
+        "joints": 50,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "b335083d23ec7ec543f37bb9acf7da2657e0cf47773f5cd6101022dac7a28253",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "to_flight",
+          "to_ground",
+          "skill",
+          "ult",
+          "light",
+          "heavy",
+          "run"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.18260001448393148,
+            "leg_FR": 0.18260001448393148,
+            "leg_HL": 0.1844214146482699,
+            "leg_HR": 0.1844214146482699
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "leg_FL": 0.1846187078104673,
+            "leg_FR": 0.18410082094306435,
+            "leg_HL": 0.18506710613542543,
+            "leg_HR": 0.18506710613542565
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s03.js": "93e5531029d77144dbd4949c8e4fe26fecb890fe23afe0a3c83ff0e614e48e94",
+          "public/assets/models/reference/s03.glb": "c0635430c05eb15418d4d407037eaf388d9166e2839f0b79aea7ab3c721204ac"
+        }
+      }
+    },
+    "s10": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/s10/s10.blend",
+      "effectAuthoringOwner": "out/combat_reference/s10/s10.blend",
+      "artifacts": {
+        "out/morph_reference/s10/s10.blend": "3823bb8e7004694fdf6047bed0f97c157a14f9bec6f8f48e49dd166f0d61a515",
+        "public/assets/models/reference/s10.glb": "68fc07e71ee704d8e7e3192066dba4ecf090df6c69fc235079e8aea384b7facf",
+        "public/js/forge/assets/s10.js": "3d1deca31d2723b05138116d954ac7f3fc7fd40f290fe25e057e0f4f19dd9542",
+        "out/combat_reference/s10/s10.blend": "6a3a471b4c28e09553703d2de75daa6ab1fb5cd42c04030e30e330d7eca71064",
+        "public/assets/models/combat/s10.glb": "cb0212a519b69dc24e4cd132216b4da77c05c281577f5de1e0f70ba3b681e527",
+        "public/js/forge/combatAssets/s10.js": "7ddf1927e82290454ddeb7684a2904013a1159ead74a45e0a66cd61afd2c952b"
+      },
+      "resources": {
+        "triangles": 19772,
+        "meshes": 113,
+        "joints": 60,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "skill",
+          "ult",
+          "flight_skill",
+          "flight_ult",
+          "run",
+          "heavy",
+          "flight_heavy",
+          "light",
+          "flight_light"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.2306622702253182,
+            "leg_FR": 0.23046131131090225,
+            "leg_HL": 0.19424999977648455,
+            "leg_HR": 0.19424999977648444
+          },
+          "maximumContactError": 4.965068306494546e-16,
+          "maximumScaleError": 9.42055475210265e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "leg_FL": 0.23066227022531804,
+            "leg_FR": 0.23046131131090242,
+            "leg_HL": 0.2344229456357294,
+            "leg_HR": 0.23414881430184775,
+            "flap_l": 0.07672774644356137,
+            "flap_r": 0.09096368608511127
+          },
+          "maximumContactError": 4.965068306494546e-16,
+          "maximumScaleError": 5.551115123125783e-16,
+          "wingRanges": [
+            [
+              1.1599810600933196,
+              0.7249468307060987,
+              0.5509253655559604,
+              0.44079497492774977
+            ],
+            [
+              1.1599810600933196,
+              0.7249468307060987,
+              0.5509253655559604,
+              0.44079497492774977
+            ]
+          ],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/s10.js": "3d1deca31d2723b05138116d954ac7f3fc7fd40f290fe25e057e0f4f19dd9542",
+          "public/assets/models/reference/s10.glb": "68fc07e71ee704d8e7e3192066dba4ecf090df6c69fc235079e8aea384b7facf"
+        }
+      }
+    },
+    "t06": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/t06/t06.blend",
+      "effectAuthoringOwner": "out/combat_reference/t06/t06.blend",
+      "artifacts": {
+        "out/morph_reference/t06/t06.blend": "b1a20d9fa5587dfd5f8570f85cbd8bd647be98fa7453280675de34c5862fa8e7",
+        "public/assets/models/reference/t06.glb": "67b806a9cf40312440197f23ec021c295c56ca657682dcc03817f172c8771d18",
+        "public/js/forge/assets/t06.js": "b507d3b4dde23a7cf4cc1f05efe3ef7a52e2739e4df366e53312f74c8daf857c",
+        "out/combat_reference/t06/t06.blend": "7875ead78b5ef21008d5827012556b01b223ddf09d18a80d011eef19a078717b",
+        "public/assets/models/combat/t06.glb": "014885ace9b95a0a2f1b567656ddfa31f5305a65aed81fe572d8cbc989eee40d",
+        "public/js/forge/combatAssets/t06.js": "ee732129250abd79c09b279d159962b18903f4b06d0a77dda3f8afea21789e9e"
+      },
+      "resources": {
+        "triangles": 13460,
+        "meshes": 86,
+        "joints": 42,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_l": 0.09999999837441931,
+            "shoulder_l": 0.0987499489635173,
+            "hip_r": 0.09999999837441931,
+            "shoulder_r": 0.0987499489635173
+          },
+          "maximumContactError": 4.965068306494546e-16,
+          "maximumScaleError": 8.08254562088053e-16,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "hip_l": 0.0999999983744192,
+            "shoulder_l": 0.09874994896352063,
+            "hip_r": 0.0999999983744192,
+            "shoulder_r": 0.09874994896352085
+          },
+          "maximumContactError": 4.440892098500626e-16,
+          "maximumScaleError": 1.1322097734007351e-15,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t06.js": "b507d3b4dde23a7cf4cc1f05efe3ef7a52e2739e4df366e53312f74c8daf857c",
+          "public/assets/models/reference/t06.glb": "67b806a9cf40312440197f23ec021c295c56ca657682dcc03817f172c8771d18"
+        }
+      }
+    },
+    "t11": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/t11/t11.blend",
+      "effectAuthoringOwner": "out/combat_reference/t11/t11.blend",
+      "artifacts": {
+        "out/morph_reference/t11/t11.blend": "107ded504896a38f1f8de65bd814784c45928e61d21e9b14a8e1c134c3e84824",
+        "public/assets/models/reference/t11.glb": "8fb623042c77f8113317fa50bc11f75bcb19a609e3cb2021c853b90360d1c2a6",
+        "public/js/forge/assets/t11.js": "b451f6311c3afce0d70da9ebf6709224167a641de29c979cee83cc664f67356b",
+        "out/combat_reference/t11/t11.blend": "4103197f5bb72e446a7ba7ba8695abba271c3342618b90d7883e9b706287c72d",
+        "public/assets/models/combat/t11.glb": "bd881bb98efd1f9ae0035425a9d9b5ff1b56e6c10eddb6539758f80fe67bf043",
+        "public/js/forge/combatAssets/t11.js": "b2fcd829f5b4c4672b0c9c9bf94390498f20ee4b2b495b0ee130dfcb5f266a2f"
+      },
+      "resources": {
+        "triangles": 14188,
+        "meshes": 131,
+        "joints": 102,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "9ef67af27f03fc71f8b5dd0a1b1638344c354b3903adc0a97f3a3df37c854880",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "run",
+          "skill",
+          "ult",
+          "flight_skill",
+          "flight_ult",
+          "light",
+          "heavy",
+          "flight_light",
+          "flight_heavy"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_l": 0.1499999983744193,
+            "shoulder_l": 0.14874994896351734,
+            "hip_r": 0.1499999983744193,
+            "shoulder_r": 0.14874994896351734
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "hip_l": 0.15357142321917783,
+            "hip_r": 0.15357142321917783
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/t11.js": "b451f6311c3afce0d70da9ebf6709224167a641de29c979cee83cc664f67356b",
+          "public/assets/models/reference/t11.glb": "8fb623042c77f8113317fa50bc11f75bcb19a609e3cb2021c853b90360d1c2a6"
+        }
+      }
+    },
+    "m05": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/m05/m05.blend",
+      "effectAuthoringOwner": "out/combat_reference/m05/m05.blend",
+      "artifacts": {
+        "out/morph_reference/m05/m05.blend": "17381ea435ced86323f972b423870d55ea77835fca3e4d05a65151d8daa6db7e",
+        "public/assets/models/reference/m05.glb": "96d93a7c56c6e2087a12ff943617ba641e36b70d84ee946838f542db7ce290b0",
+        "public/js/forge/assets/m05.js": "5556d1316257341e652bf934d03eefd2bf5083e1e82bf6ac9934cbaea2985710",
+        "out/combat_reference/m05/m05.blend": "b511a378d484b41736611cf6195cee1f8bc0399fe1a4e30950f91fd90caea9da",
+        "public/assets/models/combat/m05.glb": "3d656dea679b97042eaea5fe4a0422a496d807857eefcaa168c7522d0c95ff9e",
+        "public/js/forge/combatAssets/m05.js": "7a391a37e553deb3911dd11b18eb990537223b2767f4fc17550731764fa93fea"
+      },
+      "resources": {
+        "triangles": 19576,
+        "meshes": 131,
+        "joints": 66,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult"
+        ],
+        "ground": {
+          "exposures": {
+            "hip_l": 0.16301993328117348,
+            "shoulder_l": 0.1275555567034946,
+            "hip_r": 0.10266802771870687,
+            "shoulder_r": 0.1275555567034946
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "hip_l": 0.10099999468773857,
+            "shoulder_l": 0.10888889295083604,
+            "hip_r": 0.10099999468773474,
+            "shoulder_r": 0.10888889295083615
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m05.js": "5556d1316257341e652bf934d03eefd2bf5083e1e82bf6ac9934cbaea2985710",
+          "public/assets/models/reference/m05.glb": "96d93a7c56c6e2087a12ff943617ba641e36b70d84ee946838f542db7ce290b0"
+        }
+      }
+    },
+    "m07": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/m07/m07.blend",
+      "effectAuthoringOwner": "out/combat_reference/m07/m07.blend",
+      "artifacts": {
+        "out/morph_reference/m07/m07.blend": "7ef8e34e3777faf1c3565c7552dc26b62af3563a62ee3b59efa2273cf5d43f5f",
+        "public/assets/models/reference/m07.glb": "b13376cbac44019047a0df1d1bf393744083b81489d57d9faeb84c72e05d5f20",
+        "public/js/forge/assets/m07.js": "110e8e848d1607db2fdd2df97898e583ad2c1858cc68ce165ebcc61429104cb0",
+        "out/combat_reference/m07/m07.blend": "a4302cf1e5ed71a1022c595bd4f09deca50b2539ef166de3f88c6f8519fd27ce",
+        "public/assets/models/combat/m07.glb": "2d9a02f31590ff5d37e63f49bc152cc98fc826401f004e8b00ae6e3fc2de36c5",
+        "public/js/forge/combatAssets/m07.js": "1dde7df84d5e7401997d6b953a7e49a9581e40a5a498b6a8a5ff569285c2bb73"
+      },
+      "resources": {
+        "triangles": 14440,
+        "meshes": 112,
+        "joints": 88,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "skill",
+          "ult",
+          "flight_skill",
+          "flight_ult",
+          "light",
+          "flight_light",
+          "heavy",
+          "flight_heavy",
+          "run"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.0840759984027245,
+            "leg_FR": 0.08407536781917824,
+            "leg_ML": 0.07562498933635675,
+            "leg_MR": 0.07562498933635675,
+            "leg_HL": 0.08305707466061296,
+            "leg_HR": 0.08305722907162139
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "leg_FL": 0.07738980377394711,
+            "leg_FR": 0.07739136398322088,
+            "leg_ML": 0.08216056153827389,
+            "leg_MR": 0.0821633956348724,
+            "leg_HL": 0.08216056153827411,
+            "leg_HR": 0.08216339563487218
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m07.js": "110e8e848d1607db2fdd2df97898e583ad2c1858cc68ce165ebcc61429104cb0",
+          "public/assets/models/reference/m07.glb": "b13376cbac44019047a0df1d1bf393744083b81489d57d9faeb84c72e05d5f20"
+        }
+      }
+    },
+    "m08": {
+      "forms": [
+        "ground",
+        "flight"
+      ],
+      "bodyMotionOwner": "out/morph_reference/m08/m08.blend",
+      "effectAuthoringOwner": "out/combat_reference/m08/m08.blend",
+      "artifacts": {
+        "out/morph_reference/m08/m08.blend": "64d4e294aafc1fe7dd867007fd5c788167d4dfc0fe07201cb6c1e2c193e5dc45",
+        "public/assets/models/reference/m08.glb": "0b0a771fd2b911d5c93be9308e3128f03ec9156be506eedc558f135455b7f233",
+        "public/js/forge/assets/m08.js": "73fd982ae3fd813f9df54b9bd475564c180560a2d4ab1f61a53474c200dab6eb",
+        "out/combat_reference/m08/m08.blend": "fc68dd373d38cf73aa56a8cae6b2349c0ebac3a2e374e8146a85134926f07298",
+        "public/assets/models/combat/m08.glb": "baf1a628963ab78aebf2b8ab01c6e7b3208d14cd3b32e8a4cccbc82e2fd23384",
+        "public/js/forge/combatAssets/m08.js": "df05e4b988117cb0777e9d726cc95d23e3bac0eca8eff64b129b55675da0a2e5"
+      },
+      "resources": {
+        "triangles": 17628,
+        "meshes": 110,
+        "joints": 50,
+        "source": {
+          "contract": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+          "builder": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+          "catalog": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+          "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
+          "sharedContract": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+          "sharedCatalog": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384"
+        }
+      },
+      "attachmentMetrics": {
+        "exportClips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "skill",
+          "ult",
+          "flight_skill",
+          "flight_ult",
+          "light",
+          "flight_light",
+          "heavy",
+          "flight_heavy",
+          "run"
+        ],
+        "ground": {
+          "exposures": {
+            "leg_FL": 0.1250065320430761,
+            "leg_FR": 0.1250065320430761,
+            "leg_HL": 0.1172727393906976,
+            "leg_HR": 0.1172727393906976
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [],
+          "frames": 1440
+        },
+        "flight": {
+          "exposures": {
+            "leg_HL": 0.11902725185678298,
+            "leg_HR": 0.11902725277830362,
+            "flap_l": 0.08094389803511814,
+            "flap_r": 0.08429974194264955
+          },
+          "maximumContactError": 0,
+          "maximumScaleError": 0,
+          "wingRanges": [
+            [
+              1.1599571233115447,
+              0.7249392244791761,
+              0.5509866745555398,
+              0.44078755629022404
+            ],
+            [
+              1.1599571233115447,
+              0.7249392244791761,
+              0.5509866745555398,
+              0.44078755629022404
+            ]
+          ],
+          "frames": 1440
+        },
+        "hashes": {
+          "public/js/forge/assets/m08.js": "73fd982ae3fd813f9df54b9bd475564c180560a2d4ab1f61a53474c200dab6eb",
+          "public/assets/models/reference/m08.glb": "0b0a771fd2b911d5c93be9308e3128f03ec9156be506eedc558f135455b7f233"
+        }
+      }
+    }
+  },
+  "sources": {
+    "tools/mech_authoring/assets.json": "0a60dbc04d87a7c8c02872866371f56b9e0437db0e398d2737a005b4d06313dd",
+    "tools/mech_authoring/morphers.json": "a384cadeb2b9f20fba5f86a378e361fb253787d37301f91d232e61ea559fa5b8",
+    "tools/mech_authoring/build.py": "a5a3877274fb164e6cd974cf10f1d6bf45687efda5b3bb56d6ffc31296a2b514",
+    "tools/mech_authoring/catalog.py": "faead0d5244b40553cd13ab9046c887aa82ce7c2c04e9e883b45246c2bd05384",
+    "tools/mech_authoring/morph_recipe.py": "9a928cb0045c02ab8204bfd9fa21374de619783cef70daf3443e038a1d82b8f8",
+    "tools/mech_authoring/combat.py": "1daf16a541e94eb1e3ce05dd5373bc42b16f66eeea785fa8e0453a7f707dad25",
+    "tools/mech_authoring/artifacts.py": "299137b3e79fce0ddd631e17b54e50670e709fd63b2bdd2137942870f39ee0ec",
+    "tools/mech_authoring/author_motion.mjs": "f29eb2ca73b715b64b36180a403427bcce143633e952e8ee19192a36dde57c8b",
+    "tools/mech_authoring/bake_motion.py": "28cb44de20289947ca5e89dd28db4f83bdc0e6565f18fe9dd65d27e333e0139b",
+    "tools/mech_authoring/sampled_glb.py": "01a56f665216dc676ce59443e7013dd149aff790473d0e18b1c7e5eed5ce875d",
+    "tools/mech_authoring/motion_source.py": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf",
+    "public/js/locomotion.js": "4acb6506e2e35eb9699dc953469dbe84078919f9cb0831db58f5989f0802db77",
+    "public/js/anatomicalPose.js": "4ee5424f06e3493e756d4fb786016c74ae840988e085fd6289b8da054c4bcee7",
+    "public/js/forge/referenceAsset.js": "5fc6f4453e832c3dfd357ebd65bb24d8622fa574a6d767406a9da1719d8747d4",
+    "public/js/forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
+    "public/js/gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
+    "public/js/unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e",
+    "public/js/models.js": "1a1ff9fd5dd4cd2175b3551d97a7a4ee7f691f6bf994b75c0317706b8e82d3a9"
+  },
+  "gates": {
+    "geometry": "pass",
+    "grasp": "pass",
+    "motion": "pass",
+    "resources": "pass",
+    "editableSource": "pass",
+    "independentExport": "pass",
+    "destination": "pass",
+    "agentVisualReview": "pass",
+    "userSignoff": "pending_user_review"
+  },
+  "metrics": {
+    "assets": 32,
+    "forms": 40,
+    "attachmentFrames": 57600,
+    "bakedJointSamples": 2892617
+  },
+  "validation": {
+    "equipment": "out/limb_grip_review/equipment.log",
+    "biped": "out/limb_grip_review/biped.log",
+    "sample-motion": "out/limb_grip_review/sample-motion.log",
+    "bake-motion": "out/limb_grip_review/bake-motion.log",
+    "verify-motion": "out/limb_grip_review/verify-motion.log",
+    "verify-base": "out/limb_grip_review/verify-base.log",
+    "verify-morph": "out/limb_grip_review/verify-morph.log",
+    "verify-combat": "out/limb_grip_review/verify-combat.log",
+    "attachments": "out/limb_grip_review/attachments.log",
+    "reference-base": "out/limb_grip_review/reference-base.log",
+    "reference-morph": "out/limb_grip_review/reference-morph.log",
+    "anatomical": "out/limb_grip_review/anatomical.log",
+    "combat": "out/limb_grip_review/combat.log",
+    "syntax": "out/limb_grip_review/syntax.log",
+    "unit-damage": "out/limb_grip_review/unit-damage.log",
+    "rebake-morph": "out/limb_grip_review/rebake-morph.log",
+    "reverify-morph-motion": "out/limb_grip_review/reverify-morph-motion.log",
+    "resample-t11": "out/limb_grip_review/resample-t11.log",
+    "resample-m08": "out/limb_grip_review/resample-m08.log"
+  },
+  "runtimeEquivalence": "out/limb_grip_review/repair-runtime-equivalence.json",
+  "visualEvidence": "out/limb_grip_review/visual-review.json",
+  "reviewScene": {
+    "file": "out/limb_grip_review/m08-flight-review.blend",
+    "sha256": "ea3cdc4d1e23ce14eb77a2793a0b6a94302e689fb9158dd1a19fca74b4d26602",
+    "owner": "out/morph_reference/m08/m08.blend",
+    "ownerSha256": "64d4e294aafc1fe7dd867007fd5c788167d4dfc0fe07201cb6c1e2c193e5dc45",
+    "clip": "flight_idle",
+    "frame": 61,
+    "fps": 60,
+    "animatedNodes": 50,
+    "objects": 431
+  },
+  "formatValidator": {
+    "tool": "Khronos glTF Validator",
+    "status": "unavailable_optional"
+  },
+  "flightInterpretation": "Species-informed stylized articulation; not an aerodynamic simulation."
+}

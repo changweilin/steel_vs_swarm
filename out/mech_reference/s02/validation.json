@@ -2,13 +2,13 @@
   "asset": "s02",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 9588,
-    "meshes": 28,
-    "joints": 18,
+    "triangles": 9500,
+    "meshes": 26,
+    "joints": 20,
     "source": {
-      "contract": "98576d8fc98ca525a11490dfff2a09809cf33511b405ce98e020b99740e8e41d",
-      "builder": "24b7458e0e88389f5659341dbb4b82659fce2957283ab95b7e230afdecc36439",
-      "catalog": "e0fc6de660c77e7414c0b75942a7449f878441fd763e98d386bb83ca1dc5c1b2",
+      "contract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c",
       "image": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859"
     }
   },
@@ -24,17 +24,23 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "e3fca6b09df05b54e799a6f29be04404b2475c0368a29148b522445784419c50",
-    "blend": "98eaea505ff81bd30b64e1209e39e81b4b05648d9bbecb643f29c1e8dda6e897",
-    "glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9"
+    "runtime": "02e28f43d6ed02fdc38fdc9b854f26d0d1fdf5ec392a3e404d644b93fb31e24f",
+    "blend": "d8aef13fd840c8145d2e0699c8f3b3cd8c5865f2e79a8fd72095f35f0c372e66",
+    "glb": "66bd2526437d77af77c085fe81f1fbac44f2e70ffb1d6b833e5c059d400c98a8"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
-    "user_signoff": "pending_user_review"
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "editable_source": "pass"
+  },
+  "reviewEvidence": {
+    "weapons": "out/weapon_revision/runtime/validation.json",
+    "visual": "out/weapon_revision/visual-review.json",
+    "delivery": "out/weapon_revision/delivery-validation.json"
   }
 }
