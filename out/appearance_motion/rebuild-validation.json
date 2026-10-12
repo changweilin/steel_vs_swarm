@@ -1,0 +1,17 @@
+{
+  "s06": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true,
+    "cleanSource": "C:\\Users\\user\\.codex\\worktrees\\370f\\steel_vs_swarm\\out\\mech_reference\\_rebuild\\s06\\s06.blend"
+  },
+  "m05": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true,
+    "cleanSource": "C:\\Users\\user\\.codex\\worktrees\\370f\\steel_vs_swarm\\out\\morph_reference\\_rebuild\\m05\\m05.blend"
+  },
+  "m07": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true,
+    "cleanSource": "C:\\Users\\user\\.codex\\worktrees\\370f\\steel_vs_swarm\\out\\morph_reference\\_rebuild\\m07\\m07.blend"
+  }
+}

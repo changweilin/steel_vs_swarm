@@ -1,8 +1,8 @@
 {
   "m01": {
-    "blend": "056b67dabbdb5f6e4e5494a00dbecb4c59d2dedafa5503739bdbd84e4c4f0b84",
-    "bones": 33,
-    "effectParts": 108,
+    "blend": "e2bd01ad1d8f08318c56b970b665da80d3ee103000e3046bfc441ef1b60df0f3",
+    "bones": 43,
+    "effectParts": 129,
     "actions": [
       "light",
       "heavy",
@@ -12,40 +12,18 @@
     "fieldBounds": {
       "def": {
         "radius": 3.84,
-        "maximum": 3.583999987160255
+        "maximum": 2.2001100566818823
       },
       "atk": {
         "radius": 3.84,
-        "maximum": 3.434832656468308
+        "maximum": 2.9805960171826813
       }
     },
     "fanBounds": {}
   },
   "m02": {
-    "blend": "e710156a5b19b9728e34c5ebe5cde25a772bc4dd6176d046ff8f961d70f3868a",
-    "bones": 38,
-    "effectParts": 87,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 4.08,
-        "maximum": 3.8606451623978977
-      },
-      "atk": {
-        "radius": 200,
-        "maximum": 188.84996835285676
-      }
-    },
-    "fanBounds": {}
-  },
-  "m03": {
-    "blend": "1a1bae9b53a8a312741b938bc545ca4cd437cff9550aa46672c7f416d6535f18",
-    "bones": 13,
+    "blend": "da650aa31c6b8868b957e117f35de02930ec43f4d9984559d420123d92e69276",
+    "bones": 44,
     "effectParts": 85,
     "actions": [
       "light",
@@ -55,85 +33,41 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 2.04,
-        "maximum": 1.9040000386765485
+        "radius": 4.08,
+        "maximum": 3.164756001894764
       },
       "atk": {
-        "radius": 220,
-        "maximum": 198.00001022151898
+        "radius": 200,
+        "maximum": 53.569092815523064
+      }
+    },
+    "fanBounds": {}
+  },
+  "m03": {
+    "blend": "093ef508927f918fd40e446e022aa144c77de6d6869bb95483020d4e5ae07a92",
+    "bones": 20,
+    "effectParts": 153,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 2.04,
+        "maximum": 1.0905027343451257
+      },
+      "atk": {
+        "radius": 240,
+        "maximum": 141.58749649965233
       }
     },
     "fanBounds": {}
   },
   "m04": {
-    "blend": "b603624ab17dc937cac0dc206134954dcf6b441717b5cb747519d64e7ca2bba1",
-    "bones": 31,
-    "effectParts": 89,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 24,
-        "maximum": 21.59999961727514
-      },
-      "atk": {
-        "radius": 2.04,
-        "maximum": 1.8576857891276222
-      }
-    },
-    "fanBounds": {}
-  },
-  "m05": {
-    "blend": "0809d0cc075b941065d247a69ba2b7a0a52bd44a8f6a061f3ba072ef18842c91",
-    "bones": 66,
-    "effectParts": 105,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 20,
-        "maximum": 18.000001370597147
-      },
-      "atk": {
-        "radius": 11,
-        "maximum": 10.266666493064912
-      }
-    },
-    "fanBounds": {}
-  },
-  "m06": {
-    "blend": "48dcf14fc6b428cfe5ba92594ac72c03db89aa50515c3e5cecc70f5990ede516",
-    "bones": 38,
-    "effectParts": 102,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 4.08,
-        "maximum": 3.808000129018509
-      },
-      "atk": {
-        "radius": 4.08,
-        "maximum": 3.8079998761331253
-      }
-    },
-    "fanBounds": {}
-  },
-  "m07": {
-    "blend": "73f51feafb44b708e094ad064c3878f1b02040c3d3f16cc80aa470210b199b1e",
-    "bones": 88,
+    "blend": "c084b7344902731c3757b04dfbe4413427d30041a4a41780e92b93f00e4cd768",
+    "bones": 41,
     "effectParts": 145,
     "actions": [
       "light",
@@ -143,12 +77,78 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 3.0,
-        "maximum": 2.80000009011211
+        "radius": 24,
+        "maximum": 9.305225065318696
       },
       "atk": {
-        "radius": 9,
-        "maximum": 8.370957153174201
+        "radius": 2.04,
+        "maximum": 1.180108590870804
+      }
+    },
+    "fanBounds": {}
+  },
+  "m05": {
+    "blend": "bf60933cb28290ee719e6b13eb2a7384e73d25d2e72c53ae8023f7b5135170c3",
+    "bones": 73,
+    "effectParts": 98,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 20,
+        "maximum": 10.581422377791633
+      },
+      "atk": {
+        "radius": 11,
+        "maximum": 9.559039318704219
+      }
+    },
+    "fanBounds": {}
+  },
+  "m06": {
+    "blend": "bc4ce63c416af013453919d8028bb651f390dbf1883387b55c504c3c62a79f6c",
+    "bones": 41,
+    "effectParts": 132,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 4.08,
+        "maximum": 3.0148084367580408
+      },
+      "atk": {
+        "radius": 14,
+        "maximum": 7.277379984414792
+      }
+    },
+    "fanBounds": {}
+  },
+  "m07": {
+    "blend": "28e56799555cd6631bbd38980ff3075b6bfb257c23fcd04c8045c10f3ad1b70d",
+    "bones": 92,
+    "effectParts": 180,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 3.0,
+        "maximum": 2.1603602059569655
+      },
+      "atk": {
+        "radius": 10,
+        "maximum": 8.982835641095619
       }
     },
     "fanBounds": {
@@ -159,9 +159,9 @@
     }
   },
   "m08": {
-    "blend": "2cd00a75ff29306689ecbafb0511834dec27b6f6d50f4735a9d0f7b45452faf4",
-    "bones": 50,
-    "effectParts": 70,
+    "blend": "65bd95c015e4b5e07709203af35b089aa7654dfda7a19303bf980d93bae8b92f",
+    "bones": 54,
+    "effectParts": 92,
     "actions": [
       "light",
       "heavy",
@@ -171,19 +171,19 @@
     "fieldBounds": {
       "def": {
         "radius": 2.76,
-        "maximum": 2.575999838366102
+        "maximum": 1.3670251259430606
       },
       "atk": {
         "radius": 2.76,
-        "maximum": 2.575999838366102
+        "maximum": 0.7511926545965177
       }
     },
     "fanBounds": {}
   },
   "s01": {
-    "blend": "a63177ebb4eab45d8ca20ac14feb9f2cfd8fe94f19a94381a601647eae160bbe",
-    "bones": 22,
-    "effectParts": 68,
+    "blend": "2b57e9bfa96156d482d1b9f321a11f791714acfd43a12c615869642503022529",
+    "bones": 35,
+    "effectParts": 197,
     "actions": [
       "light",
       "heavy",
@@ -193,19 +193,19 @@
     "fieldBounds": {
       "def": {
         "radius": 2.04,
-        "maximum": 1.9039999549418933
+        "maximum": 0.8002710624522165
       },
       "atk": {
-        "radius": 2.04,
-        "maximum": 1.9039999380665626
+        "radius": 12,
+        "maximum": 8.274565116469706
       }
     },
     "fanBounds": {}
   },
   "s02": {
-    "blend": "5416d4b95520e509f4432cc77050c70d06cb08132645268fae288b90ac9a4b94",
-    "bones": 18,
-    "effectParts": 77,
+    "blend": "4887032317fc3ee2ee84a105395484846955734d9d5947b823c9083bac39c3b4",
+    "bones": 20,
+    "effectParts": 143,
     "actions": [
       "light",
       "heavy",
@@ -215,19 +215,19 @@
     "fieldBounds": {
       "def": {
         "radius": 2.04,
-        "maximum": 1.8250050943120637
+        "maximum": 1.3181309226569091
       },
       "atk": {
         "radius": 200,
-        "maximum": 180.00001133238447
+        "maximum": 119.48367100644553
       }
     },
     "fanBounds": {}
   },
   "s03": {
-    "blend": "0c6b7a9c1f126d22585f5bc79ea46f558d7143aab73618e368f70fa2bfeaf588",
-    "bones": 50,
-    "effectParts": 146,
+    "blend": "3b3e42c1bdac9b6f4f7dc8a83a6a67eee0e236baa47b84486f4fdfc52f2a3392",
+    "bones": 52,
+    "effectParts": 226,
     "actions": [
       "light",
       "heavy",
@@ -237,19 +237,19 @@
     "fieldBounds": {
       "def": {
         "radius": 3.36,
-        "maximum": 3.136000098424297
+        "maximum": 2.417015208125061
       },
       "atk": {
         "radius": 260,
-        "maximum": 234.00001475297697
+        "maximum": 218.3999987496452
       }
     },
     "fanBounds": {}
   },
   "s04": {
-    "blend": "4ae74d0253d4bbd90c6228388eae271699083ed693c055a8ba6e79090f80941f",
-    "bones": 13,
-    "effectParts": 219,
+    "blend": "995f0bd79f2974c4df322570422c3ad7fe9d8a50f8ab613a35ee5f3cc9803aab",
+    "bones": 16,
+    "effectParts": 155,
     "actions": [
       "light",
       "heavy",
@@ -259,11 +259,11 @@
     "fieldBounds": {
       "def": {
         "radius": 12,
-        "maximum": 10.79999980863757
+        "maximum": 8.654883470783933
       },
       "atk": {
         "radius": 2.04,
-        "maximum": 1.9039999862468542
+        "maximum": 1.018510456314347
       }
     },
     "fanBounds": {
@@ -273,14 +273,14 @@
       },
       "heavy": {
         "subCones": 11,
-        "parts": 55
+        "parts": 33
       }
     }
   },
   "s05": {
-    "blend": "9a4fa27e4890c3f3ec1f00cad7041110e21bad6d6147498ab469fe740e1814b1",
-    "bones": 16,
-    "effectParts": 116,
+    "blend": "2f0423252d17499f7569a5cccdd2b4cb85048f2f7be04b68648e2698c2a0554f",
+    "bones": 21,
+    "effectParts": 121,
     "actions": [
       "light",
       "heavy",
@@ -290,19 +290,19 @@
     "fieldBounds": {
       "def": {
         "radius": 2.04,
-        "maximum": 2.0000000745058046
+        "maximum": 0.8126222264422722
       },
       "atk": {
         "radius": 10,
-        "maximum": 9.251700064653184
+        "maximum": 8.43587764754792
       }
     },
     "fanBounds": {}
   },
   "s06": {
-    "blend": "70b07c696cf1ee815c3a54828bcb6556efcc0c4f8b6da50781e879145a42e28c",
-    "bones": 48,
-    "effectParts": 109,
+    "blend": "de77f0aa8d97608d4363abf5ec852901b02552ea4849e2bae6753702888289de",
+    "bones": 61,
+    "effectParts": 185,
     "actions": [
       "light",
       "heavy",
@@ -312,19 +312,19 @@
     "fieldBounds": {
       "def": {
         "radius": 140,
-        "maximum": 126.00000390241154
+        "maximum": 91.18762916309076
       },
       "atk": {
         "radius": 220,
-        "maximum": 198.00001022151898
+        "maximum": 60.86528072276458
       }
     },
     "fanBounds": {}
   },
   "s07": {
-    "blend": "9209d78da59c2088d4168e06159fb4ac1589be8272ddd9feb74f6f7d1c873b69",
-    "bones": 119,
-    "effectParts": 150,
+    "blend": "adffb157b377fb8ef72c7649b3a5ba3bf547692ef1fdec75765009bfe1000c7a",
+    "bones": 120,
+    "effectParts": 166,
     "actions": [
       "light",
       "heavy",
@@ -334,24 +334,24 @@
     "fieldBounds": {
       "def": {
         "radius": 4.08,
-        "maximum": 3.8079999671131683
+        "maximum": 1.8903189112826821
       },
       "atk": {
         "radius": 11,
-        "maximum": 9.899999759695064
+        "maximum": 7.851577223578925
       }
     },
     "fanBounds": {
       "heavy": {
         "subCones": 17,
-        "parts": 68
+        "parts": 102
       }
     }
   },
   "s08": {
-    "blend": "aca69f8a587b051d4472f9350a02af2cfc16a6c997bcbf2cf5ecb662cb4d4929",
-    "bones": 14,
-    "effectParts": 101,
+    "blend": "508a14fbb579766ae7232b15d507273d0e20a051065d3c8079130e42e68433ac",
+    "bones": 18,
+    "effectParts": 177,
     "actions": [
       "light",
       "heavy",
@@ -360,161 +360,19 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 2.04,
-        "maximum": 1.9040000386765485
+        "radius": 28,
+        "maximum": 24.350041449352915
       },
       "atk": {
         "radius": 240,
-        "maximum": 216.00000514437576
+        "maximum": 82.5022948899567
       }
     },
     "fanBounds": {}
   },
   "s09": {
-    "blend": "098e227a05cb97e4861f9a9a1cd798087b146cf2edfe8604291925db32f56fb7",
-    "bones": 35,
-    "effectParts": 175,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 4.08,
-        "maximum": 3.8079999671131683
-      },
-      "atk": {
-        "radius": 9,
-        "maximum": 8.099999849120028
-      }
-    },
-    "fanBounds": {
-      "light": {
-        "subCones": 15,
-        "parts": 60
-      }
-    }
-  },
-  "s10": {
-    "blend": "e1e34e9a50c5007dfc1cf75d3294ae0e124db644592f3f53c36f2e0d91e08459",
-    "bones": 58,
-    "effectParts": 109,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 12,
-        "maximum": 10.79999980863757
-      },
-      "atk": {
-        "radius": 300,
-        "maximum": 270.0000192591569
-      }
-    },
-    "fanBounds": {}
-  },
-  "s11": {
-    "blend": "c789a55a5f8fbcf7362d856a064dfa884d3a007a90427ed11da6c94387ad4f46",
-    "bones": 13,
-    "effectParts": 70,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 2.04,
-        "maximum": 1.8247547587460577
-      },
-      "atk": {
-        "radius": 2.04,
-        "maximum": 1.9040000386765485
-      }
-    },
-    "fanBounds": {}
-  },
-  "s12": {
-    "blend": "c0e05e45bb5fef450d40043d8259559012cb4ad586fd67ac1dd08c0cdd0acb0d",
-    "bones": 16,
-    "effectParts": 77,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 2.04,
-        "maximum": 1.9039999549418933
-      },
-      "atk": {
-        "radius": 2.04,
-        "maximum": 1.8602438029420854
-      }
-    },
-    "fanBounds": {}
-  },
-  "t01": {
-    "blend": "0c992539d2803425ecf943eef35d7880a82464a1002c591a24181525c56fc87f",
-    "bones": 26,
-    "effectParts": 150,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 12,
-        "maximum": 10.79999980863757
-      },
-      "atk": {
-        "radius": 12,
-        "maximum": 11.200000960486234
-      }
-    },
-    "fanBounds": {
-      "heavy": {
-        "subCones": 13,
-        "parts": 52
-      }
-    }
-  },
-  "t02": {
-    "blend": "60a781e4d9d4cbc5ba9d50b39535c76ac5d2f8988efd1ad36f5e7e1a7f7271a7",
-    "bones": 26,
-    "effectParts": 104,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 4.08,
-        "maximum": 3.7746939763825944
-      },
-      "atk": {
-        "radius": 4.08,
-        "maximum": 3.999999925494193
-      }
-    },
-    "fanBounds": {}
-  },
-  "t03": {
-    "blend": "b0e2ca0d643ca9c5a00d36cad8b502429df4c8c3901d94eef67f19ad90dddc1b",
-    "bones": 26,
+    "blend": "4ab2aec5e14177b8a5a9c184ca22769b6bd7bd6ae2064fdb6970902525c926fd",
+    "bones": 40,
     "effectParts": 193,
     "actions": [
       "light",
@@ -524,25 +382,25 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 12,
-        "maximum": 10.79999980863757
+        "radius": 4.08,
+        "maximum": 3.5517375359154406
       },
       "atk": {
-        "radius": 14,
-        "maximum": 12.600000026936426
+        "radius": 9,
+        "maximum": 6.867371366814678
       }
     },
     "fanBounds": {
       "light": {
         "subCones": 15,
-        "parts": 60
+        "parts": 30
       }
     }
   },
-  "t04": {
-    "blend": "68a6259426cbaf6a6491b93415d014eb2282d233b1fd9ab8b08b21450353dc38",
-    "bones": 38,
-    "effectParts": 62,
+  "s10": {
+    "blend": "db22345f00a274144e57bf98450febd3aa4658e03c8cb71ed40598ad12fa406c",
+    "bones": 62,
+    "effectParts": 187,
     "actions": [
       "light",
       "heavy",
@@ -551,20 +409,20 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 4.08,
-        "maximum": 3.8079997283899067
+        "radius": 12,
+        "maximum": 6.88173032257075
       },
       "atk": {
-        "radius": 4.08,
-        "maximum": 3.6720001967878946
+        "radius": 300,
+        "maximum": 164.56367646987366
       }
     },
     "fanBounds": {}
   },
-  "t05": {
-    "blend": "3e70f05f38a30603052037ef4ec402070884f05517a5877cabffddcf0da2c084",
-    "bones": 33,
-    "effectParts": 98,
+  "s11": {
+    "blend": "d4818efdea73c504b01e05faef1bf6ae99855ac7c5dfb145c40506552d533582",
+    "bones": 15,
+    "effectParts": 179,
     "actions": [
       "light",
       "heavy",
@@ -573,46 +431,19 @@
     ],
     "fieldBounds": {
       "def": {
-        "radius": 4.08,
-        "maximum": 3.808000077353097
+        "radius": 2.04,
+        "maximum": 0.8113636302479752
       },
       "atk": {
-        "radius": 4.08,
-        "maximum": 3.8079999724937084
+        "radius": 2.04,
+        "maximum": 0.28334263703101475
       }
     },
     "fanBounds": {}
   },
-  "t06": {
-    "blend": "d910d483127f7611df51902bad270d6565e0e12a8b6a1803fc9cb0849fc3e49d",
-    "bones": 40,
-    "effectParts": 150,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 3.5999999999999996,
-        "maximum": 3.3306123959361353
-      },
-      "atk": {
-        "radius": 3.5999999999999996,
-        "maximum": 3.330612470875641
-      }
-    },
-    "fanBounds": {
-      "heavy": {
-        "subCones": 9,
-        "parts": 45
-      }
-    }
-  },
-  "t07": {
-    "blend": "fdb02c28881cf60c4ab34c90e78080ef6ba50467b8661f309f86317526675f2c",
-    "bones": 30,
+  "s12": {
+    "blend": "506f513c35e6ffb5edde4b4c6c31a0462c931e7a2c838dc0a7cf1da3fa8c5883",
+    "bones": 19,
     "effectParts": 105,
     "actions": [
       "light",
@@ -623,19 +454,19 @@
     "fieldBounds": {
       "def": {
         "radius": 2.04,
-        "maximum": 1.9303224451688126
+        "maximum": 1.2596890596291632
       },
       "atk": {
-        "radius": 6,
-        "maximum": 5.413534447918606
+        "radius": 2.04,
+        "maximum": 1.2937425212644218
       }
     },
     "fanBounds": {}
   },
-  "t08": {
-    "blend": "064b7339d355e087aafe48cde3422ae513a161bc989fa96c2259e879190d73c2",
-    "bones": 51,
-    "effectParts": 193,
+  "t01": {
+    "blend": "2c9fec88eb5c72db32927255ca958b9b300065e65af5207e787fa2b9172d9749",
+    "bones": 30,
+    "effectParts": 131,
     "actions": [
       "light",
       "heavy",
@@ -644,86 +475,25 @@
     ],
     "fieldBounds": {
       "def": {
+        "radius": 12,
+        "maximum": 6.548253539033422
+      },
+      "atk": {
         "radius": 16,
-        "maximum": 14.400000333537998
-      },
-      "atk": {
-        "radius": 280,
-        "maximum": 255.90686176696016
+        "maximum": 14.532438217312626
       }
     },
-    "fanBounds": {}
-  },
-  "t09": {
-    "blend": "09a54d753ca80c0cfd382163df9943bd8e33dc147b1bd12fcc62f3f6f0053669",
-    "bones": 14,
-    "effectParts": 80,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 16,
-        "maximum": 14.400000333537998
-      },
-      "atk": {
-        "radius": 11,
-        "maximum": 10.266666794958567
+    "fanBounds": {
+      "heavy": {
+        "subCones": 13,
+        "parts": 39
       }
-    },
-    "fanBounds": {}
+    }
   },
-  "t10": {
-    "blend": "1efddaadecb6400c758539adee9dbd04790a1f0c9af9e733cf3e68e38ed7c95c",
-    "bones": 29,
-    "effectParts": 89,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 3.5999999999999996,
-        "maximum": 3.3599999489670704
-      },
-      "atk": {
-        "radius": 220,
-        "maximum": 204.9022156267472
-      }
-    },
-    "fanBounds": {}
-  },
-  "t11": {
-    "blend": "3b903d517012813faaa0faf10d44b042fc95242a651580583a9ca6d40394e563",
-    "bones": 102,
-    "effectParts": 86,
-    "actions": [
-      "light",
-      "heavy",
-      "def",
-      "atk"
-    ],
-    "fieldBounds": {
-      "def": {
-        "radius": 3.5999999999999996,
-        "maximum": 3.3599999489670704
-      },
-      "atk": {
-        "radius": 3.5999999999999996,
-        "maximum": 3.360000094209042
-      }
-    },
-    "fanBounds": {}
-  },
-  "t12": {
-    "blend": "fa0a69e2cffb0b4ae4d256d461d2ec33051030eeae6d37f3ea8ed43c07a51189",
-    "bones": 27,
-    "effectParts": 102,
+  "t02": {
+    "blend": "93227878cce4db8c6505549d9b8e4cbaff1cdfde5d0d39177598a4180532a4e7",
+    "bones": 30,
+    "effectParts": 232,
     "actions": [
       "light",
       "heavy",
@@ -733,11 +503,241 @@
     "fieldBounds": {
       "def": {
         "radius": 4.08,
-        "maximum": 3.6495722735631135
+        "maximum": 2.1115523756494996
+      },
+      "atk": {
+        "radius": 4.08,
+        "maximum": 1.715313779677909
+      }
+    },
+    "fanBounds": {}
+  },
+  "t03": {
+    "blend": "2a2ffb33164d6430db4d8d96c5007d6682665983536a616a16252ad24cd972cd",
+    "bones": 30,
+    "effectParts": 222,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 12,
+        "maximum": 7.232525253278182
+      },
+      "atk": {
+        "radius": 14,
+        "maximum": 2.147803802666884
+      }
+    },
+    "fanBounds": {
+      "light": {
+        "subCones": 15,
+        "parts": 45
+      }
+    }
+  },
+  "t04": {
+    "blend": "4d8f4ae29cfae25f0e7ff8f8d95f7c59e5bab86b9b6d405a493be7ed7a0616b3",
+    "bones": 40,
+    "effectParts": 126,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 4.08,
+        "maximum": 2.5067807151736514
+      },
+      "atk": {
+        "radius": 4.08,
+        "maximum": 1.0229383281410274
+      }
+    },
+    "fanBounds": {}
+  },
+  "t05": {
+    "blend": "d92a84229fee0af95c6b4d3dfecfb4325007c0207ad67cc40f7a9e2cbd4d6da8",
+    "bones": 36,
+    "effectParts": 106,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 4.08,
+        "maximum": 2.448978923390319
+      },
+      "atk": {
+        "radius": 4.08,
+        "maximum": 2.761632332535633
+      }
+    },
+    "fanBounds": {}
+  },
+  "t06": {
+    "blend": "476d79740a54953e4b3258e4dbeb80cd124052e700f2b74d8f16739535726363",
+    "bones": 48,
+    "effectParts": 153,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 3.5999999999999996,
+        "maximum": 1.54987461963504
+      },
+      "atk": {
+        "radius": 3.5999999999999996,
+        "maximum": 2.648098048959148
+      }
+    },
+    "fanBounds": {
+      "heavy": {
+        "subCones": 9,
+        "parts": 54
+      }
+    }
+  },
+  "t07": {
+    "blend": "a7bfa3caebf0139025e8fef8bc1ab92c8ed409e48882a359411d5fa57049cbff",
+    "bones": 33,
+    "effectParts": 86,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 2.04,
+        "maximum": 1.1241289448871958
+      },
+      "atk": {
+        "radius": 6,
+        "maximum": 1.7238555007894216
+      }
+    },
+    "fanBounds": {}
+  },
+  "t08": {
+    "blend": "994aa308556c4a29cc12b86af2dde65c495596f1d08ed6582bda1e22da0f0e9d",
+    "bones": 64,
+    "effectParts": 211,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 16,
+        "maximum": 6.685969556395976
+      },
+      "atk": {
+        "radius": 280,
+        "maximum": 220.85690439014326
+      }
+    },
+    "fanBounds": {}
+  },
+  "t09": {
+    "blend": "60227fbf02eac4314e6d1a149c754cbe400c1ce568fccb7dda9cd1ebf18924a4",
+    "bones": 27,
+    "effectParts": 116,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 16,
+        "maximum": 13.349424919857707
+      },
+      "atk": {
+        "radius": 12,
+        "maximum": 10.807738473993586
+      }
+    },
+    "fanBounds": {}
+  },
+  "t10": {
+    "blend": "08454e23f8897a0c96311d6ccb6bc74516adb0548970752eb037c161cc14ca39",
+    "bones": 48,
+    "effectParts": 164,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 3.5999999999999996,
+        "maximum": 2.484540190093169
+      },
+      "atk": {
+        "radius": 220,
+        "maximum": 42.14279946843974
+      }
+    },
+    "fanBounds": {}
+  },
+  "t11": {
+    "blend": "0d26cde5efa538cdc32f0d2639569f0be293a4e81b8545947911fe024b562eec",
+    "bones": 108,
+    "effectParts": 157,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 3.5999999999999996,
+        "maximum": 2.6556485925767994
+      },
+      "atk": {
+        "radius": 3.5999999999999996,
+        "maximum": 0.5482658505713303
+      }
+    },
+    "fanBounds": {}
+  },
+  "t12": {
+    "blend": "584ed0c50e33759448447a6590f4382d8cb4b4bec39ff4e7d69720c8a754fbc5",
+    "bones": 30,
+    "effectParts": 156,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ],
+    "fieldBounds": {
+      "def": {
+        "radius": 180,
+        "maximum": 74.22091567564003
       },
       "atk": {
         "radius": 240,
-        "maximum": 216.00000514437576
+        "maximum": 199.92745266252206
       }
     },
     "fanBounds": {}

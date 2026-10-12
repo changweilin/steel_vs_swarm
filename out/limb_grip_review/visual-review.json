@@ -1,0 +1,201 @@
+{
+  "gate": "pass",
+  "assets": [
+    "s01",
+    "t10",
+    "s02",
+    "s04",
+    "s05",
+    "s08",
+    "s11",
+    "s12",
+    "t07",
+    "t08",
+    "t09",
+    "m03",
+    "m04",
+    "s06",
+    "s07",
+    "s09",
+    "t01",
+    "t02",
+    "t03",
+    "t04",
+    "t05",
+    "t12",
+    "m02",
+    "m06",
+    "m01",
+    "s03",
+    "s10",
+    "t06",
+    "t11",
+    "m05",
+    "m07",
+    "m08"
+  ],
+  "forms": 40,
+  "images": {
+    "out/limb_grip_review/geometry-1.png": "1b4bfbe13fee8abc9ef76bfa7e406d2d2c7ebc9b75209e7c651303a50a61bda7",
+    "out/limb_grip_review/geometry-2.png": "897530add148e00d5be8a3c989f5152960c704ae04db5e9a05934082d2670b8a",
+    "out/limb_grip_review/geometry-3.png": "75a69181d7cb9d7cf621a4107c9ac6852703914324380b134d838ccb4d353918",
+    "out/limb_grip_review/geometry-4.png": "8d271c280c0187e51b9a33fa7c8e0ae04ba21df98721c771b88ef2214201542d",
+    "out/limb_grip_review/geometry-5.png": "f8ef2ae649ce044f4d4e6e5617f0a4f69409efb41f14db1fb0ada3f5d6852447",
+    "out/limb_grip_review/geometry-6.png": "b665ee1a9ac8b2880cadd71fb0cfbcd6137b22be1ed80444da781d578d4f3eda",
+    "out/limb_grip_review/geometry-7.png": "8564189f13cbd07c866eed38e78e98bdea7091fd7d65aa1a8ea4f24bffc8559e",
+    "out/limb_grip_review/geometry-8.png": "dde31d41117f038852d995ed6cb3eb5132474cd1d0f883e968df56742e618705",
+    "out/limb_grip_review/flight-geometry-1.png": "2d8e9fa2417f2808ad4a4f375ed3ac049a7f051fed569466447f1977ab91565b",
+    "out/limb_grip_review/flight-geometry-2.png": "8a8b3a945383fe0a109a034b0ea4c6810c870fa096ef33cd1167189568ceffe2",
+    "out/limb_grip_review/grips.png": "d821ed9edc4fab878f6094ea0b90dd7dae4a1fa621c9ee01d2173900407c089e",
+    "out/limb_grip_review/flight.png": "a7b4f7d68568ba366d564fc8da671cb480309bbfa16a301d55dd0174e534efdd",
+    "out/limb_grip_review/overview.png": "fd19fd57631da9edab03bc6003394d0f9aa20597fd4ebc40936c6074fa56517d",
+    "out/limb_grip_review/m04-cycle.png": "615f855becde7c648aa74ac44175dbb364e39a4167c563381849610e0e2c7d40",
+    "out/limb_grip_review/t07-cycle.png": "e9f8ef74410925860c81afbeffd95c624f942896c20135e106fe4186c7120a6f",
+    "out/limb_grip_review/t08-cycle.png": "d32147f45adf9c4783c365a6e86e6f4867429c724f4e6426cc1dba0a9f9c592d",
+    "out/limb_grip_review/s10-cycle.png": "490af86bffce63a857c5f27afa348e5bb65bd918202248c6c6ef784635174591",
+    "out/limb_grip_review/m08-cycle.png": "2a9a0135154b8165e7ad545449e71a60f193a0e3345ecd1da098388f2974bfc2"
+  },
+  "observations": [
+    "Exposed proximal sockets are visible in five neutral views of each form.",
+    "Grips separate receivers from wrists and retain mirrored opposed thumbs.",
+    "Wing recovery folds the elbow before the wrist and opens for the downstroke.",
+    "Feather and membrane surfaces retain their supported span through a full cycle.",
+    "The owl folded primary feathers remain within the back envelope while exposed forelimb contacts retain their world positions."
+  ],
+  "reinspectedImages": [
+    "out/limb_grip_review/geometry-8.png",
+    "out/limb_grip_review/flight-geometry-2.png",
+    "out/limb_grip_review/overview.png"
+  ],
+  "assetHashes": {
+    "s01": {
+      "public/js/forge/assets/s01.js": "f3bcbce1a09f05f4978259ed59fcce0eff5b5ecd2dd642f842f60e549fce1b4e",
+      "public/assets/models/reference/s01.glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25"
+    },
+    "t10": {
+      "public/js/forge/assets/t10.js": "472cfe8396c73aac1261340becce128786bc83130acd06356a1b8cd5ccad4e8a",
+      "public/assets/models/reference/t10.glb": "10c7d4ddc1cf650288d0499168514de98d3f523493ba2149314fc0238aa95849"
+    },
+    "s02": {
+      "public/js/forge/assets/s02.js": "e8e8886a69da06569c76f7cb2150b2214013cbec66f868b7af05ccd8cdf87593",
+      "public/assets/models/reference/s02.glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9"
+    },
+    "s04": {
+      "public/js/forge/assets/s04.js": "47771aff43cf4cfb7d1865d1d136724e2b10b40538301113135c54fba94b4761",
+      "public/assets/models/reference/s04.glb": "e379a12cf9584f8eb5342f809c3faf4020003f87763bda62c16b54ce9d8217cf"
+    },
+    "s05": {
+      "public/js/forge/assets/s05.js": "ef3ab21e21b1cd303bf0ee677f0446ddb89432b66ae2ce6aea727f81b0be9ebe",
+      "public/assets/models/reference/s05.glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126"
+    },
+    "s08": {
+      "public/js/forge/assets/s08.js": "3b8089ed712bfb8128f42a5decc8d02526afdb887c6111410023fc80fceb63a7",
+      "public/assets/models/reference/s08.glb": "8eee0ddd80475e62919333b89f43635eab37d3ae32773d5619c9fd6c24f8e090"
+    },
+    "s11": {
+      "public/js/forge/assets/s11.js": "326311a58773f21f6d5a073a6153250d8b8f26c566288e6e00c458d86911f519",
+      "public/assets/models/reference/s11.glb": "d5323c7787fd84bb97eda6073ce05499d9990f07bdd771099f83571d30736b8d"
+    },
+    "s12": {
+      "public/js/forge/assets/s12.js": "b19ad0acbd13c1e7670e63298b50bdbe23d19eaa27286f1f3cff443fbb34bd8c",
+      "public/assets/models/reference/s12.glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9"
+    },
+    "t07": {
+      "public/js/forge/assets/t07.js": "21873705e2ddcf5f02b600b71cd912a3a70f708833994313bfe70ec2908acacb",
+      "public/assets/models/reference/t07.glb": "f7a13db209262907f6d11ccaf8ab6843dfa586007dac1df1b4734f7fbb724bbe"
+    },
+    "t08": {
+      "public/js/forge/assets/t08.js": "e57e6da299a3d251b3005b251621956537042cfececeba76328b0f0edb3109c5",
+      "public/assets/models/reference/t08.glb": "49ee6fe1f55d0721d44485520be5d3f597bb18bac4e0199e6d040c51aba5bfc1"
+    },
+    "t09": {
+      "public/js/forge/assets/t09.js": "66ce7672d9f1b6e7153e51dfb246ee40bfce8d839f261412ac11c0548d928dc6",
+      "public/assets/models/reference/t09.glb": "01154e92859f1ebb0060676387b05dcb8f9324eba1506fb46d83fad8673781fd"
+    },
+    "m03": {
+      "public/js/forge/assets/m03.js": "ad5d44ebc2303117e83f2d286c2b87bbee9c9caee50b12b28ff17bcc17a4a58f",
+      "public/assets/models/reference/m03.glb": "35ba50a528f935dda65662f5673e5d9805a81b401d1d67226711d8380fd11058"
+    },
+    "m04": {
+      "public/js/forge/assets/m04.js": "1745fb4e1959ab078fa67eee57d2daa824cf21892f3d7d286d7655556472cebb",
+      "public/assets/models/reference/m04.glb": "97f03fdfef25caae87536a3cfccf11972d15816de839a77ec707d7d0edcaf3fd"
+    },
+    "s06": {
+      "public/js/forge/assets/s06.js": "a749222ed378b8be81afb86ea2707b721d3c126368e32ea5053c89f1cc2e2cb7",
+      "public/assets/models/reference/s06.glb": "9caaa1081e73576afd6fec76c2924016bf7356c092e4a1aef7e1be9b87485a02"
+    },
+    "s07": {
+      "public/js/forge/assets/s07.js": "9b57b0ff986d45853c949dd2971e610614ab3b9c3e76865ae2478c2fe658ab59",
+      "public/assets/models/reference/s07.glb": "592a155f6b03e439269be0b20c2cc2dea7dac508f6483aa120b0c721159d16ab"
+    },
+    "s09": {
+      "public/js/forge/assets/s09.js": "643b722b3c621e45d2bed9a9776b6dbdcf5250cfd66696a20dd64692275950ee",
+      "public/assets/models/reference/s09.glb": "57fb87240b4fd5e4fdc3abce737e80c369d516064add731eb0b3488a501d62a9"
+    },
+    "t01": {
+      "public/js/forge/assets/t01.js": "daef48169a99d92bcc6aa6497f9f868c3127102e4d2ed82f0e30ef1cdb82906e",
+      "public/assets/models/reference/t01.glb": "ac2de7fafd76a8d53905ded6098e55595a12dde9178d776d7940d7e3313d279e"
+    },
+    "t02": {
+      "public/js/forge/assets/t02.js": "4dbc7ec9c7cb861c113756ee8c2d656da09f461591a72b9580e1816f0b24baf2",
+      "public/assets/models/reference/t02.glb": "6ccabc6e6f7295fd1c54bec4a58c878b938ece13ae87905b524c4a444699eba7"
+    },
+    "t03": {
+      "public/js/forge/assets/t03.js": "feb3c1e3de77c5181d307a1e00db93c71536d4a57912419fda032e8cb5a3db01",
+      "public/assets/models/reference/t03.glb": "15999de159619e4d76b1dce05f738ea71d7276bf824877de21e410fb8545b86c"
+    },
+    "t04": {
+      "public/js/forge/assets/t04.js": "3bafc0aeba62755bd5af6e06dd15f077e44a0038a0900d354720060814b3a2f8",
+      "public/assets/models/reference/t04.glb": "11a6778fbbfc9b6f08d205aaf849c84a7afd617166428eea0b3c98e42d4553f7"
+    },
+    "t05": {
+      "public/js/forge/assets/t05.js": "0322625e4951a72a2752f7bdc46bc77506db2379a612a05e3d5b248ce1700a4f",
+      "public/assets/models/reference/t05.glb": "3b0c0cdff044c5ca06c4f1b78ec675bb115dbea77f0296fb6e985da0ab0ad333"
+    },
+    "t12": {
+      "public/js/forge/assets/t12.js": "f76248af79389582c07357bafecd66c87d776eb0e20141d14b58211821d3b9c3",
+      "public/assets/models/reference/t12.glb": "54cf63894762e314a415913e89afc38f1988cdd2e91f3ea8054f77589df51025"
+    },
+    "m02": {
+      "public/js/forge/assets/m02.js": "1299ce61c2757c8ebd0280ca77b9f376abf23cb801f0f004f868bd1cfdb5181b",
+      "public/assets/models/reference/m02.glb": "171958e3ed927ba0b1b2a74360f4e292de53c5a559e5a809ed244f30806a91e0"
+    },
+    "m06": {
+      "public/js/forge/assets/m06.js": "6c003fb47bdb87da5edf637102b5d06ac17c489c7b9f9a1f0d3abf17b8063138",
+      "public/assets/models/reference/m06.glb": "0e86bdf40b6420ef77a5c5d18ff904bbea3e7bbe6328dd61a71ed435c8040679"
+    },
+    "m01": {
+      "public/js/forge/assets/m01.js": "4db60dafa9f0c57f40892d628aa2ce90addbb2d894d6e3e1a8bd2935a55f02a7",
+      "public/assets/models/reference/m01.glb": "dab6655ff38776c890cdb11aa0df75718f59496ec0cc890a2f987fa746b17b73"
+    },
+    "s03": {
+      "public/js/forge/assets/s03.js": "93e5531029d77144dbd4949c8e4fe26fecb890fe23afe0a3c83ff0e614e48e94",
+      "public/assets/models/reference/s03.glb": "c0635430c05eb15418d4d407037eaf388d9166e2839f0b79aea7ab3c721204ac"
+    },
+    "s10": {
+      "public/js/forge/assets/s10.js": "3d1deca31d2723b05138116d954ac7f3fc7fd40f290fe25e057e0f4f19dd9542",
+      "public/assets/models/reference/s10.glb": "68fc07e71ee704d8e7e3192066dba4ecf090df6c69fc235079e8aea384b7facf"
+    },
+    "t06": {
+      "public/js/forge/assets/t06.js": "b507d3b4dde23a7cf4cc1f05efe3ef7a52e2739e4df366e53312f74c8daf857c",
+      "public/assets/models/reference/t06.glb": "67b806a9cf40312440197f23ec021c295c56ca657682dcc03817f172c8771d18"
+    },
+    "t11": {
+      "public/js/forge/assets/t11.js": "b451f6311c3afce0d70da9ebf6709224167a641de29c979cee83cc664f67356b",
+      "public/assets/models/reference/t11.glb": "8fb623042c77f8113317fa50bc11f75bcb19a609e3cb2021c853b90360d1c2a6"
+    },
+    "m05": {
+      "public/js/forge/assets/m05.js": "5556d1316257341e652bf934d03eefd2bf5083e1e82bf6ac9934cbaea2985710",
+      "public/assets/models/reference/m05.glb": "96d93a7c56c6e2087a12ff943617ba641e36b70d84ee946838f542db7ce290b0"
+    },
+    "m07": {
+      "public/js/forge/assets/m07.js": "110e8e848d1607db2fdd2df97898e583ad2c1858cc68ce165ebcc61429104cb0",
+      "public/assets/models/reference/m07.glb": "b13376cbac44019047a0df1d1bf393744083b81489d57d9faeb84c72e05d5f20"
+    },
+    "m08": {
+      "public/js/forge/assets/m08.js": "73fd982ae3fd813f9df54b9bd475564c180560a2d4ab1f61a53474c200dab6eb",
+      "public/assets/models/reference/m08.glb": "0b0a771fd2b911d5c93be9308e3128f03ec9156be506eedc558f135455b7f233"
+    }
+  },
+  "nativePreview": "out/limb_grip_review/preview-validation.json"
+}

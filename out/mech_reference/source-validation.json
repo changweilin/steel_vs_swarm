@@ -1,8 +1,8 @@
 {
   "s01": {
-    "blend": "7e642915e416384b192f66939e77f161a830805b5158130dded8a950b81a30c6",
+    "blend": "766834fbbd7587f7e07c727a4025f358f35521e90b6ca7c49e0ec82fcc2c5e50",
     "sourceMeshes": 232,
-    "bones": 22,
+    "bones": 35,
     "editableClips": [
       "idle",
       "run",
@@ -19,12 +19,40 @@
         "waist": null,
         "heldWeapons": 0
       }
-    }
+    },
+    "bakedSource": null
   },
   "t10": {
-    "blend": "412cc9ff13d0b1cc583e1fb146322153b2bdb30f889a9dc5f94b42c1595a1764",
-    "sourceMeshes": 268,
-    "bones": 29,
+    "blend": "5c6d1e631553bd09081a61c4de3e7ce2ca1c5ebc7e945564d682aca328befd6c",
+    "sourceMeshes": 286,
+    "bones": 48,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 0,
+    "anatomy": {
+      "articulation": {
+        "waist": "waist",
+        "heldWeapons": 1
+      }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t10-ea2d4973c139.blend",
+      "contractSourceHash": "ea2d4973c13998914bbb1b984e0f2511de02ff861851a8a46e37cff40ad822ea",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+    }
+  },
+  "s02": {
+    "blend": "d8aef13fd840c8145d2e0699c8f3b3cd8c5865f2e79a8fd72095f35f0c372e66",
+    "sourceMeshes": 168,
+    "bones": 20,
     "editableClips": [
       "idle",
       "run",
@@ -38,14 +66,61 @@
     "poseSamples": 40,
     "anatomy": {
       "articulation": {
-        "waist": "waist",
-        "heldWeapons": 1
+        "waist": null,
+        "heldWeapons": 0
       }
-    }
+    },
+    "bakedSource": null
   },
-  "s02": {
-    "blend": "ec023e61495b4fe68e7d4f4d347ecc224847761b30f24c700a867257a03a6ce2",
-    "sourceMeshes": 170,
+  "s04": {
+    "blend": "ed9db883edfcf540d8c08839c0d4cee12b1487192bd8d0535661c09f6375701e",
+    "sourceMeshes": 146,
+    "bones": 16,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 40,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      }
+    },
+    "bakedSource": null
+  },
+  "s05": {
+    "blend": "9a3be985bff8f2a0269d1a3f9a7ecf5f4af2aa758fa9ae521aa5cade9012a3df",
+    "sourceMeshes": 166,
+    "bones": 21,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 40,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      }
+    },
+    "bakedSource": null
+  },
+  "s08": {
+    "blend": "ddb8868f9e71b84c77c85b14d85abfee5ad53736b5ebeab724643b7b0ba41817",
+    "sourceMeshes": 143,
     "bones": 18,
     "editableClips": [
       "idle",
@@ -63,78 +138,13 @@
         "waist": null,
         "heldWeapons": 0
       }
-    }
-  },
-  "s04": {
-    "blend": "90612ebd5ede6305146cfeeea2bad5f4fb46e9eb3c11f930fc5ce869ec6bee07",
-    "sourceMeshes": 148,
-    "bones": 13,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      }
-    }
-  },
-  "s05": {
-    "blend": "536628817410306ef26ee15212d0d9087c2b77dc78652a590e0164021a8883e2",
-    "sourceMeshes": 167,
-    "bones": 16,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      }
-    }
-  },
-  "s08": {
-    "blend": "f5badc8c9b9acf64ac938e086d512c3978c21172232ceb0436cc704ad6f67478",
-    "sourceMeshes": 145,
-    "bones": 14,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      }
-    }
+    },
+    "bakedSource": null
   },
   "s11": {
-    "blend": "9e39df3a2236116820408f779c61bf2a2aa3e42e5b4e5c40371c359f16c82d0d",
-    "sourceMeshes": 164,
-    "bones": 13,
+    "blend": "20e0591a9c58c8c7bb1a5c18b287f97dd2c4aed83885c34431f73750e8f42b0b",
+    "sourceMeshes": 162,
+    "bones": 15,
     "editableClips": [
       "idle",
       "run",
@@ -151,12 +161,13 @@
         "waist": null,
         "heldWeapons": 0
       }
-    }
+    },
+    "bakedSource": null
   },
   "s12": {
-    "blend": "43c509a65857f57807578058f6a3d81ac6301d8b4e9d15ba039e7d28a9e771cf",
-    "sourceMeshes": 170,
-    "bones": 16,
+    "blend": "34b398140062352e4155e9a4936a07b3a582612310f141fcb65f54581d01df4e",
+    "sourceMeshes": 168,
+    "bones": 19,
     "editableClips": [
       "idle",
       "run",
@@ -173,12 +184,13 @@
         "waist": null,
         "heldWeapons": 0
       }
-    }
+    },
+    "bakedSource": null
   },
   "t07": {
-    "blend": "b0b69f385c2488adc5e79c3e1985a0871887df74a17e612550eb482634904844",
-    "sourceMeshes": 201,
-    "bones": 30,
+    "blend": "320297ba8822e2a8b5ba127d39f48fe77e2fd7caf89426b15445239533c99574",
+    "sourceMeshes": 209,
+    "bones": 33,
     "editableClips": [
       "idle",
       "run",
@@ -189,7 +201,7 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": null,
@@ -197,11 +209,122 @@
       },
       "bentWingElbow": true,
       "articulatedWings": 2
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t07-1fdb9f14ac58.blend",
+      "contractSourceHash": "1fdb9f14ac589f59339161031f2b49e63892a07c8699c2ec9728e0836193f99a",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t08": {
-    "blend": "0b98847ba73bff03e0f7042f4ece251f8744677e58d1e4f516afe1ca04a96ac2",
-    "sourceMeshes": 377,
+    "blend": "a5c63cfb5f15d76de997a6749edfacab2c26c90a1fc9ea3d1e2be60dc605f3e8",
+    "sourceMeshes": 389,
+    "bones": 64,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 0,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      },
+      "bentWingElbow": true,
+      "feathersBehindBones": 22,
+      "articulatedWings": 2
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t08-bb80a4423ee3.blend",
+      "contractSourceHash": "bb80a4423ee38a0a878352be8ea80e38a648a1339668bad470af66caec0c649d",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+    }
+  },
+  "t09": {
+    "blend": "32b4d55d1dda8c84aa9686e24bace7d7a2176c7195d2f8ae6285f24dc54fe38c",
+    "sourceMeshes": 172,
+    "bones": 27,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 40,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      }
+    },
+    "bakedSource": null
+  },
+  "m03": {
+    "blend": "f7163eb389da49b57c629abc24972709389c67664301c9258eea44bca5d632e0",
+    "sourceMeshes": 153,
+    "bones": 20,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 40,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      }
+    },
+    "bakedSource": null
+  },
+  "m04": {
+    "blend": "837e6b0ce9c670945530a6698c83e36ab6dbf5e9941a017908e5718a02fad7aa",
+    "sourceMeshes": 302,
+    "bones": 41,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ],
+    "poseSamples": 0,
+    "anatomy": {
+      "articulation": {
+        "waist": null,
+        "heldWeapons": 0
+      },
+      "bentWingElbow": true,
+      "feathersBehindBones": 22,
+      "articulatedWings": 2
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/m04-bb630b0f8c95.blend",
+      "contractSourceHash": "bb630b0f8c953fd81ce65682829d1f29ec8075f38fd2bd8793f8ad54a56dfbf4",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+    }
+  },
+  "s06": {
+    "blend": "b54d3d3ee6ce5b5477bce14d6baa602d7b827a03b6d8b337dde806b982172101",
+    "sourceMeshes": 309,
     "bones": 61,
     "editableClips": [
       "idle",
@@ -213,112 +336,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      },
-      "bentWingElbow": true,
-      "feathersBehindBones": 22,
-      "articulatedWings": 2
-    }
-  },
-  "t09": {
-    "blend": "caaf8b8a1b5386343820be44506c75e01204941c84b96a54ba102a8573d4bf2f",
-    "sourceMeshes": 174,
-    "bones": 14,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": null,
         "heldWeapons": 0
       }
-    }
-  },
-  "m03": {
-    "blend": "74cf6b1ebeb28f79e84579633390af2f34c6fe12e02cb1186305ed8d1537d80c",
-    "sourceMeshes": 155,
-    "bones": 13,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      }
-    }
-  },
-  "m04": {
-    "blend": "708794b7fda0467763de063f56e82ca38bbf2eb5a1516788eb4b9beca097ddec",
-    "sourceMeshes": 294,
-    "bones": 31,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 40,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      },
-      "bentWingElbow": true,
-      "feathersBehindBones": 22,
-      "articulatedWings": 2
-    }
-  },
-  "s06": {
-    "blend": "bf4ac690d460ffb5bf8df0d1702e9c3d1518fe5bf458c847dabf55e134defc29",
-    "sourceMeshes": 291,
-    "bones": 51,
-    "editableClips": [
-      "idle",
-      "run",
-      "light",
-      "heavy",
-      "skill",
-      "ult",
-      "shield_deploy",
-      "shield_retract"
-    ],
-    "poseSamples": 248,
-    "anatomy": {
-      "articulation": {
-        "waist": null,
-        "heldWeapons": 0
-      }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/s06-a7112691f0c6.blend",
+      "contractSourceHash": "a7112691f0c63b23ab7859915e6133b84d8e1101bdb3b98e16a06737392eb3ee",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "s07": {
-    "blend": "a572d795aae24f1b8957a4fb242bf42b60e767f066a41b39cf08da0bdf48bfe6",
-    "sourceMeshes": 431,
-    "bones": 119,
+    "blend": "cab8b42a33f73817e6c0affd77450cd0ec3bb0949c60ca4dd954229b21af08d5",
+    "sourceMeshes": 428,
+    "bones": 120,
     "editableClips": [
       "idle",
       "run",
@@ -329,7 +363,7 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 248,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": null,
@@ -346,12 +380,17 @@
         12
       ],
       "radialTentacleSectors": 8
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/s07-a23ed5cb946d.blend",
+      "contractSourceHash": "a23ed5cb946ddfa9fca0b13d0c4f55848e345ac0108c2cebc0271dd27f8df8ab",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "s09": {
-    "blend": "2c32babbc139b47dabf4edab77d2b4580d67a1b60d64d4d06bd8dab7258b26b0",
-    "sourceMeshes": 222,
-    "bones": 35,
+    "blend": "8489573e97665625c179d591c8882eed6231493238ded027de7a8d8dd685217f",
+    "sourceMeshes": 244,
+    "bones": 40,
     "editableClips": [
       "idle",
       "run",
@@ -362,18 +401,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 1
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/s09-058c9754ce49.blend",
+      "contractSourceHash": "058c9754ce49d0d95f43b5c1dc8b9ca9fc0ed671c4fabce4a0f5ec25810c535f",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t01": {
-    "blend": "2ace7b1ac18ac85154969401e3ed0ef734c3f475b50af1f94792e279442ed6aa",
-    "sourceMeshes": 223,
-    "bones": 26,
+    "blend": "9dcba71650b9bf77fe9c62b43d4828df1a6e82784c4d0b4342ec084e26dcf19a",
+    "sourceMeshes": 253,
+    "bones": 30,
     "editableClips": [
       "idle",
       "run",
@@ -384,18 +428,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 2
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t01-4a7d95969ea8.blend",
+      "contractSourceHash": "4a7d95969ea892cdb4d75e1c1a96accc7355c7c5a621ff5b148a6a7306782659",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t02": {
-    "blend": "139d5a463803dc599e43f9faaa48173b7095dfa0959e7840e76407fcbed72d45",
-    "sourceMeshes": 254,
-    "bones": 26,
+    "blend": "5f0d45388dcacc59b4ddc1cbf379a4ccbbec8029021233f03cabbb4a4d7126a7",
+    "sourceMeshes": 283,
+    "bones": 30,
     "editableClips": [
       "idle",
       "run",
@@ -406,18 +455,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 2
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t02-4183faca4f3b.blend",
+      "contractSourceHash": "4183faca4f3be733e49a976360c5fa8391cb7022c709bd8c715a2784909084fe",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t03": {
-    "blend": "7069d0ca7e49b5cc97f74a34d3f7a6b5c6b0ca34f952883d807c99de26a112e3",
-    "sourceMeshes": 209,
-    "bones": 26,
+    "blend": "89dacbf104492de60cf0deb32cb02912fb5554036bea8a64356f3e67641258f2",
+    "sourceMeshes": 239,
+    "bones": 30,
     "editableClips": [
       "idle",
       "run",
@@ -428,18 +482,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 2
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t03-0f23ebc73867.blend",
+      "contractSourceHash": "0f23ebc73867645d2cb2f0defb3c24acf77f2df52a6725c0bfca42e5cc20facd",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t04": {
-    "blend": "89a455c1be8a94e589a037dce7138a4b6d5422cedb60105e769229d3e6a1cb43",
-    "sourceMeshes": 253,
-    "bones": 38,
+    "blend": "7215be8c608e9ea4c4495097759ed57d59e37de84489df47d303f55c8f65d21c",
+    "sourceMeshes": 263,
+    "bones": 40,
     "editableClips": [
       "idle",
       "run",
@@ -450,18 +509,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": null,
         "heldWeapons": 0
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t04-1d628d29508c.blend",
+      "contractSourceHash": "1d628d29508cd244db3fcfdbe4cbb2b55ae4ba297d68221866b658694497e827",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t05": {
-    "blend": "5a9e3a67130405cf775a4e16d8c316acded4646753341d366ab9af8eb1e70673",
-    "sourceMeshes": 302,
-    "bones": 33,
+    "blend": "73b4a8a5b563627e98a7bedb8bba6b2844fd4522a318e4d5acd5b571610d5a3b",
+    "sourceMeshes": 312,
+    "bones": 36,
     "editableClips": [
       "idle",
       "run",
@@ -472,18 +536,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 0
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t05-4e3496e252e1.blend",
+      "contractSourceHash": "4e3496e252e14c79ba710bab3aee3c2b2d46f959af3a177313a5174c6113bab1",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "t12": {
-    "blend": "7789b3a29b12745106742f55cf1c0bdc4b1878f07c2374975d25e59ebc81393e",
-    "sourceMeshes": 221,
-    "bones": 27,
+    "blend": "ce7db41294c5b6d771ec5eec14793a56846b694ca683a4f124e106f3046ff619",
+    "sourceMeshes": 229,
+    "bones": 30,
     "editableClips": [
       "idle",
       "run",
@@ -494,18 +563,23 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 1
       }
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/t12-1bfd75665b4c.blend",
+      "contractSourceHash": "1bfd75665b4cba59ac7e3f38d16b62fcebb8daf53dbcb0716c1f60857141d9b9",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "m02": {
-    "blend": "7a4b4aaea5dbb19ece5c8f6ed3e449471a8a1d3115b26b6117e10378f97619a1",
-    "sourceMeshes": 248,
-    "bones": 38,
+    "blend": "bcf838bc07c468b9ac50675007ec5a6edec2f508da52a40fedeea8f2bd2ee328",
+    "sourceMeshes": 259,
+    "bones": 44,
     "editableClips": [
       "idle",
       "run",
@@ -516,19 +590,24 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": "waist",
         "heldWeapons": 0
       },
       "skullToBoreWidth": 5.929487133563977
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/m02-000bc4c74cf8.blend",
+      "contractSourceHash": "000bc4c74cf8136a8fc107eb644b382e088f79253bab8f6a9842873e5ca5e095",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   },
   "m06": {
-    "blend": "9d265dfa16add548c45a36c5e67646ce8a98fc456e122715f1d9a9a42a60015b",
-    "sourceMeshes": 250,
-    "bones": 38,
+    "blend": "5470dc83e96f415e9d54ab60e6961ba1bb6fe7488708eeb183fb573ac988e384",
+    "sourceMeshes": 261,
+    "bones": 41,
     "editableClips": [
       "idle",
       "run",
@@ -539,13 +618,18 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 0,
     "anatomy": {
       "articulation": {
         "waist": null,
         "heldWeapons": 0
       },
       "sagittalBackplates": 8
+    },
+    "bakedSource": {
+      "contractSource": "out/anatomical_motion/before/m06-4cc7863752db.blend",
+      "contractSourceHash": "4cc7863752db261a7c3860396c21b8629dc4d404a1e61517316517ffcdd760bd",
+      "motionVerification": "out/anatomical_motion/after/blender-validation.json"
     }
   }
 }

@@ -53,6 +53,8 @@ try {
           step(5,i<fps?0:.8);
           if(id==='s06'){
             const a=rig.archery;
+            check(rig.anatomical.body.includes(unit.getObjectByName('hum_waist')),'s06: lumbar joint is omitted from firing stance');
+            check(rig.anatomical.shots.light.hand===rig.wpn.light.aimJoint,'s06: bow holding arm bypasses the shared firing stance');
             contact=Math.max(contact,a.hand.getWorldPosition(vector()).distanceTo(a.nock.getWorldPosition(vector())));
             check(contact<.015,'s06: drawing hand lost bowstring contact: '+JSON.stringify({gap:contact,
               shoulder:a.shoulder.getWorldPosition(vector()).toArray(),nock:a.nock.getWorldPosition(vector()).toArray(),

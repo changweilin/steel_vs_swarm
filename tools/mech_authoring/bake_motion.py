@@ -11,6 +11,7 @@ from mathutils import Quaternion
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sampled_glb import encode_tracks
 from motion_source import snapshot_rest, restore_rest
+from artifacts import replace_artifact
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = ROOT / 'out/anatomical_motion/after'
@@ -28,7 +29,7 @@ def sha(file):
 for id in ids:
     source = (ROOT / 'public/js/forge/assets' / (id + '.js')).read_text(encoding='utf8')
     asset = json.loads(source.split('export default ', 1)[1].rsplit(';', 1)[0])
-    if asset['rig'].get('cephalopod') or (asset['kind'] == 'aerial' and not any(wing.get('hand') for wing in asset['rig'].get('wings', []))):
+    if asset['kind'] == 'aerial' and not any(wing.get('hand') for wing in asset['rig'].get('wings', [])):
         continue
     samples = json.loads((SAMPLES / (id + '.json')).read_text(encoding='utf8'))
     directory = ROOT / 'out/morph_reference' / id
@@ -91,6 +92,14 @@ for id in ids:
             track.strips.new(clip, 1, action)
             track.mute = True
             obj.animation_data.action = None
+    # The procedural driver's idle owns holsters and independent grips, including quaternion-only joints.
+    for name, position, rotation, scale in samples['clips']['idle']['frames'][0]:
+        if name not in rest:
+            continue
+        q=axis @ Quaternion((rotation[3],rotation[0],rotation[1],rotation[2])) @ axis.inverted()
+        mode=rest[name][4]
+        rest[name]=((position[0],-position[2],position[1]),q.to_euler(mode if mode not in ['QUATERNION','AXIS_ANGLE'] else 'XYZ'),
+                    q,(scale[0],scale[2],scale[1]),mode)
     restore_rest(nodes, rest)
     # Preserve durations of untouched cast/shield/morph tracks authored at 30 fps.
     for obj in nodes.values():
@@ -103,15 +112,19 @@ for id in ids:
     bpy.context.scene.frame_end = max(len(clip['frames']) for clip in samples['clips'].values())
     temporary_blend = blend.with_suffix('.motion.blend')
     bpy.ops.wm.save_as_mainfile(filepath=str(temporary_blend))
+    source_record = {'samples': sha(SAMPLES / (id + '.json')),
+                     'inputBlend': original.relative_to(ROOT).as_posix(), 'clips': baked_clips, 'nodes': list(nodes),
+                     'drivers': json.loads((SAMPLES / 'validation.json').read_text())['sources'],
+                     'baker': sha(Path(__file__)), 'fps': 60,
+                     'sampler': sha(ROOT / 'tools/mech_authoring/author_motion.mjs'),
+                     'encoder': sha(Path(__file__).with_name('sampled_glb.py')),
+                     'restorer': sha(Path(__file__).with_name('motion_source.py'))}
     if actions_only:
-        temporary_blend.replace(blend)
+        replace_artifact(temporary_blend, blend)
         glb = ROOT / 'public/assets/models/reference' / (id + '.glb')
         encode_tracks(glb, samples, baked_clips)
         report['hashes']['blend'], report['hashes']['glb'] = sha(blend), sha(glb)
-        report['motionSource']['samples'] = sha(SAMPLES / (id + '.json'))
-        report['motionSource']['clips'] = baked_clips
-        report['motionSource']['drivers'] = json.loads((SAMPLES / 'validation.json').read_text())['sources']
-        report['motionSource']['baker'] = sha(Path(__file__))
+        report['motionSource'] = source_record
         report['gates']['editable_source'] = 'pending_independent_load'
         report['gates']['export'] = 'pending_independent_load'
         report_file.write_text(json.dumps(report, indent=2), encoding='utf8')
@@ -152,17 +165,10 @@ for id in ids:
     for obj in meshes:
         bpy.data.objects.remove(obj, do_unlink=True)
     restore_rest(nodes, rest)
-    temporary_blend.replace(blend)
-    temporary.replace(glb)
+    replace_artifact(temporary_blend, blend)
+    replace_artifact(temporary, glb)
     report['hashes']['blend'], report['hashes']['glb'] = sha(blend), sha(glb)
-    report['motionSource'] = {'samples': sha(SAMPLES / (id + '.json')),
-                              'inputBlend': original.relative_to(ROOT).as_posix(),
-                              'clips': baked_clips,
-                              'nodes': list(nodes),
-                              'drivers': json.loads((SAMPLES / 'validation.json').read_text())['sources'],
-                              'baker': sha(Path(__file__)), 'fps': 60}
-    report['motionSource']['encoder'] = sha(Path(__file__).with_name('sampled_glb.py'))
-    report['motionSource']['restorer'] = sha(Path(__file__).with_name('motion_source.py'))
+    report['motionSource'] = source_record
     report.pop('motionInputBlend', None)
     for gate in ['editable_source', 'export', 'motion']:
         report['gates'][gate] = 'pending_independent_load'

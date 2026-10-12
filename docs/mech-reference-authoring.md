@@ -16,6 +16,16 @@ The Blender skeleton follows the named rigid driver joints. Animate these joint 
 armor stays rigid across elbows and knees. Export clips share their NLA track names.
 Feathered wings separate humerus, ulna and manus; overlapping secondary feathers meet fanned primaries.
 Bent elbow and wrist offsets distinguish avian wings from the pterosaur's elongated membrane-supporting digit.
+The runtime wing solver couples shoulder elevation with elbow recovery and delayed wrist folding;
+membrane wings retain a smaller folding excursion to preserve their supported span.
+These stylized curves are informed by [avian skeletal kinematics](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0063982)
+and [pterosaur membrane mechanics](https://doi.org/10.1098/rspb.2010.2179).
+Held weapon frames expose a full grip below the receiver. The grasp follows the weapon's orientation
+at a fixed wrist contact; inverse scale keeps fingers and the grip full-sized when equipment shrinks.
+Stow clearance uses the same arm solver to lift the grasp, preventing an independently translated weapon
+from pulling its hand away from the wrist. The flight belly remains sealed while its proximal joints
+stay externally visible. [The attachment audit](../tools/audit_limb_grips.mjs)
+measures the actual registry surfaces, contact transforms and complete wing cycles.
 Overlapping hinge gores cover the sweep between articulated wing panels, including membrane wings.
 Ground avian wings fold along the body and spread only during running; this posture overrides humanoid arm motion.
 Cephalopod limbs use dense flexible chains. The tyrannosaur jaw and concealed throat barrel follow heavy-fire presentation.
@@ -33,6 +43,9 @@ Shield deployment is a post-pass on dedicated emitter joints and the free arm; i
 defense, shield points, damage, collider dimensions or weapon timing. The authored radar membrane
 is decorative; the existing authoritative shield presentation remains the gameplay boundary.
 Static parts batch only within their own joint and material, preserving moving attachments while limiting draw calls.
+Firing ports derive from authored barrel ends, optical apertures and gesture digits.
+Each accepted shot advances its slot's sequence before a render update; matched morph rigs share the event.
+Payload omission and transported missile geometry preserve attack rules, while receiver recoil stays separate from the aiming frame.
 
 Build and verification commands live in [package.json](../package.json).
 The authoring runner accepts contracted IDs with `--asset` (comma-separated for a batch), or `--asset all`;

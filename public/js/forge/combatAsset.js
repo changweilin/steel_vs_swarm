@@ -109,12 +109,18 @@ export function stepAuthoredCombat(rig, ent, now) {
   for (const [slot, clip] of Object.entries(combat.clips)) {
     const event = slot === 'light' || slot === 'heavy' ? ent.fireFx : ent.castFx;
     if (event?.slot !== slot || !Number.isFinite(event.t0)) continue;
-    const time = (now - event.t0) / clip.duration;
+    const time = (now - event.t0 - (rig.fireLead?.[slot] || 0)) / clip.duration;
     if (time < 0 || time >= 1) continue;
     for (const track of clip.tracks) {
       if (combat.transported?.includes(track.node)) continue;
       track.target[track.channel][track.axis] = sampleCombatKeys(track.keys, time);
       track.target.visible = true;
     }
+  }
+  const charge = Math.max(0,Math.min(1,rig._chg || 0));
+  if (charge > 0) for (const name of combat.charging || []) {
+    const node = combat.nodes.get(name);
+    node.visible = true;
+    node.scale.set(1,.45+.55*charge,.45+.55*charge);
   }
 }

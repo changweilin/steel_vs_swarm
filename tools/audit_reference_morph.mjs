@@ -135,8 +135,8 @@ try {
       && morph.ground.tailSegs.length === 5
       && ['l', 'r'].every(side => morph.gg.getObjectByName('wing_' + side).parent.name === 'elbow_' + side),
       'Wolf must retain elbow-folded patagium, paired fist blades and a balanced tail');
-    if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'wing_r'
-      && morph.gg.getObjectByName('heavy').parent.name === 'wing_l', 'Weapons must stay on shoulder trays');
+    if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'shoulder_r'
+      && morph.gg.getObjectByName('heavy').parent.name === 'shoulder_l', 'Weapons must stay outboard on the shoulders');
     if (id === 't11') {
       check(count('Solid retractable rotor shield petal') === 48, 'Solid twin shield covers lost');
       for (const tree of [morph.gg, morph.ag]) {
@@ -193,7 +193,20 @@ try {
         const delta = Math.max(...g.matrixWorld.elements.map((v, j) => Math.abs(v - a.matrixWorld.elements[j])));
         maxSeamError = Math.max(maxSeamError, delta);
         check(delta < 1e-5, `Rig-swap seam: ${id}/${g.name} ${delta}; t=${t}, shield=${defending}, aim=${unit.userData.rig._fireAim}`);
-        check(g.scale.toArray().every(v => Math.abs(v - 1) < 1e-7), `Rigid part scale changed: ${g.name}`);
+        const stow=spec.rig.stowedWeapons?.find(control=>control.node===g.name);
+        const held=spec.rig.heldWeapons?.find(control=>control.grip===g.name);
+        if (held) {
+          check(g.scale.toArray().every((v,i)=>Math.abs(v*g.parent.scale.getComponent(i)-1)<1e-7), `Grasp dimensions changed: ${g.name}`);
+          const wrist=morph.gg.getObjectByName(held.hand),contact=wrist.localToWorld(new THREE.Vector3().fromArray(held.contact));
+          check(contact.distanceTo(g.getWorldPosition(new THREE.Vector3()))<1e-5, `Grasp detached from wrist: ${g.name}`);
+        } else if (stow) {
+          check(g.scale.toArray().every(v=>v>=stow.scale-1e-7&&v<=1+1e-7), `Weapon exceeds declared stow scale: ${g.name}`);
+          check(Math.max(...g.scale.toArray())-Math.min(...g.scale.toArray())<1e-7, `Weapon stow distorts proportions: ${g.name}`);
+        } else if (spec.rig.visibilityControls?.includes(g.name)) {
+          const scale = g.scale.toArray();
+          check(scale.every(v => Math.abs(v - scale[0]) < 1e-7)
+            && [.001, 1].some(v => Math.abs(v - scale[0]) < 1e-7), `Invalid visibility scale: ${g.name}`);
+        } else check(g.scale.toArray().every(v => Math.abs(v - 1) < 1e-7), `Rigid part scale changed: ${g.name}`);
       }
     };
     const samples = [.05, .25, .49, .5, .51, .75, .95];
@@ -204,6 +217,10 @@ try {
     ent.df = false;
     ent.fireFx = { t0: now, slot: 'heavy' };
     for (let i = 0; i < 30; i++) step();
+    for (const t of [...samples, ...samples.toReversed()]) sample(t);
+    ent.fireFx = null;
+    for (let i = 0; i < 120; i++) step();
+    ent.fireFx = { t0: now, slot: 'light' };
     for (const t of [...samples, ...samples.toReversed()]) sample(t);
     ent.fireFx = null;
     for (let i = 0; i < 120; i++) step();
@@ -240,7 +257,12 @@ try {
             && leg.chain.every(j => j.axis === 'z')), 'Sprawled insect leg uses mammal flexion axes');
         }
       }
-      if (!flight && id === 's10') check(rig.tailSegs.every(n => Math.abs(n.rotation.x) < .04), 'Raptor counterbalance tail droops');
+      if (!flight && id === 's10') {
+        const tail = rig.tailSegs.map(n => unit.worldToLocal(n.getWorldPosition(new THREE.Vector3())));
+        check(tail.at(-1).z < tail[0].z && tail.every(p => p.y > 0), 'Raptor tail loses rear counterbalance or strikes ground');
+        check(rig.tailSegs.some((n, i) => i && n.quaternion.angleTo(rig.tailSegs[i - 1].quaternion) > 1e-4),
+          'Raptor tail remains a rigid straight chain');
+      }
       if (!flight && id === 'm05') check(morph.gg.getObjectByName('hunch').rotation.x > .3, 'Wolf attack stance lost during locomotion');
       check(rig.kind === (flight ? 'aerial' : spec.kind), 'Wrong locomotion rig');
       if (id === 's10') {
@@ -269,7 +291,8 @@ try {
         ent.fireFx = { t0: now, slot };
         for (let i = 0; i < 45; i++) step();
         const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(rig.wpn[slot].ref.getWorldQuaternion(new THREE.Quaternion()));
-        check(direction.z > .9999, `Firing axis ${slot}/${flight}: ${direction.toArray()}`);
+        const ancestors=[];for(let node=rig.wpn[slot].ref;node&&node!==unit;node=node.parent)ancestors.push([node.name,node.rotation.toArray().slice(0,3)]);
+        check(direction.z > .9999, `Firing axis ${id}/${slot}/${flight}: ${JSON.stringify({direction:direction.toArray(),aim:rig._fireAim,slot:rig._aimSlot,active:rig===unit.userData.rig,ancestors,controls:rig.aimForward?.map(a=>({node:a.g.name,slots:a.slots,rotation:a.g.rotation.toArray().slice(0,3)}))})}`);
       }
       ent.heavyFx = { t0: now, phase: 'charge' };
       for (let i = 0; i < 35; i++) step(1 / 60, 6);
@@ -318,9 +341,18 @@ try {
       if (clip.name.endsWith('shield_deploy')) check(loaded.scene.getObjectByName('barrier').scale.x > .1, 'Frozen exported shield');
       if (clip.name === 'to_flight') {
         mixer.setTime(clip.duration);
+        loaded.scene.updateMatrixWorld(true);
+        const graspJoints=new Set((spec.rig.heldWeapons || []).flatMap(held=>[held.node,held.grip]));
         for (const [name, pose] of Object.entries(spec.forms.flight.transforms)) {
           const node = loaded.scene.getObjectByName(name);
-          if (pose.position) check(node.position.distanceTo(new THREE.Vector3(...pose.position)) < .001, `Frozen exported stowage: ${name}`);
+          if (pose.position&&!graspJoints.has(name)) check(node.position.distanceTo(new THREE.Vector3(...pose.position)) < .001, `Frozen exported stowage: ${name}`);
+        }
+        // Held joint positions derive from the contact frame rather than a cached form pivot.
+        for (const held of spec.rig.heldWeapons || []) {
+          const wrist=loaded.scene.getObjectByName(held.hand),grip=loaded.scene.getObjectByName(held.grip);
+          const contact=wrist.localToWorld(new THREE.Vector3().fromArray(held.contact));
+          check(contact.distanceTo(grip.getWorldPosition(new THREE.Vector3()))<1e-4, `Exported grasp detached: ${held.node}`);
+          check(grip.scale.toArray().every((v,i)=>Math.abs(v*grip.parent.scale.getComponent(i)-1)<1e-5), `Exported grasp resized: ${held.node}`);
         }
       }
     }

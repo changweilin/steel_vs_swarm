@@ -1,0 +1,1104 @@
+{
+  "assets": {
+    "s01": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s01.js": "a7cec55df2be1fa3aad7d442220313e69ca1300218933a41b1148e1aed26277c",
+        "public/assets/models/reference/s01.glb": "12fb111dcb606a96be18725f514e6b22fb4ca1ffe79640883e8050985c847abc"
+      }
+    },
+    "t10": {
+      "exportClips": [
+        "run",
+        "idle",
+        "skill",
+        "ult",
+        "heavy",
+        "light",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_l": 0.10933289821124259,
+          "hip_r": 0.10933289821124259,
+          "shoulder_l": 0.22258066202301452,
+          "shoulder_r": 0.22258066202301452
+        },
+        "maximumContactError": 4.965068306494546e-16,
+        "maximumScaleError": 6.280369834735101e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t10.js": "1cb64e129d6899ee41c67b51756b02c942eb19623f09075755de97878112a73b",
+        "public/assets/models/reference/t10.glb": "6e724c1a3a26a5cb912149f60710928a9593bfafd94057431bf2a352b5d3f1c4"
+      }
+    },
+    "s02": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s02.js": "02e28f43d6ed02fdc38fdc9b854f26d0d1fdf5ec392a3e404d644b93fb31e24f",
+        "public/assets/models/reference/s02.glb": "66bd2526437d77af77c085fe81f1fbac44f2e70ffb1d6b833e5c059d400c98a8"
+      }
+    },
+    "s04": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s04.js": "8278cdb72cbdf4fb2e608ba696886c0309401b02df42b8f055ebd5a11e552988",
+        "public/assets/models/reference/s04.glb": "9e27f9e73d45ef369725abd3523942f504b757ac36d9c939ccda5c3f48f4df01"
+      }
+    },
+    "s05": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s05.js": "26ebc1d754d799e00dcdc66a3dfec696211c4ae23ccac7c6f319ed52ee2ee53e",
+        "public/assets/models/reference/s05.glb": "a9e00a034b7fddec8452330f0866701a1729ef1376e51d7f57d698fafbfaee8b"
+      }
+    },
+    "s08": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s08.js": "10f642bd563a15d05fccc51f1f9ca6c52ec8e998301b7b3e4fe52fe8b8a2196f",
+        "public/assets/models/reference/s08.glb": "007ad3ae362966da8fa2c8712ba454f729b62e5179e9c9dddf96a0e6d8347392"
+      }
+    },
+    "s11": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s11.js": "e49192d806aba712ddce4e25e27394386eacedfb5594b374c43720095d562548",
+        "public/assets/models/reference/s11.glb": "ed882a44b421058f3f38ed597961ca33c4d827ffe46ab2bc5c459e022f091ee7"
+      }
+    },
+    "s12": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s12.js": "ee0835f9d800df04d9b25db448ce3f8cba7750ef29c7962c0952967a04015e9d",
+        "public/assets/models/reference/s12.glb": "29fa0ceeee4d6d43410a0a7adac22861ac441729584d8ac98ac3bf683aa33fa8"
+      }
+    },
+    "t07": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {
+          "hind_hip_r": 0.10858124207336872,
+          "hind_hip_l": 0.10850913797515677,
+          "wing_r": 0.08804571120153415,
+          "wing_l": 0.08804477969634655
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [
+          [
+            1.1599218123564596,
+            0.25374182921127825,
+            0.1928363872973311,
+            0.18558380628860874
+          ],
+          [
+            1.1599218123564596,
+            0.25374182921127825,
+            0.1928363872973311,
+            0.18558380628860874
+          ]
+        ],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t07.js": "116388ba48511777674314a3f0bc4fc1db3bc4e3de57db789954380b8985646a",
+        "public/assets/models/reference/t07.glb": "d78ec594d2144f0f2f497ccdb35b6e7ae7fc0276466c716e1cb0240492b9c4ca"
+      }
+    },
+    "t08": {
+      "exportClips": [
+        "shield_deploy",
+        "shield_retract",
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult"
+      ],
+      "ground": {
+        "exposures": {
+          "fore_hip_r": 0.12967252801413648,
+          "fore_hip_l": 0.1263566468429016,
+          "hind_hip_r": 0.11137273947523707,
+          "hind_hip_l": 0.1113663343055411,
+          "wing_r": 0.07961209520139129,
+          "wing_l": 0.0796120489272032
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [
+          [
+            1.1599773884044093,
+            0.2537469420226553,
+            0.19284907237810833,
+            0.18559803504252964
+          ],
+          [
+            1.1599773884044093,
+            0.2537469420226553,
+            0.19284907237810833,
+            0.18559803504252964
+          ]
+        ],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t08.js": "8be3e0cbcd95655218e3ebe4cabbe77629ab4eb7f704881480ba5de9a2ce56a1",
+        "public/assets/models/reference/t08.glb": "2a1025b861671aff6b9173b3026fff20e827132764df6f58299e626f8e72284b"
+      }
+    },
+    "t09": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t09.js": "333936236f84063e06b9f16089800d127e525900dc805f7b0374f8ad32536602",
+        "public/assets/models/reference/t09.glb": "f43e8fab94a8b1194b382122b9378c32e7a1b5f4997f8190346973513397f002"
+      }
+    },
+    "m03": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {},
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m03.js": "3c70d8480b088f288b8dfb6722481a3f041ce7ec380b319630c688c6727d3f7a",
+        "public/assets/models/reference/m03.glb": "39c051c3b3203f83a79d14d8397f77ce0304e18195c35d7de2edda8bcec5551a"
+      }
+    },
+    "m04": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {
+          "wing_r": 0.08028164471272431,
+          "wing_l": 0.08028067883230328
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [
+          [
+            1.159987731170225,
+            0.7248998812789259,
+            0.5509889734586104,
+            0.4407914563943526
+          ],
+          [
+            1.159987731170225,
+            0.7248998812789259,
+            0.5509889734586104,
+            0.4407914563943526
+          ]
+        ],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m04.js": "97d6b13fa3570c833df0e566da1c2c3bd6b0ef7c1903820713346050c2e0ddea",
+        "public/assets/models/reference/m04.glb": "af5883ceed1c0351508ab382a6b5970fb958cd769af349255278b3b5547a1274"
+      }
+    },
+    "s06": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {
+          "shoulder_r": 0.33214286979364327,
+          "shoulder_l": 0.33214286979364327,
+          "leg_FL": 0.09729998282789942,
+          "leg_FR": 0.09729998282789942,
+          "leg_HL": 0.10350002861022944,
+          "leg_HR": 0.10350002861022933
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s06.js": "62dcbabc07f90ab8454487f574d74c3439960e2a9474a42c562c138bc69c58ed",
+        "public/assets/models/reference/s06.glb": "d6f0a76abf287526913c5bf9a60e9952af7824dfae17ad9a70f249d20548aeae"
+      }
+    },
+    "s07": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.1070270649733019,
+          "leg_FR": 0.1070248970270811,
+          "leg_HL": 0.10702489702707585,
+          "leg_HR": 0.10702706497330197,
+          "tent_0": 0.10870482285334693,
+          "tent_1": 0.08776010482956953,
+          "tent_2": 0.10870482285334693,
+          "tent_3": 0.08776010482956953
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s07.js": "d8eb3802752ab15372ffdf92e16b91843450d15d818499cec208c5a2a21a1908",
+        "public/assets/models/reference/s07.glb": "4af580f1211533e7924533707a75ff18a788854e6b5241303171e7285d9804ac"
+      }
+    },
+    "s09": {
+      "exportClips": [
+        "idle",
+        "run",
+        "shield_deploy",
+        "shield_retract",
+        "heavy",
+        "light",
+        "skill",
+        "ult"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.15437054180693088,
+          "shoulder_r": 0.23179013153947675,
+          "hip_l": 0.1543708113108737,
+          "shoulder_l": 0.2317924380744042
+        },
+        "maximumContactError": 4.965189522502828e-16,
+        "maximumScaleError": 3.1401849173675503e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s09.js": "ddf7068b95207b3a5f1d0dd5064fdbc87e45c7ed8e7596e48c5bdd3cb1a00025",
+        "public/assets/models/reference/s09.glb": "7f488eb7d1743e71f08feaa75e8738677706bb979de6d478a42a489dd0c65160"
+      }
+    },
+    "t01": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "skill",
+        "ult",
+        "light",
+        "heavy"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.1916216114784388,
+          "shoulder_r": 0.5041666625274579,
+          "hip_l": 0.1916216114784388,
+          "shoulder_l": 0.5041666625274579
+        },
+        "maximumContactError": 5.087681048627601e-16,
+        "maximumScaleError": 6.473657049138938e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t01.js": "a85cf79bac3805c44f1f9c4108f21b41349ac04b3debcf956f456999c701eb10",
+        "public/assets/models/reference/t01.glb": "564ec63738f795eeceebc8322976abcfa2056a9285f75726586ea0f6cbc37a6f"
+      }
+    },
+    "t02": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "skill",
+        "ult",
+        "light",
+        "heavy"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.08312500454659971,
+          "shoulder_r": 0.1998837146667497,
+          "hip_l": 0.08312500454659971,
+          "shoulder_l": 0.1998837146667497
+        },
+        "maximumContactError": 2.5438405243138006e-16,
+        "maximumScaleError": 4.775249788392736e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t02.js": "3f15ee1fe9d86aa83b6b6c71321be1657a3b6a85c5f3d09433569f0e01b91f5a",
+        "public/assets/models/reference/t02.glb": "a326adc60f1671f77dde9a62c9297a9385f2f230fea3322eae32347be0e72322"
+      }
+    },
+    "t03": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "skill",
+        "ult",
+        "light",
+        "heavy"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.2018771085795199,
+          "shoulder_r": 0.3683749917477488,
+          "hip_l": 0.20187710857951968,
+          "shoulder_l": 0.36965832512123453
+        },
+        "maximumContactError": 5.438959822042073e-16,
+        "maximumScaleError": 8.15843973306311e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t03.js": "93c68328f4c55e10f22ca4d2db7867bcd81edce43485a42bc64d4d44ab026f00",
+        "public/assets/models/reference/t03.glb": "bddd5202d2cbb3b676ae75b0c5bb1efd4dba5272ce6a666e6b6fda05731805f0"
+      }
+    },
+    "t04": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "skill",
+        "ult",
+        "light",
+        "heavy",
+        "run"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.0770705960560859,
+          "leg_FR": 0.0770705960560858,
+          "leg_HL": 0.08352001427829397,
+          "leg_HR": 0.08352001427829392
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t04.js": "1a61b15002a8175985b26bf4a1ff70f9c3d118f3df9980d3c9e29fa5291ebab7",
+        "public/assets/models/reference/t04.glb": "dfbf50c93c71688990d71c2c35fdf7993014d013935f84b90db07c48b2353d5e"
+      }
+    },
+    "t05": {
+      "exportClips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.07803704975461168,
+          "shoulder_r": 0.08270641527851752,
+          "hip_l": 0.07803703821211494,
+          "shoulder_l": 0.08270604404154569
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t05.js": "fe65a47c3f434e90c86cc7da156d467eb40109f5dbe3c91a9553128bb6dfd741",
+        "public/assets/models/reference/t05.glb": "655456e835792dd31655dac53364e6d149be0eaa97d4012e069bf4ef62a96bc9"
+      }
+    },
+    "t12": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "skill",
+        "ult",
+        "heavy",
+        "light"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.20155556413222786,
+          "shoulder_r": 0.3657142623042584,
+          "hip_l": 0.20155556413222786,
+          "shoulder_l": 0.3657142623042584
+        },
+        "maximumContactError": 2.7194799110210365e-16,
+        "maximumScaleError": 4.710277376051325e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t12.js": "1103ba887eea28e1e11dc69932b74e588b51f6941a386c49d53b326637c6cb13",
+        "public/assets/models/reference/t12.glb": "e74760fa2986ab08c5db96d0ac1279739c7503ea80d339f4dbc9f9813c2ad23e"
+      }
+    },
+    "m02": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_r": 0.17308858421563872,
+          "shoulder_r": 0.2688463906311056,
+          "hip_l": 0.17309705086116745,
+          "shoulder_l": 0.2659484849779523
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m02.js": "c0b7756a586b1d33502073a4e1107c7b339c6d8b5c08c043d5c51d71c1db3dbf",
+        "public/assets/models/reference/m02.glb": "38917733c14a4081a8b10290ca3b5ecac6fe184baea119d58cfa0681d3b537ed"
+      }
+    },
+    "m06": {
+      "exportClips": [
+        "idle",
+        "shield_deploy",
+        "shield_retract",
+        "skill",
+        "ult",
+        "light",
+        "heavy",
+        "run"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.17399999935810362,
+          "leg_FR": 0.17399999935810362,
+          "leg_HL": 0.1451500008950024,
+          "leg_HR": 0.1451500008950024
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m06.js": "88b0cab886a195f235ee94a4263c21384d450afbd991dc9087d6232cff9c1be1",
+        "public/assets/models/reference/m06.glb": "532067d63657a9ebb35a3155ee02df76906ef9c0aba0b4d9ee21ac26ca8f2c7f"
+      }
+    },
+    "m01": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "run",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
+        "light",
+        "heavy",
+        "flight_light",
+        "flight_heavy"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_l": 0.10090909061024539,
+          "shoulder_l": 0.11207860880075093,
+          "hip_r": 0.10090909061024539,
+          "shoulder_r": 0.11207860880075093
+        },
+        "maximumContactError": 4.967007407645019e-16,
+        "maximumScaleError": 6.280369834735101e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "hip_l": 0.1009090906102455,
+          "shoulder_l": 0.1052102560789292,
+          "hip_r": 0.10090909061024544,
+          "shoulder_r": 0.10957981805186512
+        },
+        "maximumContactError": 4.611102534756203e-16,
+        "maximumScaleError": 6.280369834735101e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m01.js": "d5ff6660c1e301c72597dd624376384cb02cb0896f894cc55abefee20e16b4aa",
+        "public/assets/models/reference/m01.glb": "0a482536634f368959a54615b4ba35868f324fed3930c2ba1a807d0b9a9a0aa3"
+      }
+    },
+    "s03": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "to_flight",
+        "to_ground",
+        "skill",
+        "ult",
+        "run",
+        "heavy",
+        "light"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.18260001448393148,
+          "leg_FR": 0.18260001448393148,
+          "leg_HL": 0.1844214146482699,
+          "leg_HR": 0.1844214146482699
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "leg_FL": 0.1846187078104673,
+          "leg_FR": 0.18410082094306413,
+          "leg_HL": 0.18506710613542166,
+          "leg_HR": 0.18506710613542543
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s03.js": "b517a5d78eff9cdf42488bb74db08d7ecfad27fa8fc3e5f3f589b4a8532430a6",
+        "public/assets/models/reference/s03.glb": "e657887d20be93fff7da4c592e831e101104ef4912558241f28450e5e19778e2"
+      }
+    },
+    "s10": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
+        "run",
+        "heavy",
+        "flight_heavy",
+        "light",
+        "flight_light"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.2306622702253182,
+          "leg_FR": 0.23046131131090225,
+          "leg_HL": 0.19424999977648455,
+          "leg_HR": 0.19424999977648444
+        },
+        "maximumContactError": 4.965068306494546e-16,
+        "maximumScaleError": 9.42055475210265e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "leg_FL": 0.23066227022531804,
+          "leg_FR": 0.23046131131090242,
+          "leg_HL": 0.2344229456357294,
+          "leg_HR": 0.23414881430184775,
+          "flap_l": 0.07672774644356137,
+          "flap_r": 0.09096368608511127
+        },
+        "maximumContactError": 4.965068306494546e-16,
+        "maximumScaleError": 5.551115123125783e-16,
+        "wingRanges": [
+          [
+            1.1599810600933196,
+            0.7249468307060987,
+            0.5509253655559604,
+            0.44079497492774977
+          ],
+          [
+            1.1599810600933196,
+            0.7249468307060987,
+            0.5509253655559604,
+            0.44079497492774977
+          ]
+        ],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/s10.js": "3267fb61549bcf34a465e5c7c8a8b26dbcb90adab4052708c218dda3b5c1c8a1",
+        "public/assets/models/reference/s10.glb": "d8ffa86887f49a9ab8c7a9e14ee499c9cf7448db1fe23085431f4209c00d1de8"
+      }
+    },
+    "t06": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_l": 0.09999999837441931,
+          "shoulder_l": 0.09874994896351708,
+          "hip_r": 0.09999999837441936,
+          "shoulder_r": 0.0987499489635173
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 8.005932084973442e-16,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "hip_l": 0.09999999837441936,
+          "shoulder_l": 0.09874994896352063,
+          "hip_r": 0.0999999983744192,
+          "shoulder_r": 0.09874994896352085
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 1.1322097734007351e-15,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t06.js": "4b850d82d73aa4d3a656fc01404e2d1b83ed6a2e497542ec13767f8a0da9a55a",
+        "public/assets/models/reference/t06.glb": "a31b5abdd75679023251149e455a6e5f3bcf92c1d735dbe96319cb015beea5f0"
+      }
+    },
+    "t11": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "run",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
+        "light",
+        "heavy",
+        "flight_light",
+        "flight_heavy"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_l": 0.1499999983744193,
+          "shoulder_l": 0.14874994896351734,
+          "hip_r": 0.1499999983744193,
+          "shoulder_r": 0.14874994896351734
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "hip_l": 0.15357142321917783,
+          "hip_r": 0.15357142321917783
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/t11.js": "a958e3335df37307416d7a8701500261f0f1f399b5965f0347d435a1695d1ed5",
+        "public/assets/models/reference/t11.glb": "7bb4fff5772f5ec608c9c029a124750682d45e8834abbb248036ad55fabf71f5"
+      }
+    },
+    "m05": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult"
+      ],
+      "ground": {
+        "exposures": {
+          "hip_l": 0.16301993328117348,
+          "shoulder_l": 0.1275555567034946,
+          "hip_r": 0.10266802771870687,
+          "shoulder_r": 0.1275555567034946
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "hip_l": 0.10099999468773857,
+          "shoulder_l": 0.10888889295083604,
+          "hip_r": 0.10099999468773474,
+          "shoulder_r": 0.10888889295083615
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m05.js": "b50fa0f12365710709306d37a10acb909675d685938873c07bea4a06240d5fc3",
+        "public/assets/models/reference/m05.glb": "f7066e3a8c35d9dae281616dbad028aa13bcd44e3d4d46e1fd230ba6eb2151a4"
+      }
+    },
+    "m07": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
+        "light",
+        "flight_light",
+        "heavy",
+        "flight_heavy",
+        "run"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.0840759984027245,
+          "leg_FR": 0.08407536781917824,
+          "leg_ML": 0.07562498933635675,
+          "leg_MR": 0.07562498933635675,
+          "leg_HL": 0.08305707466061296,
+          "leg_HR": 0.08305722907162139
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "leg_FL": 0.07738980377394711,
+          "leg_FR": 0.07739136398322088,
+          "leg_ML": 0.08216056153827389,
+          "leg_MR": 0.0821633956348724,
+          "leg_HL": 0.08216056153827411,
+          "leg_HR": 0.08216339563487218
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m07.js": "e13aedbf774dd4a6f2a0045049918c57a591ebcc7458b79a947fb76ced073f93",
+        "public/assets/models/reference/m07.glb": "03917eef3b4b109492863f62ee8f846dc9661481e5193be5c2171091e000c5a7"
+      }
+    },
+    "m08": {
+      "exportClips": [
+        "flight_idle",
+        "shield_deploy",
+        "shield_retract",
+        "flight_shield_deploy",
+        "flight_shield_retract",
+        "idle",
+        "to_flight",
+        "to_ground",
+        "skill",
+        "ult",
+        "flight_skill",
+        "flight_ult",
+        "light",
+        "flight_light",
+        "heavy",
+        "flight_heavy",
+        "run"
+      ],
+      "ground": {
+        "exposures": {
+          "leg_FL": 0.1250065320430761,
+          "leg_FR": 0.1250065320430761,
+          "leg_HL": 0.1172727393906976,
+          "leg_HR": 0.1172727393906976
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [],
+        "frames": 1440
+      },
+      "flight": {
+        "exposures": {
+          "leg_HL": 0.11902725185678292,
+          "leg_HR": 0.11902725277830378,
+          "flap_l": 0.08094389803511826,
+          "flap_r": 0.08429974194264966
+        },
+        "maximumContactError": 0,
+        "maximumScaleError": 0,
+        "wingRanges": [
+          [
+            1.1599571233115447,
+            0.7249392244791761,
+            0.5509866745555398,
+            0.44078755629022404
+          ],
+          [
+            1.1599571233115447,
+            0.7249392244791761,
+            0.5509866745555398,
+            0.44078755629022404
+          ]
+        ],
+        "frames": 1440
+      },
+      "hashes": {
+        "public/js/forge/assets/m08.js": "bf18ab25e2ca2ed4bd098824c19c2acc2d4d1502399859b1bb508defc6d91321",
+        "public/assets/models/reference/m08.glb": "cd90ef25fa4d8c2f272524548e61f30b8e9ce8b99022992275bdf4d1110d348e"
+      }
+    }
+  },
+  "gates": {
+    "structure": "pass",
+    "motion": "pass",
+    "independentExport": "pass",
+    "visual": "pending_image_inspection"
+  }
+}

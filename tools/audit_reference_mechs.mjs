@@ -230,8 +230,9 @@ try {
         root.traverse(node => { if (!found && node.isMesh && !node.userData.isOutline) found = node; });
         return found;
       };
-      const owned = firstMesh(unit.getObjectByName('gun_recoil'));
-      const copied = firstMesh(copy.group.getObjectByName('gun_recoil'));
+      const owned = firstMesh(unit.getObjectByName('gun'));
+      const copied = firstMesh(copy.group.getObjectByName('gun'));
+      check(owned && copied, `${id}: physical light emitter missing`);
       check(owned.geometry !== copied.geometry && owned.material !== copied.material, `${id}: independent units share disposable GPU resources`);
       const loaded = await new GLTFLoader().loadAsync(`/public/assets/models/reference/${id}.glb`);
       check(loaded.animations.length >= 8 && loaded.scene.getObjectByName('barrier'), `${id}: independent GLB load loses rig/clips`);

@@ -1,6 +1,6 @@
 {
-  "blend": "a12e634a1d4a44bb127b996d36bc1e891098fddcec0e7e38bd355ab89592bb4a",
-  "bones": 33,
+  "blend": "ac7aa704d30ebb3f7e206e7edf784c7f50739024290d7226f8ecd5dce077ab08",
+  "bones": 43,
   "clips": [
     "idle",
     "run",
@@ -25,55 +25,62 @@
     "articulation": {
       "waist": "waist",
       "heldWeapons": 2
-    }
+    },
+    "sealedCoreMeshes": 2
   },
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/m01-ec2a81437e72.blend",
+    "contractSourceHash": "ec2a81437e72f13ae797116c97d7a3b774ce0e765f07a91c3065881c42f6c0bf",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+  },
+  "deliveredShieldAlignment": null,
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,
   "exposedLimbBoundsInHullCoordinates": {
     "hip_l": {
       "min": [
-        0.002749994397163391,
+        0.1387999951839447,
         -3.8409926891326904,
         -0.2885189950466156
       ],
       "max": [
-        0.4972500205039978,
-        -0.5874667763710022,
+        0.7172499895095825,
+        -0.5829892158508301,
         0.47148099541664124
       ]
     },
     "hip_r": {
       "min": [
-        -0.4972500205039978,
+        -0.7172499895095825,
         -3.8409926891326904,
         -0.2885189950466156
       ],
       "max": [
-        -0.002749994397163391,
-        -0.5874667763710022,
+        -0.1387999951839447,
+        -0.5829892158508301,
         0.47148099541664124
       ]
     },
     "shoulder_l": {
       "min": [
-        0.26409095525741577,
-        -0.8998374342918396,
+        0.6266351342201233,
+        -0.8367373943328857,
         -0.4893280863761902
       ],
       "max": [
-        0.9819357395172119,
+        1.3719357252120972,
         1.200107216835022,
         0.05344105884432793
       ]
     },
     "shoulder_r": {
       "min": [
-        -0.9819357395172119,
-        -0.8998374342918396,
+        -1.3719357252120972,
+        -0.8367373943328857,
         -0.4893280863761902
       ],
       "max": [
-        -0.26409095525741577,
+        -0.6266351342201233,
         1.200107216835022,
         0.05344105884432793
       ]

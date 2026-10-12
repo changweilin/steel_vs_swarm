@@ -2,13 +2,13 @@
   "asset": "s02",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 9588,
-    "meshes": 28,
-    "joints": 18,
+    "triangles": 9500,
+    "meshes": 26,
+    "joints": 20,
     "source": {
-      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
+      "contract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c",
       "image": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859"
     }
   },
@@ -24,18 +24,23 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "f42a06bf837de865bee4a431ecaba20a0b02b0b3ee4f7019955043e9b2d40f4a",
-    "blend": "ec023e61495b4fe68e7d4f4d347ecc224847761b30f24c700a867257a03a6ce2",
-    "glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9"
+    "runtime": "02e28f43d6ed02fdc38fdc9b854f26d0d1fdf5ec392a3e404d644b93fb31e24f",
+    "blend": "d8aef13fd840c8145d2e0699c8f3b3cd8c5865f2e79a8fd72095f35f0c372e66",
+    "glb": "66bd2526437d77af77c085fe81f1fbac44f2e70ffb1d6b833e5c059d400c98a8"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass"
+  },
+  "reviewEvidence": {
+    "weapons": "out/weapon_revision/runtime/validation.json",
+    "visual": "out/weapon_revision/visual-review.json",
+    "delivery": "out/weapon_revision/delivery-validation.json"
   }
 }

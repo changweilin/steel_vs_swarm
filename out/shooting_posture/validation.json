@@ -1,0 +1,182 @@
+{
+  "source": {
+    "path": "public/js/anatomicalPose.js",
+    "sha256": "bd05d7c4a183e5bc9e7301e873235f5abdbc526e34ad34cff10a392d69b53bdc"
+  },
+  "assets": {
+    "s06": {
+      "blend": {
+        "path": "out/mech_reference/s06/s06.blend",
+        "sha256": "dc9f8f1aff2e1395946b56676a11b11286b3f0746cb5dde1a32df2eb6c43c287"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/s06.glb",
+        "sha256": "d120e133e3118e5d3e5469315efe8f0e745c931030af4d85bdd290c24ba5ee0d"
+      },
+      "samples": "833c9a6a205c0f2c6ef9516831780fd5ef21c060ba47cb9d903cf23896a0138a"
+    },
+    "t02": {
+      "blend": {
+        "path": "out/mech_reference/t02/t02.blend",
+        "sha256": "b4719270dfe45de9233a28184a8febd60ffb767ffe179e27cbb0a8175a08b74c"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t02.glb",
+        "sha256": "8a733455d3cb17680c09eecf65598dc58fdd5000eca073e0ed7170acbe663e95"
+      },
+      "samples": "1086f8bcb6ac132b29a88f35e0618456e5d1fe38d38071fd7175d411a6afc000"
+    },
+    "t06": {
+      "blend": {
+        "path": "out/morph_reference/t06/t06.blend",
+        "sha256": "cae5fa088d0de0d1776d147acba702e3622d4db4c1bc3a93d54753c4b30383fe"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t06.glb",
+        "sha256": "3cd6844ff6b07bb4cf5b187193099cdf3afb46bad48ccf468bff0531f0a69d30"
+      },
+      "samples": "cea84b093904bc194c42229b917d7bd9e63fba32da54b6a8b6e41f7cd4bd8594"
+    },
+    "s10": {
+      "blend": {
+        "path": "out/morph_reference/s10/s10.blend",
+        "sha256": "c042ddd7093af01c4f096bde5c3658e0fb7129376ee5e3e671baa871b4b94a50"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/s10.glb",
+        "sha256": "a3e19ed5ef0d4c24af3704cf18f768e7fd6beb35d26896d58b82f761c3ebc42f"
+      },
+      "samples": "c4b6344c619d927918a1f0a4b09b8d55fcf09a62f44ab85d00df57cde4933af3"
+    },
+    "s09": {
+      "blend": {
+        "path": "out/mech_reference/s09/s09.blend",
+        "sha256": "0f164977ff93190eb26f5be0c5b8e0ac248ca3fb4abfe7ca45a8312391279fec"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/s09.glb",
+        "sha256": "529d38ad95fb96577e880e3d230f72554af63f269ae61f83c94c94911973a354"
+      },
+      "samples": "e0f75700fc791fc066d1533ff8c4259939fa1fd19b9c3f87fd54e50a3a80ef05"
+    },
+    "t01": {
+      "blend": {
+        "path": "out/mech_reference/t01/t01.blend",
+        "sha256": "1a4b28adc6b123e28708c45ba6c44d2a0cdbd15bc86e6b88f4ae4e60789b03e0"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t01.glb",
+        "sha256": "e1da50a99954a9b64784f5c8b8ac703aa0a1677681d9b1318fd7c2c106d6c4a3"
+      },
+      "samples": "6c7f797fd4e079f83b169614c8ab8dc7de036bf08a6294a922d3ce843dc542a5"
+    },
+    "t03": {
+      "blend": {
+        "path": "out/mech_reference/t03/t03.blend",
+        "sha256": "414ac0deb6190d8dd0cffe5c1b1d0d8408687cf1c3e791e3bdd2227a2981b04f"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t03.glb",
+        "sha256": "d9fa8ab959e519aeff6b62b6a002be2ad8e7761a17f84043592162ec594573db"
+      },
+      "samples": "0431fe51883042848944dc300b458571e9c3abad18a8b825e4a36b9583fb1b82"
+    },
+    "t10": {
+      "blend": {
+        "path": "out/mech_reference/t10/t10.blend",
+        "sha256": "7acdbf1ae1c21429192f5f40deadd54c3ab1549ba67fb5adc5049b5a2dafd4d9"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t10.glb",
+        "sha256": "5d6cc109d5f6fa4abf8e3da25e860c3f6fd8b3163d750c4bea0c27772e663138"
+      },
+      "samples": "0c427925eac8640d9ca231d96b49f7a11c3ecf8f80ec0f9ddcd224195442a7ba"
+    },
+    "t12": {
+      "blend": {
+        "path": "out/mech_reference/t12/t12.blend",
+        "sha256": "1d4b9cf6c21ac4399989a2e412a4b2ae65e2e3b471dd986b42e434e675532121"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/t12.glb",
+        "sha256": "0919e497c73e05d2820ed6e837412dbc9600c60a1d12ff51d951058d2b2adda3"
+      },
+      "samples": "9658b264d473829fc102e58438fe348c1fdb5b12b88e67ad1c975b6fcf83689c"
+    },
+    "m01": {
+      "blend": {
+        "path": "out/morph_reference/m01/m01.blend",
+        "sha256": "cfef52dcf7980a089dbdd8c3429f6e9368be2d0dbc7ea83b615605f1e3d0bea9"
+      },
+      "glb": {
+        "path": "public/assets/models/reference/m01.glb",
+        "sha256": "e59108ff5046ab9018c3ab4e95e5810c88161ccbc263f64373564064b5d3eb26"
+      },
+      "samples": "02a44253d4ea27f1fc400ad89b84eebe2ab586a06239a80e0c56c55e25345478"
+    }
+  },
+  "checks": {
+    "runtimePosture": {
+      "status": "pass",
+      "evidence": "runtime-validation.json"
+    },
+    "bipedFrameRates": {
+      "status": "pass",
+      "assets": [
+        "t01",
+        "t02",
+        "t10",
+        "t12",
+        "m01",
+        "s09"
+      ],
+      "fps": [
+        30,
+        60,
+        144
+      ],
+      "evidence": "biped-posture-validation.json"
+    },
+    "bowContact": {
+      "status": "pass",
+      "evidence": "../fantasy_refinement/motion-validation.json"
+    },
+    "editableAnimation": {
+      "status": "pass",
+      "evidence": "../anatomical_motion/after/blender-validation.json"
+    },
+    "exportedAnimation": {
+      "status": "pass",
+      "evidence": "../anatomical_motion/after/export-validation.json"
+    },
+    "morphStructure": {
+      "status": "pass",
+      "evidence": "../morph_reference/source-validation.json"
+    },
+    "morphDestination": {
+      "status": "pass",
+      "evidence": "../morph_reference/runtime-validation.json"
+    },
+    "visualInspection": {
+      "status": "pass",
+      "evidence": [
+        "../fantasy_refinement/s06-cycle.png",
+        "../anatomical_motion/after/t02-heavy-120.png",
+        "../anatomical_motion/after/t06-heavy-120.png",
+        "../anatomical_motion/after/s10-heavy-120.png"
+      ]
+    }
+  },
+  "existingAuditFailures": [
+    {
+      "audit": "tools/audit_biped_posture.mjs",
+      "asset": "t06",
+      "baselineReproduced": true,
+      "reason": "The default light-fire test requires both forearms to point forward while t06 fires its tail-mounted light weapon."
+    },
+    {
+      "audit": "tools/audit_comment_discipline.mjs",
+      "reason": "The legacy CJK ratchet fails in unchanged public/js/game.js and public/js/mapSetupProgress.js."
+    }
+  ]
+}

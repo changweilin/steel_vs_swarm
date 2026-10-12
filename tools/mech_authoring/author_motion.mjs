@@ -12,7 +12,7 @@ const baseline = process.argv.includes('--baseline');
 const selected = process.argv.indexOf('--asset');
 const ids = selected < 0 ? Object.keys(CHARACTERS) : process.argv[selected + 1].split(',');
 const output = 'out/anatomical_motion/' + (baseline ? 'before' : 'after');
-const files = ['locomotion.js', 'anatomicalPose.js', 'forge/referenceAsset.js', 'gaitcurve.js', 'unitMotion.js'];
+const files = ['locomotion.js', 'anatomicalPose.js', 'forge/referenceAsset.js', 'forge/forge.js', 'gaitcurve.js', 'unitMotion.js', 'models.js'];
 const sources = {};
 for (const file of files) {
   if (baseline && file === 'anatomicalPose.js') continue;
@@ -50,24 +50,31 @@ try {
   for (const id of ids) {
     const sampled=await page.evaluate(async id=>{
       const {makeUnit}=await import('/public/js/models.js');
-      const {CHARACTERS,charKind}=await import('/public/js/data.js');
+      const {CHARACTERS,charKind,heroWeapon}=await import('/public/js/data.js');
       const {stepLocomotion,stepCombatFx}=await import('/public/js/locomotion.js');
       const {disposeTree}=await import('/public/js/toon.js');
       const {THREE,scene,camera,renderer}=window.motion;
       if(window.motion.unit){scene.remove(window.motion.unit);disposeTree(window.motion.unit);}
       const clips={},metrics={},pictures={};
       for(const form of charKind(id)==='morph'?['ground','flight']:['ground']) {
-        for(const action of ['idle','run','light','heavy']) {
+        for(const action of ['idle','run','light','heavy','skill','ult','shield_deploy','shield_retract']) {
           const unit=makeUnit(`hero:${charKind(id)}`,CHARACTERS[id].side,{ring:false,ch:id}).group;
           const ent={id,mesh:unit,sp:1,heroY:form==='flight'?5:0,flies:charKind(id)==='drone'};
-          let now=0;
+          let now=0,lastShot=-Infinity;
           const speed=action==='run'?(unit.userData.rig.top||10):0;
           const tick=(speed,slot)=>{
             now+=1/60;
-            if(slot)ent.fireFx={t0:now,slot};
+            if(slot && now-lastShot >= 1/heroWeapon(id,slot).rate) {
+              ent.fireFx={t0:now,slot};lastShot=now;
+            }
             stepCombatFx(ent,now,1/60);stepLocomotion(ent,1/60,now,0,-speed/60,0);unit.updateMatrixWorld(true);
           };
-          for(let i=0;i<240;i++)tick(speed, ['light','heavy'].includes(action)?action:null);
+          ent.df=action==='shield_retract';
+          const warmupSlot = action === 'light' && unit.userData.rig.hairFlick ? null
+            : ['light','heavy'].includes(action) ? action : null;
+          for(let i=0;i<240;i++)tick(speed, warmupSlot);
+          ent.df=action==='shield_deploy';
+          if(action==='skill'||action==='ult')ent.castFx={t0:now,slot:action==='skill'?'def':'atk'};
           const rig=unit.userData.rig;
           const frameCount=action==='idle'&&rig.tailSegs?.length>1?360:240;
           let authored;
@@ -79,12 +86,21 @@ try {
           const box=new THREE.Box3().setFromObject(unit),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3()),span=Math.max(size.x,size.y,size.z);
           camera.position.copy(center).add(new THREE.Vector3(span*1.25,size.y*.6,span*1.6));camera.lookAt(center);
           const frames=[];
+          const shieldLocal=new THREE.Matrix4(),shieldPosition=new THREE.Vector3(),shieldRotation=new THREE.Quaternion(),shieldScale=new THREE.Vector3();
           const head=rig.anatomical?.head || rig.head || authored.getObjectByName('sensor');
           const ranges={},start=head?.getWorldQuaternion(new THREE.Quaternion());
           let headAngle=0,forward=1,forearm=1;
           for(let frame=0;frame<=frameCount;frame++) {
             tick(speed,['light','heavy'].includes(action)?action:null);
-            frames.push(nodes.map(node=>[node.name,node.position.toArray(),node.quaternion.toArray(),node.scale.toArray()]));
+            frames.push(nodes.map(node=>{
+              // The shader guard replaces the body's membrane at runtime; keep the editable proxy on that same actor.
+              if(node.name==='barrier' && rig.shield?.barrier && rig.shield.barrier!==node) {
+                shieldLocal.copy(node.parent.matrixWorld).invert().multiply(rig.shield.barrier.matrixWorld)
+                  .decompose(shieldPosition,shieldRotation,shieldScale);
+                return [node.name,shieldPosition.toArray(),shieldRotation.toArray(),shieldScale.toArray()];
+              }
+              return [node.name,node.position.toArray(),node.quaternion.toArray(),node.scale.toArray()];
+            }));
             for(const node of nodes) {
               if(!node.matrixWorld.elements.every(Number.isFinite))throw new Error(id+': nonfinite '+node.name);
               const row=ranges[node.name]??={min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};
@@ -99,7 +115,7 @@ try {
               const shot=rig.anatomical?.shots[action];
               if(shot?.hand)forearm=Math.min(forearm,shot.hand.getWorldPosition(new THREE.Vector3()).sub(shot.elbow.getWorldPosition(new THREE.Vector3())).normalize().dot(direction));
             }
-            if(frame%30===0 && (rig.wings?.some(w=>w.hand) || rig.anatomical?.shots[action]) && action!=='idle') {
+            if(frame%30===0) {
               scene.add(unit);renderer.render(scene,camera);scene.remove(unit);
               pictures[name+'-'+frame]=renderer.domElement.toDataURL('image/png').split(',')[1];
             }

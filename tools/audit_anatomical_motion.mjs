@@ -1,6 +1,6 @@
 // The real registry and locomotion driver must preserve species motion and equipment clearance together.
-import { mkdir, writeFile } from 'node:fs/promises';
-import { chromiumOrNull, chromePath } from './pw.mjs';
+import { mkdir } from 'node:fs/promises';
+import { chromiumOrNull, chromePath, writeReview as writeFile } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 
 const root = 'out/mech_reference/motion';
@@ -161,9 +161,20 @@ try {
           if(direction.z<.95)throw new Error(`${id}/${form}/${slot}: active firing axis ${direction.z}`);
           const pose=unit.userData.rig.anatomical,shot=pose?.shots[slot];
           if(shot?.hand){
+            const turn=pose.body.reduce((sum,node)=>sum+node.quaternion.angleTo(pose.bases.find(base=>base.node===node).q),0);
+            if(turn<.70)throw new Error(`${id}/${form}/${slot}: firing body does not turn side-on (${turn})`);
+            const hand=pose.group.worldToLocal(shot.hand.getWorldPosition(new THREE.Vector3()));
+            const shoulder=pose.group.worldToLocal(shot.shoulder.getWorldPosition(new THREE.Vector3()));
+            if(Math.abs(hand.x)>Math.abs(shoulder.x)+1e-5)
+              throw new Error(`${id}/${form}/${slot}: firing hand does not brace toward the center of mass`);
             const forearm=shot.hand.getWorldPosition(new THREE.Vector3())
               .sub(shot.elbow.getWorldPosition(new THREE.Vector3())).normalize();
-            if(forearm.dot(direction)<.90)throw new Error(`${id}/${form}/${slot}: barrel diverges from the forearm`);
+            if(!shot.bow&&forearm.dot(direction)<.90)throw new Error(`${id}/${form}/${slot}: barrel diverges from the forearm`);
+            for(const [key,brace] of Object.entries(pose.shots))if(brace.alwaysForward){
+              const forearm=brace.hand.getWorldPosition(new THREE.Vector3()).sub(brace.elbow.getWorldPosition(new THREE.Vector3())).normalize();
+              const forward=new THREE.Vector3(0,0,1).applyQuaternion(unit.userData.rig.wpn[key].ref.getWorldQuaternion(new THREE.Quaternion()));
+              if(forearm.dot(forward)<.90)throw new Error(`${id}/${form}/${slot}: companion ${key} forearm does not follow its forward weapon`);
+            }
             const target=pose.group.getWorldQuaternion(new THREE.Quaternion()).multiply(pose.gaze);
             if(target.angleTo(pose.head.getWorldQuaternion(new THREE.Quaternion()))>1e-4)
               throw new Error(`${id}/${form}/${slot}: firing head turns away from the target`);

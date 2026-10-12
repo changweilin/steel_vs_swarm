@@ -1,0 +1,315 @@
+{
+  "inputs": {
+    "locomotion.js": "4acb6506e2e35eb9699dc953469dbe84078919f9cb0831db58f5989f0802db77",
+    "anatomicalPose.js": "4ee5424f06e3493e756d4fb786016c74ae840988e085fd6289b8da054c4bcee7",
+    "unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e",
+    "models.js": "1a1ff9fd5dd4cd2175b3551d97a7a4ee7f691f6bf994b75c0317706b8e82d3a9",
+    "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
+    "forge/referenceAsset.js": "5fc6f4453e832c3dfd357ebd65bb24d8622fa574a6d767406a9da1719d8747d4",
+    "forge/assets/s06.js": "a749222ed378b8be81afb86ea2707b721d3c126368e32ea5053c89f1cc2e2cb7",
+    "forge/assets/s07.js": "9b57b0ff986d45853c949dd2971e610614ab3b9c3e76865ae2478c2fe658ab59",
+    "forge/assets/s09.js": "643b722b3c621e45d2bed9a9776b6dbdcf5250cfd66696a20dd64692275950ee",
+    "forge/assets/m02.js": "1299ce61c2757c8ebd0280ca77b9f376abf23cb801f0f004f868bd1cfdb5181b",
+    "forge/assets/t12.js": "f76248af79389582c07357bafecd66c87d776eb0e20141d14b58211821d3b9c3",
+    "forge/assets/t03.js": "feb3c1e3de77c5181d307a1e00db93c71536d4a57912419fda032e8cb5a3db01",
+    "forge/assets/t06.js": "ab566d8b0211aa92db0f8cb982e702591a738989872f3b38427c7910c598566f",
+    "forge/assets/s10.js": "992100e5366ea7d6ab4ff07c9aa59478b38deeca5eacb8e84c4557afbb669e9f",
+    "forge/assets/t11.js": "5e665cbbed13513450baed051e1379fb71dd1b87d122e0ba4c65a715fe7318f7",
+    "forge/assets/m05.js": "4ecc45da256227109987519a13fa768175291bc4aea8967dae6a96383ff03d69",
+    "forge/assets/m07.js": "fd81e5d0fecf2e5cfa9799ac9d4184dba09a5430d8c52e42c4c2a3b6b1604c7b"
+  },
+  "metrics": {
+    "s06": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "s07": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "s09": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": 1.1754294493058564
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": 1.129268104388073
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": 1.059425244340269
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": 1.1754294493058564
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": 1.1754294493058564
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": 1.1754294493058564
+      }
+    },
+    "m02": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "t12": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "t03": {
+      "idle": {
+        "soleMargin": 0.08138381732311356,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": 0.042570810527260916,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": 0.06431630100645447,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": 0.07228202910170106,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": 0.0628980611894687,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": 0.06150044681843758,
+        "handGap": null
+      }
+    },
+    "t06": {
+      "idle": {
+        "soleMargin": 1.0677362597588331,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": 0.028124396428502507,
+        "handGap": null,
+        "maximumTurnBend": 2.1450935074600124
+      },
+      "light": {
+        "soleMargin": 1.130179878051672,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": 1.1549526507434758,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": 1.0703487800954277,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": 1.0722819023352748,
+        "handGap": null
+      }
+    },
+    "s10": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "t11": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "m05": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "m07": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    }
+  },
+  "gates": {
+    "structure": "pass",
+    "motion": "pass",
+    "visual": "pending_image_inspection"
+  }
+}

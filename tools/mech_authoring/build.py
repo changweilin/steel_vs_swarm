@@ -29,7 +29,8 @@ if 'inherit' in contract:
     contract = json.loads((HERE / contract['inherit']).read_text(encoding='utf8')) | contract
 assert args.asset == 'all' or args.asset in contract['assets'], 'Unknown asset: ' + args.asset
 sys.path.insert(0, str(HERE))
-from catalog import construct
+from catalog import construct, limb_girdles
+from artifacts import replace_artifact
 adapter = importlib.import_module(contract['authoring']['adapter']) if 'adapter' in contract['authoring'] else None
 combat = importlib.reload(importlib.import_module('combat')) if args.combat else None
 combat_intent = json.loads(Path(args.combat_data).read_text(encoding='utf8')) if args.combat else None
@@ -158,6 +159,7 @@ class Asset:
         self.nodes = {}
         self.materials = {}
         self.parts = []
+        self.emissions = {'light': [], 'heavy': []}
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=False)
         # A live MCP session must produce the same mesh/material names as a fresh build.
@@ -226,7 +228,53 @@ class Asset:
         faces += [(i, (i + 1) % n, (i + 1) % n + n, i + n) for i in range(n)]
         return self.mesh(name, parent, vertices, faces, material, at, .015 if depth > .06 else 0)
 
-    def tube(self, name, parent, radius, inner, length, at, material, axis='z', segments=16):
+    def joint(self, name, parent, at):
+        assert name not in self.nodes, 'Duplicate joint: ' + name
+        node = bpy.data.objects.new(name, None)
+        node.parent = self.nodes[parent] if parent else self.root
+        node.location = xyz(at)
+        bpy.context.collection.objects.link(node)
+        self.nodes[name] = node
+        self.spec['joints'].append([name, parent, list(at)])
+        return name
+
+    def emission(self, slot, parent, at, ref=None, payload=None, axis='z'):
+        name = self.joint('emission_' + slot + '_' + str(len(self.emissions[slot])), parent, at)
+        if axis != 'z':
+            self.spec['rig'].setdefault('emissionRest',{})[name]=[-math.pi/2,0,0] if axis=='y' else [0,math.pi/2,0]
+        roots = {node for weapon in self.spec['rig']['wpn'].values() for node in weapon['nodes']}
+        roots.update(self.spec['rig'].get('alternating', {}).get('weapons', []))
+        owner = self.nodes[parent]
+        recoil = None
+        while owner and owner != self.root:
+            if recoil is None and owner.name.endswith('_recoil'):
+                recoil = owner.name
+            if owner.name in roots:
+                ref = ref or owner.name
+                break
+            owner = owner.parent
+        ref = ref or self.spec['rig']['wpn'][slot]['ref']
+        side = next((held['hand'][-1].upper() for held in self.spec['rig'].get('heldWeapons', [])
+                     if held['node'] == ref), self.spec['rig'].get('weap', {}).get(slot, 'N'))
+        self.emissions[slot].append({'muzzle': name, 'ref': ref, 'recoil': recoil, 'side': side,
+                                     **({'payload': payload} if payload else {})})
+        return name
+
+    def finalize_emissions(self):
+        for slot, weapon in self.spec['rig']['wpn'].items():
+            if not self.emissions[slot]:
+                self.emission(slot, weapon['muzzle'], (0, 0, 0))
+        self.spec['rig']['weaponSequences'] = {slot: entries for slot, entries in self.emissions.items() if entries}
+        visibility=self.spec['rig'].setdefault('visibilityControls',[])
+        visibility.extend(entry['payload'] for entries in self.emissions.values() for entry in entries if entry.get('payload'))
+        for slot, entries in self.spec['rig']['weaponSequences'].items():
+            self.spec['rig']['wpn'][slot]['muzzle'] = entries[0]['muzzle']
+        for track in self.spec['motion']['fire']:
+            slots=[slot for slot,entries in self.emissions.items() if any(entry['recoil']==track['node'] for entry in entries)]
+            if len(slots)==1:
+                track['slot']=slots[0]
+
+    def tube(self, name, parent, radius, inner, length, at, material, axis='z', segments=16, emission=None):
         vertices = []
         for z, r in [(-length / 2, radius), (length / 2, radius),
                      (-length / 2, inner), (length / 2, inner)]:
@@ -241,7 +289,12 @@ class Asset:
                       (i + 2 * segments, i + 3 * segments, j + 3 * segments, j + 2 * segments),
                       (i, i + 2 * segments, j + 2 * segments, j),
                       (i + segments, j + segments, j + 3 * segments, i + 3 * segments)]
-        return self.mesh(name, parent, vertices, faces, material, at)
+        obj = self.mesh(name, parent, vertices, faces, material, at)
+        if emission:
+            tip = list(at)
+            tip['xyz'.index(axis)] += length / 2
+            self.emission(emission, parent, tip, axis=axis)
+        return obj
 
     def disk(self, name, parent, radius, depth, at, material, axis='z', segments=12):
         vertices = []
@@ -327,14 +380,14 @@ class Asset:
             self.tube('Rocket pod collar', pod, .27, .22, .08, (0, 0, .48), 'gold')
             for j in range(6):
                 a = j * math.tau / 6
-                self.tube('Rocket cell', pod, .072, .052, .4, (.16 * math.cos(a), .16 * math.sin(a), .44), 'steel', segments=10)
+                self.tube('Rocket cell', pod, .072, .052, .4, (.16 * math.cos(a), .16 * math.sin(a), .44), 'steel', segments=10, emission='heavy')
                 self.disk('Rocket warhead', pod, .042, .045, (.16 * math.cos(a), .16 * math.sin(a), .46), 'gold', segments=8)
             self.box('Rocket port shutter', 'rocket_gate_l' if side < 0 else 'rocket_gate_r', (.42, .025, .2), (0, 0, .075), 'gold', .008)
         from catalog import compact_emitters
         compact_emitters(self)
         self.loft('Gun gimbal cradle', 'gun', [(-.16, .26, .29), (.25, .22, .24)], 'steel', axis='z')
         self.tube('Coaxial nose gun', 'gun_recoil', .083, .048, .77, (0, 0, .53), 'steel', segments=12)
-        self.tube('Muzzle brake', 'gun_recoil', .12, .049, .11, (0, 0, .93), 'dark')
+        self.tube('Muzzle brake', 'gun_recoil', .12, .049, .11, (0, 0, .93), 'dark', emission='light')
         self.disk('Gun muzzle glow', 'light_muzzle', .041, .008, (0, 0, 0), 'glow')
         for z in [-.25, .08, .4]:
             for side in [-1, 1]:
@@ -400,15 +453,16 @@ class Asset:
             self.loft('Upper arm armor', sh, [(-.84, .31, .37), (-.38, .39, .44), (-.22, .42, .43)], 'shade')
             self.loft('Forearm enclosure', elbow, [(-p['foreArm'] + .12, .32, .36), (-.28, .49, .5), (-.08, .39, .38)], 'armor')
             self.box('Forearm steel tendon', elbow, (.1, .51, .11), (side * .17, -.45, -.22), 'steel', .018)
-            self.box('Palm', wrist, (.27, .3, .16), (0, -.08, .01), 'shade')
-            for j in range(4):
-                self.box('Finger lower', wrist, (.046, .16, .075), (-.09 + j * .061, -.27, .042), 'dark', .009)
-                self.box('Finger armor', wrist, (.043, .1, .068), (-.09 + j * .061, -.21, .075), 'armor', .009)
-            self.box('Thumb', wrist, (.085, .19, .12), (side * .19, -.02, .07), 'armor', .01)
+            if not any(h['hand']==wrist for h in self.spec['rig'].get('heldWeapons',[])):
+                self.box('Palm', wrist, (.27, .3, .16), (0, -.08, .01), 'shade')
+                for j in range(4):
+                    self.box('Finger lower', wrist, (.046, .16, .075), (-.09 + j * .061, -.27, .042), 'dark', .009)
+                    self.box('Finger armor', wrist, (.043, .1, .068), (-.09 + j * .061, -.21, .075), 'armor', .009)
+                self.box('Thumb', wrist, (.085, .19, .12), (side * .19, -.02, .07), 'armor', .01)
         self.loft('Right forearm gun housing', 'gun', [(-.29, .42, .39), (.22, .5, .49), (.43, .37, .34)], 'dark', axis='z')
         for j in range(6):
             th = math.tau * j / 6
-            self.tube('Rotary gun barrel ' + str(j), 'gun_spin', .048, .025, .78, (.12 * math.cos(th), .12 * math.sin(th), .42), 'steel', segments=10)
+            self.tube('Rotary gun barrel ' + str(j), 'gun_spin', .048, .025, .78, (.12 * math.cos(th), .12 * math.sin(th), .42), 'steel', segments=10, emission='light')
         for z in [.08, .63, .84]:
             self.tube('Barrel retaining ring', 'gun_spin', .198, .158, .06, (0, 0, z), 'dark')
         weapon_grips(self)
@@ -418,7 +472,7 @@ class Asset:
             self.box('Launcher dorsal armor',launcher,(.78,.09,.93),(0,.43,0),'armor')
             for x in [-.16,.16]:
                 for y in [-.23,0,.23]:
-                    self.tube('Forward shoulder launch cell',launcher,.112,.088,.43,(x,y,.43),'dark','z',12)
+                    self.tube('Forward shoulder launch cell',launcher,.112,.088,.43,(x,y,.43),'dark','z',12, emission='heavy')
                     self.disk('Shoulder missile nose',launcher,.07,.035,(x,y,.48),'steel')
             self.box('Hinged launcher lid',lid,(.71,.045,.93),(0,.015,.44),'dark')
         self.disk('Single flush offhand elbow transducer','shield_leaf_l',.17,.065,(0,0,0),'dark','x',16)
@@ -478,6 +532,9 @@ class Asset:
             node.location = xyz(at)
             node.rotation_euler = (0, 0, 0)
             node.scale = (1, 1, 1)
+        for name, angles in self.spec['rig'].get('emissionRest',{}).items():
+            for axis, value in zip('xyz',angles):
+                self.rotate(self.nodes[name],axis,value)
         if 'forms' not in self.spec:
             rig = self.spec['rig']
             for side in ['L', 'R']:
@@ -507,10 +564,28 @@ class Asset:
         if rig.get('rider'):
             self.rider_pose()
         if rig.get('archery'):
-            self.aim_hands(0)
-            self.archery_pose(rig['archery']['restDraw'])
+            self.nodes[rig['archery']['arrow']].location = xyz(next(at for name,_,at in self.spec['joints'] if name==rig['archery']['arrow']))
+        for side, sign in [('L',1),('R',-1)]:
+            if rig.get('stance'):
+                self.rotate(self.nodes[rig['leg'+side]],'y',sign*rig['stance']['toeOut'])
+                self.rotate(self.nodes[rig['leg'+side]],'z',sign*rig['stance']['hipSplay'])
+        for weapon in rig.get('stowedWeapons', []):
+            node = self.nodes[weapon['node']]
+            for axis, angle in zip('xyz',weapon['rotation']):
+                self.rotate(node,axis,node.rotation_euler[{'x':0,'y':2,'z':1}[axis]]+angle)
+            node.scale = (weapon['scale'],)*3
         if hasattr(self, 'combat'):
             combat.reset(self)
+        self.grip_pose()
+
+    def grip_pose(self):
+        positions={name:at for name,_,at in self.spec['joints']}
+        for held in self.spec['rig'].get('heldWeapons',[]):
+            node,grip=self.nodes[held['node']],self.nodes[held['grip']]
+            anchor=xyz(positions[held['grip']])
+            node.location=xyz(held['contact'])-node.rotation_euler.to_quaternion() @ anchor
+            grip.location=Vector(tuple(anchor[i]/node.scale[i] for i in range(3)))
+            grip.scale=Vector(tuple(1/node.scale[i] for i in range(3)))
 
     def anatomy_pose(self, clip, t):
         rig = self.spec['rig']
@@ -765,7 +840,7 @@ class Asset:
             aim = max(0, min(1, (extension - launcher['rotateStart']) / (1 - launcher['rotateStart'])))
             self.rotate(self.nodes[launcher['pivot']], 'x', math.pi / 2 * aim)
         self.aim_hands(math.sin(math.pi*u)**2 if clip in ('light','heavy','skill','ult') else 0)
-        if rig.get('archery'):
+        if rig.get('archery') and clip == 'light':
             bow = rig['archery']
             draw = 0
             if clip == 'light':
@@ -777,8 +852,12 @@ class Asset:
                     draw = 1-phase*phase*(3-2*phase)
                 self.nodes['gun_recoil'].scale = ((.001 if .58<=u<.80 else 1),)*3
             self.archery_pose(bow['restDraw']+(bow['fullDraw']-bow['restDraw'])*draw)
+        for weapon in rig.get('stowedWeapons', []):
+            weight = math.sin(math.pi*u)**2 if clip==weapon['slot'] else 0
+            self.nodes[weapon['node']].scale = (weapon['scale']+(1-weapon['scale'])*weight,)*3
         if hasattr(self, 'combat'):
             combat.pose(self, clip, t)
+        self.grip_pose()
 
     def animations(self):
         clips = self.spec.get('clips', ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract'])
@@ -853,7 +932,7 @@ class Asset:
         output = RUNTIME / (self.spec['id'] + '.js')
         pending = output.with_suffix('.js.tmp')
         pending.write_text('// Generated by tools/mech_authoring/build.py; edit the owning contract or builder.\nexport default ' + json.dumps(data, separators=(',', ':')) + ';\n', encoding='utf8')
-        pending.replace(output)
+        replace_artifact(pending, output)
         self.batches = list(batches.values())
         return output, {'triangles': triangles, 'meshes': len(batches), 'joints': len(self.nodes), 'source': data['source']}
 
@@ -918,7 +997,7 @@ class Asset:
         temporary = directory / (name + '.render.png')
         bpy.context.scene.render.filepath = str(temporary)
         bpy.ops.render.render(write_still=True)
-        temporary.replace(target)
+        replace_artifact(temporary, target)
 
 
 for spec in contract['assets'].values():
@@ -933,6 +1012,8 @@ for spec in contract['assets'].values():
         construct(asset)
     else:
         asset.drone() if spec['kind'] == 'aerial' else asset.mech()
+    limb_girdles(asset)
+    asset.finalize_emissions()
     asset.armature()
     if args.combat:
         combat.construct(asset, combat_intent[spec['id']], xyz)
@@ -944,7 +1025,9 @@ for spec in contract['assets'].values():
     if args.no_render:
         asset.setup_render()
     views = [] if args.no_render else asset.render(directory)
-    bpy.ops.wm.save_as_mainfile(filepath=str(blend))
+    temporary_blend = blend.with_suffix('.build.blend')
+    bpy.ops.wm.save_as_mainfile(filepath=str(temporary_blend))
+    replace_artifact(temporary_blend, blend)
     asset.export_selection()
     glb = EXPORT / (spec['id'] + '.glb')
     temporary_glb = glb.with_suffix('.export.glb')
@@ -954,7 +1037,7 @@ for spec in contract['assets'].values():
                              export_animations=True, export_animation_mode='NLA_TRACKS',
                              export_optimize_animation_keep_anim_object=bool(spec['rig'].get('groundWings') or spec['rig'].get('archery')),
                              export_nla_strips_merged_animation_name='Animation', export_force_sampling=True)
-    temporary_glb.replace(glb)
+    replace_artifact(temporary_glb, glb)
     report = {'asset': spec['id'], 'blender': bpy.app.version_string, 'measurements': measured,
               'clips': clips, 'renders': views, 'hashes': {'runtime': digest(output), 'blend': digest(blend), 'glb': digest(glb)},
               'gates': {'structure': 'pass', 'resources': 'pass', 'geometry': 'pending_visual_review',
@@ -962,5 +1045,5 @@ for spec in contract['assets'].values():
                         'destination': 'pending_browser_review', 'user_signoff': contract['review']['signoff']}}
     pending_report = directory / 'validation.json.tmp'
     pending_report.write_text(json.dumps(report, indent=2), encoding='utf8')
-    pending_report.replace(directory / 'validation.json')
+    replace_artifact(pending_report, directory / 'validation.json')
     print('ASSET_RESULT ' + json.dumps({'id': spec['id'], **measured, 'glb': str(glb)}), flush=True)

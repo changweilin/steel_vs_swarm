@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF, lanceR } from './data.js';
 import { makeUnit, heroTargetH, measureBox } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
+import { fireUnitMotion, stepUnitSpinners, fireReferenceWeapon } from './unitMotion.js';
 import { buildBaseBattery } from './buildingUnitModels.js';
 import { updateCelLight, disposeTree } from './toon.js';
 import { unitShotStyle, unitShotFx, starburst, shockRing, impactBurst, explosionBurst, beamLine, gundamBeam, ionBreath, projectileMesh, stepProjectileFx } from './vfx.js';
@@ -367,7 +367,8 @@ export class CharPreview {
     const t0 = this._now();
     this._ent.fireFx = { t0, slot: heavy ? 'heavy' : 'light' };
     const data = this.unit?.userData;
-    const muzzle = data?.turretMuzzles?.[this._unitMuzzleIndex] || data?.rig?.muzzles?.light?.n;
+    for (const rig of data?.morph ? [data.morph.ground,data.morph.air] : [data?.rig]) fireReferenceWeapon(rig,this._ent.fireFx);
+    const muzzle = data?.turretMuzzles?.[this._unitMuzzleIndex] || data?.rig?.wpn?.[heavy ? 'heavy' : 'light']?.muz || data?.rig?.muzzles?.light?.n;
     fireUnitMotion(data?.rig, muzzle, t0);
     if (heavy) this._ent.heavyFx = { phase: 'fire', t0 };
   }

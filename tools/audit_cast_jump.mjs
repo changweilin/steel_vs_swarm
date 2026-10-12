@@ -3,12 +3,17 @@
 // 用法:node tools/audit_cast_jump.mjs
 // ① 32 角 × castFx(skill/ult × 全向/定向)跑到自清、無 NaN
 // ② heroY 拋物線兩輪:落地衝擊 landK MUST 觸發(非 aerial)
-// ③ morph 1.69m tap 小跳 MUST NOT 觸發變形(L.morph 保持 ~0)
+// ③ A 1.69m tap jump MUST NOT start a morph (mesh.userData.morph.m remains ~0).
 // ④ 差分洩漏:同角色對照組(從未施法)逐節點比對旋轉 —— 任何未每幀重賦的通道洩漏都會現形
 // ⑤ 靜止後包圍盒高度回歸基線 ±20%(aerial 免驗)
 // ⑥ 展示台共用 spawnCastFx 跑完整個 fade / cleanup 生命週期,攔截首幀 ReferenceError
+// Interrupted/replaced casts and defense during full morph cycles must recover both trees.
+// SVS_POSE_FPS selects the timestep; recovery uses elapsed time at 30/60/144 fps.
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 import { readFile } from 'node:fs/promises';
+
+const fps = Number(process.env.SVS_POSE_FPS || 60);
+if (!Number.isFinite(fps) || fps < 30 || fps > 144) throw new Error('SVS_POSE_FPS must be between 30 and 144');
 
 // 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
 // 在那裡驗到的是別份程式碼而且不會報錯。
@@ -47,7 +52,7 @@ if (process.argv.includes('--break-vfx-ease')) {
 }
 await page.goto((process.env.SVS_URL || 'http://localhost:8620'), { waitUntil: 'networkidle' });
 
-const report = await page.evaluate(async () => {
+const report = await page.evaluate(async (fps) => {
   const THREE = await import('three');
   const { makeUnit } = await import('/public/js/models.js');
   const { stepLocomotion } = await import('/public/js/locomotion.js');
@@ -82,13 +87,28 @@ const report = await page.evaluate(async () => {
       const A = { mesh: meshA, heroY: 0 };
       const B = { mesh: meshB, heroY: 0 };
       let t = 100;
-      const dt = 1 / 60;
+      const dt = 1 / fps;
       const step = () => {
         t += dt;
         stepLocomotion(A, dt, t, meshA.position.x, meshA.position.z, meshA.rotation.y);
         stepLocomotion(B, dt, t, meshB.position.x, meshB.position.z, meshB.rotation.y);
       };
-      for (let i = 0; i < 90; i++) step();
+      const advance = seconds => { for (let i = 0; i < Math.ceil(seconds / dt); i++) step(); };
+      const comparePose = stage => {
+        const fa = flat(meshA), fb = flat(meshB);
+        if (fa.length !== fb.length) { r.ok = false; r.issues.push(`${stage}: structure mismatch (${fa.length}/${fb.length})`); return; }
+        for (let i = 0; i < fa.length; i++) {
+          let delta = 0;
+          for (const channel of ['rotation', 'position', 'scale']) {
+            for (const axis of ['x', 'y', 'z']) delta += Math.abs(fa[i][channel][axis] - fb[i][channel][axis]);
+          }
+          if (!Number.isFinite(delta) || delta > 6e-3) {
+            r.ok = false; r.issues.push(`${stage}: pose leak @${fa[i].name || fa[i].type}#${i} Δ=${delta.toFixed(4)}`);
+          }
+        }
+      };
+      advance(1.5);
+      r.castSig = meshA.userData.rig.castSig ? `${meshA.userData.rig.castSig.omni}/${meshA.userData.rig.castSig.dir}` : '(預設)';
       const base = bboxH(meshA);
 
       // ① 施法四組合
@@ -96,7 +116,7 @@ const report = await page.evaluate(async () => {
         for (const dir of [null, { x: 0, z: -1 }]) {
           A.castFx = { t0: t, slot, dir };
           let frames = 0;
-          while (A.castFx && frames < 200) { step(); frames++; }
+          while (A.castFx && frames < Math.ceil(4 / dt)) { step(); frames++; }
           if (A.castFx) { r.ok = false; r.issues.push(`castFx 未自清(${slot}/${dir ? '定向' : '全向'})`); A.castFx = null; }
           const nan = hasNaN(meshA);
           if (nan) { r.ok = false; r.issues.push(`施法 NaN @${nan}(${slot}/${dir ? '定向' : '全向'})`); }
@@ -117,7 +137,7 @@ const report = await page.evaluate(async () => {
           r: Math.min(a.r || 8, 12), rvCap: 12, dur: a.dur, scale: 6,
         });
         if (!effects.length) throw new Error(`Missing cast presentation: ${id}.${slot}`);
-        for (let frame = 0; frame < 300 && effects.length; frame++) {
+        for (let frame = 0; frame < Math.ceil(5 / dt) && effects.length; frame++) {
           for (let i = effects.length - 1; i >= 0; i--) {
             const e = effects[i];
             e.ttl -= dt;
@@ -148,7 +168,7 @@ const report = await page.evaluate(async () => {
           landMax = Math.max(landMax, A.loco?.landK || 0);
         }
         A.heroY = 0;
-        for (let i = 0; i < 30; i++) { step(); landMax = Math.max(landMax, A.loco?.landK || 0); }
+        for (let i = 0; i < Math.ceil(.5 / dt); i++) { step(); landMax = Math.max(landMax, A.loco?.landK || 0); }
       }
       if (hasNaN(meshA)) { r.ok = false; r.issues.push('跳躍 NaN'); }
       r.landMax = +landMax.toFixed(2);
@@ -160,44 +180,64 @@ const report = await page.evaluate(async () => {
         for (let i = 0; i <= Math.round(T / dt); i++) {
           A.heroY = Math.max(0, 1.69 * Math.sin((Math.PI * i * dt) / T));
           step();
-          morphMax = Math.max(morphMax, A.loco?.morph || 0);
+          morphMax = Math.max(morphMax, meshA.userData.morph.m);
         }
         A.heroY = 0;
         r.morphMax = +morphMax.toFixed(3);
-        if (morphMax > 0.05) { r.ok = false; r.issues.push(`tap 小跳誤觸變形(L.morph max=${morphMax.toFixed(2)})`); }
+        if (morphMax > 0.05) { r.ok = false; r.issues.push(`tap 小跳誤觸變形(M.m max=${morphMax.toFixed(2)})`); }
       }
 
       // ④ 靜止收斂後:差分洩漏 + 包圍盒回歸
-      for (let i = 0; i < 150; i++) step();
-      const fa = flat(meshA), fb = flat(meshB);
-      if (fa.length !== fb.length) { r.issues.push(`對照組結構不一致(${fa.length}/${fb.length}),跳過差分`); }
-      else {
-        for (let i = 0; i < fa.length; i++) {
-          const da = Math.abs(fa[i].rotation.x - fb[i].rotation.x)
-            + Math.abs(fa[i].rotation.y - fb[i].rotation.y)
-            + Math.abs(fa[i].rotation.z - fb[i].rotation.z)
-            + Math.abs(fa[i].position.y - fb[i].position.y);
-          if (da > 6e-3) { r.ok = false; r.issues.push(`通道洩漏 @${fa[i].name || fa[i].type}#${i} Δ=${da.toFixed(4)}`); }
-        }
-      }
+      advance(2.5);
+      comparePose('cast/jump recovery');
       const after = bboxH(meshA);
       r.base = +base.toFixed(3); r.after = +after.toFixed(3);
       if (rig?.kind !== 'aerial' && Math.abs(after - base) / base > 0.2) {
         r.ok = false; r.issues.push(`包圍盒高度未回歸:${base.toFixed(2)} → ${after.toFixed(2)}`);
       }
+
+      for (const fraction of [.2, .5, .85]) {
+        A.castFx = { t0: t, slot: 'def', dir: null };
+        advance(meshA.userData.rig.combat.clips.def.duration * fraction);
+        A.castFx = { t0: t, slot: 'atk', dir: { x: 0, z: -1 } };
+        advance(meshA.userData.rig.combat.clips.atk.duration * fraction);
+        A.castFx = null;
+        advance(2.5);
+        comparePose(`interrupted cast ${fraction}`);
+      }
+      if (kind === 'morph') {
+        for (let cycle = 0; cycle < 2; cycle++) {
+          A.df = true;
+          advance(.5);
+          A.heroY = B.heroY = 5;
+          A.castFx = { t0: t, slot: 'def', dir: null };
+          advance(3);
+          if (meshA.userData.morph.m < .99) { r.ok = false; r.issues.push('Full flight morph did not execute'); }
+          A.df = false; A.castFx = null;
+          advance(2.5);
+          comparePose(`flight recovery ${cycle}`);
+          A.heroY = B.heroY = 0;
+          A.castFx = { t0: t, slot: 'atk', dir: { x: 0, z: -1 } };
+          advance(.2);
+          A.castFx = null;
+          advance(3);
+          comparePose(`ground recovery ${cycle}`);
+        }
+      }
+      disposeTree(meshA); disposeTree(meshB);
     } catch (e) {
       r.ok = false; r.issues.push('例外:' + e.message);
     }
     out.push(r);
   }
   return out;
-});
+}, fps);
 
 let fail = 0;
 for (const r of report) {
   if (r.ok) console.log(`✅ ${r.id} (${r.kind}/${r.rigKind}) sig=${r.castSig} land=${r.landMax}${r.morphMax != null ? ' morphTap=' + r.morphMax : ''} h ${r.base}→${r.after}`);
   else { fail++; console.log(`❌ ${r.id} (${r.kind}/${r.rigKind}) ${r.issues.slice(0, 6).join(' | ')}`); }
 }
-console.log(`\n${report.length - fail}/${report.length} 通過`);
+console.log(`\n${report.length - fail}/${report.length} 通過 (${fps} fps)`);
 await browser.close();
 process.exit(fail ? 1 : 0);

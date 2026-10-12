@@ -1,0 +1,161 @@
+{
+  "inputs": {
+    "locomotion.js": "bcece282327405b44b9c8d84c7942553422ab3b6f686cbe3df48b9a21a3c834a",
+    "anatomicalPose.js": "e5928d7fe6f4b2d978df4f6b14373654d37fe9f5ad604c1b4039ffc896efedf4",
+    "unitMotion.js": "9eb808b34abcd9249fd9e5217f21c98798731e68c69228e24a81797642347a0e",
+    "models.js": "292acf92bee840d42d04f936b08643d13c8931de7e1181fe8101c1954f5c1790",
+    "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
+    "forge/referenceAsset.js": "5fc6f4453e832c3dfd357ebd65bb24d8622fa574a6d767406a9da1719d8747d4",
+    "forge/assets/s06.js": "de206f22a6f0dcdafbaecc25465ea4f423079eca72e4c13148ded2ea576f6886",
+    "forge/assets/s07.js": "b06a3d2d0edfac72829245de3736a7e7c0072c20801481921ee909a3f8201695",
+    "forge/assets/t06.js": "37461764299fa0c843b10dfb11d169c459bcd200c560b8de2af49f45e9a29e7d",
+    "forge/assets/m05.js": "274f7d398a01aa796172c3387136e232b5cfb6d290d631db8bfff35dc0151050",
+    "forge/assets/m07.js": "96056a26bbf33d1a5abd62c919f3e1bfe12154c4c5a9d76f9884589bf0d2c29c"
+  },
+  "metrics": {
+    "s06": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "s07": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "t06": {
+      "idle": {
+        "soleMargin": 1.0855038205116154,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": 0.011747797232579238,
+        "handGap": null,
+        "maximumTurnBend": 2.1450935074600124
+      },
+      "light": {
+        "soleMargin": 1.1699543148912683,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": 1.1687372484556084,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": 1.0855038205116154,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": 1.0855038205116154,
+        "handGap": null
+      }
+    },
+    "m05": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    },
+    "m07": {
+      "idle": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "run": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "light": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "heavy": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "def": {
+        "soleMargin": null,
+        "handGap": null
+      },
+      "atk": {
+        "soleMargin": null,
+        "handGap": null
+      }
+    }
+  },
+  "gates": {
+    "structure": "pass",
+    "motion": "pass",
+    "visual": "pass",
+    "user_signoff": "pending_user_review"
+  },
+  "visualReview": {
+    "shape.png": "fd8a33cc0b4b7070a243e62515ef5fd8e3eb6e2ad3989ba4c0051ff87f82a079",
+    "actions.png": "2bf363f875babbd1a45d713e3bd883057ab39a97b0ee6312a9f183cd097e6664",
+    "s07-run-cycle.png": "c4d74f0c00f73905b05c511b596aecaee0352658dda9e2ebc4954f020a40ce0b",
+    "t06-run-cycle.png": "d83e2ed12d31527798bb820d7e848a59f6db56f4a2b98ccc8724e8ab697400da",
+    "overview.png": "53ea7d9cec7c87072506e8d9e88dbbb25cec9d7deebfc35c60600a511b966ace"
+  }
+}

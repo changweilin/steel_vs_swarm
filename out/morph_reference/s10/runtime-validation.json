@@ -1,24 +1,24 @@
 {
   "source": {
-    "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-    "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-    "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+    "contract": "36dca79aa62df1c72362d695b9c0c7eb765ba067e1734da8750bb34615ad82c2",
+    "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+    "catalog": "532d2f52b46812ed674fd38db7fcc3c21a2fabbe86db8f1a185246c3fa53bb84",
     "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-    "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-    "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+    "sharedContract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+    "sharedCatalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c"
   },
   "hashes": {
-    "runtime": "22ebc72b48bd4133903c35d24e268816a0d7ddbd4e085f59958a9766c4844b39",
-    "glb": "43257615ddded6f75e09e3869e8d593208570972110ce0ccd22c3d20fb11dfa1"
+    "runtime": "021d7e2370e17a9ea8b43f20f16d0ef685974a4b871e271e4ea268531461c111",
+    "glb": "d8ffa86887f49a9ab8c7a9e14ee499c9cf7448db1fe23085431f4209c00d1de8"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 17144,
-    "effectTriangles": 996,
-    "effectMeshes": 10,
-    "retainedTriangles": 35284,
-    "meshesPerVisibleForm": 109,
+    "trianglesPerVisibleForm": 19728,
+    "effectTriangles": 487,
+    "effectMeshes": 8,
+    "retainedTriangles": 39943,
+    "meshesPerVisibleForm": 112,
     "pairs": {
-      "pair": 164,
+      "pair": 171,
       "soft": 0,
       "gOnly": 0,
       "aOnly": 0
@@ -52,23 +52,23 @@
       }
     ],
     "clips": [
-      "skill",
-      "ult",
+      "flight_idle",
       "shield_deploy",
       "shield_retract",
-      "to_flight",
-      "to_ground",
-      "flight_skill",
-      "flight_ult",
       "flight_shield_deploy",
       "flight_shield_retract",
       "idle",
+      "to_flight",
+      "to_ground",
+      "skill",
+      "ult",
+      "flight_skill",
+      "flight_ult",
       "run",
-      "light",
       "heavy",
-      "flight_idle",
-      "flight_light",
-      "flight_heavy"
+      "flight_heavy",
+      "light",
+      "flight_light"
     ]
   },
   "gates": {

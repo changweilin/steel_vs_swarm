@@ -1,0 +1,14 @@
+{
+  "s07": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true
+  },
+  "m05": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true
+  },
+  "m07": {
+    "runtimeStructureEqual": true,
+    "glbGeometryEqual": true
+  }
+}

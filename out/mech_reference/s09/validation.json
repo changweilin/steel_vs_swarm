@@ -2,13 +2,13 @@
   "asset": "s09",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 12300,
-    "meshes": 83,
-    "joints": 35,
+    "triangles": 13440,
+    "meshes": 82,
+    "joints": 40,
     "source": {
-      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
+      "contract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c",
       "image": "5ad7953be8671b0839261e485df6dcbee6c8c4c87bf54d7f2eaa66256c62891c"
     }
   },
@@ -24,29 +24,33 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "752a479ac0c838fa8246c669ec1af43acdfb80f40cc482443c207ec07a00b333",
-    "blend": "2c32babbc139b47dabf4edab77d2b4580d67a1b60d64d4d06bd8dab7258b26b0",
-    "glb": "dde2b578c125f548d850531710f9688573cca64a20d0c0be7317130fd037c8d1"
+    "runtime": "ddf7068b95207b3a5f1d0dd5064fdbc87e45c7ed8e7596e48c5bdd3cb1a00025",
+    "blend": "8489573e97665625c179d591c8882eed6231493238ded027de7a8d8dd685217f",
+    "glb": "7f488eb7d1743e71f08feaa75e8738677706bb979de6d478a42a489dd0c65160"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
     "motion": "pass_structural"
   },
   "motionSource": {
-    "samples": "c23f40e5dc9185ebfa25f17dafc2f934ddc496f9de06243606a439ad6498cdfc",
-    "inputBlend": "out/anatomical_motion/before/s09-5b1fe65c7b73.blend",
+    "samples": "8a568f637d55a7c4a4423cf14b0fb1aa597d0bdacb971002fdc0d4bcf9f07581",
+    "inputBlend": "out/anatomical_motion/before/s09-058c9754ce49.blend",
     "clips": [
       "idle",
       "run",
       "light",
-      "heavy"
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
     ],
     "nodes": [
       "hips",
@@ -76,6 +80,7 @@
       "tail_5",
       "tail_6",
       "gun",
+      "grip_gun",
       "gun_recoil",
       "light_muzzle",
       "heavy",
@@ -83,18 +88,30 @@
       "heavy_muzzle",
       "cast_dish",
       "emitter_l",
-      "barrier"
+      "barrier",
+      "emission_light_0",
+      "emission_light_1",
+      "emission_heavy_0",
+      "emission_heavy_1"
     ],
     "drivers": {
-      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
-      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
-      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "locomotion.js": "533b1bab31b176687f9a26542e50cb30bd22d7d5ade985698eac12cd5cccd9ba",
+      "anatomicalPose.js": "416f04e566954c35855b3670885c3978bf06509ca68b085beec6f6f6a05e35dd",
+      "forge/referenceAsset.js": "dbc4ee783631ac66ace195bb27107f9804188ced67ae63ce36ceea395f7b9e63",
+      "forge/forge.js": "780af6c5bbe3a7c2c345cd5a502114bf3b1887ba3ccb691219b87d2b41481a50",
       "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
-      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+      "unitMotion.js": "931ccf20c8aaecfceabd22bdc9388ff581820a9d93cfe2c986ec1922327aa2eb",
+      "models.js": "1a1ff9fd5dd4cd2175b3551d97a7a4ee7f691f6bf994b75c0317706b8e82d3a9"
     },
-    "baker": "ccd04038d3378aea18129aace2dfbbb5c533cadb3eefcf6370ebfbb81f2ef112",
+    "baker": "28cb44de20289947ca5e89dd28db4f83bdc0e6565f18fe9dd65d27e333e0139b",
     "fps": 60,
-    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
-    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
+    "sampler": "f1a848912d95710bde3fd9debbc770034eedb4401d85ae8faa106eb6d9310dae",
+    "encoder": "01a56f665216dc676ce59443e7013dd149aff790473d0e18b1c7e5eed5ce875d",
+    "restorer": "3b3c61b6309a26e0948eb7a42b5971094885cf94e665a92c54d297158b8dadcf"
+  },
+  "reviewEvidence": {
+    "weapons": "out/weapon_revision/runtime/validation.json",
+    "visual": "out/weapon_revision/visual-review.json",
+    "delivery": "out/weapon_revision/delivery-validation.json"
   }
 }

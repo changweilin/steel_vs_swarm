@@ -2,18 +2,18 @@
   "asset": "m05",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 18512,
+    "triangles": 20304,
     "meshes": 147,
-    "joints": 81,
+    "joints": 90,
     "source": {
-      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
-      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+      "contract": "36dca79aa62df1c72362d695b9c0c7eb765ba067e1734da8750bb34615ad82c2",
+      "builder": "206a1f81c702c78a375fcc1a0cde1a25eff33722fa558fb00ea7d08f01113f05",
+      "catalog": "532d2f52b46812ed674fd38db7fcc3c21a2fabbe86db8f1a185246c3fa53bb84",
       "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
-      "combat": "e2982b57af135c577a74355159096288e7ccdc8b85e5cb741cf9b934fc0d7b89",
-      "intent": "8a20f54432767ac8fbe6edb4539ce343803c981fa23399713dfcfb19487ffa1f",
-      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
+      "combat": "06151fbfe9b55bf70b8c61b89215f858260f104a338145fe7bea93183e4ccb8a",
+      "intent": "07abd378fc0382184f10b970d53af3251e04fed156b88a47477a9c35b5f6f159",
+      "sharedContract": "e9b28922a41cf5d14ea682fda69eaf2aefde31a765d58febc0f69a1632f7902e",
+      "sharedCatalog": "fb656b10b053fc9226f57fc686eefea7cc09a32724772466474f6679d164ce7c"
     }
   },
   "clips": [
@@ -39,9 +39,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "7f731b8db693baf274041afc2a30d56f7940b02221ac5625562942bf9a33805c",
-    "blend": "aee4500f4aa4b02be272904f1552144f942b8268720ed0e769dfac53be412fd7",
-    "glb": "b64aae63da1347e9d7b0bff2bb55843801ed395a5d896d9ef1fd2111764a2c55"
+    "runtime": "2b74bf0b865f41a10a431c7a03586cb87fa2b667afc5221953262c700aece107",
+    "blend": "bf60933cb28290ee719e6b13eb2a7384e73d25d2e72c53ae8023f7b5135170c3",
+    "glb": "3dbf7c6092e2d8003f1b0f160fc3c47b8a3b3499c93dedc2dac3ed345aa234fa"
   },
   "gates": {
     "structure": "pass",

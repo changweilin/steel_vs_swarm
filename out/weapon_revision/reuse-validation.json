@@ -1,0 +1,13 @@
+{
+  "gate": "pass",
+  "assets": {
+    "m01": "identical geometry, rig and motion",
+    "s03": "resample distal aim control",
+    "s10": "identical geometry, rig and motion",
+    "t06": "identical geometry, rig and motion",
+    "t11": "identical geometry, rig and motion",
+    "m05": "identical geometry, rig and motion",
+    "m07": "identical geometry, rig and motion",
+    "m08": "identical geometry, rig and motion"
+  }
+}

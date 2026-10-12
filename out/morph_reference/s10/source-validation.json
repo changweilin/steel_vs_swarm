@@ -1,6 +1,6 @@
 {
-  "blend": "9c787daa817c16ab39c4043b8e3ff5118d70060dda338d0bde2b9c936f03981e",
-  "bones": 58,
+  "blend": "9c99012ec67d4279dc85b157b1e950de91dff5f6cd73dcb8fa5c53a53e917f57",
+  "bones": 62,
   "clips": [
     "idle",
     "run",
@@ -26,33 +26,40 @@
       "waist": null,
       "heldWeapons": 2
     },
+    "sealedCoreMeshes": 3,
     "feathersBehindBones": 44
   },
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/s10-40146c6e532d.blend",
+    "contractSourceHash": "40146c6e532d517776b9b78f016322164fbd7b84a9c0aa453b5a940ef8d4e23c",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+  },
+  "deliveredShieldAlignment": null,
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,
   "exposedLimbBoundsInHullCoordinates": {
     "leg_FL": {
       "min": [
-        0.44188955426216125,
-        -0.5309884548187256,
-        0.8285616636276245
+        0.21923719346523285,
+        -0.4688599407672882,
+        0.7826759815216064
       ],
       "max": [
-        0.7893307209014893,
-        0.07315599173307419,
-        1.9139492511749268
+        0.7857917547225952,
+        0.202119842171669,
+        1.4912259578704834
       ]
     },
     "leg_FR": {
       "min": [
-        -0.7893307209014893,
-        -0.5309884548187256,
-        0.8285616636276245
+        -0.7857917547225952,
+        -0.4688599407672882,
+        0.7826759815216064
       ],
       "max": [
-        -0.44188958406448364,
-        0.07315599173307419,
-        1.9139492511749268
+        -0.21923719346523285,
+        0.202119842171669,
+        1.4912259578704834
       ]
     },
     "leg_HL": {

@@ -1,0 +1,1152 @@
+{
+  "assets": {
+    "s01": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3",
+            "emission_heavy_4",
+            "emission_heavy_5",
+            "emission_heavy_6",
+            "emission_heavy_7",
+            "emission_heavy_8",
+            "emission_heavy_9",
+            "emission_heavy_10",
+            "emission_heavy_11"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 28
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s01.js": "a7cec55df2be1fa3aad7d442220313e69ca1300218933a41b1148e1aed26277c",
+        "public/assets/models/reference/s01.glb": "12fb111dcb606a96be18725f514e6b22fb4ca1ffe79640883e8050985c847abc",
+        "public/js/forge/combatAssets/s01.js": "30acbc56dcdd5edbfe318e07eb0cdb59af8c748f87c660a2117be4cd39d4a5b3"
+      }
+    },
+    "t10": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3",
+            "emission_light_4",
+            "emission_light_5"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3",
+            "emission_heavy_4",
+            "emission_heavy_5",
+            "emission_heavy_6",
+            "emission_heavy_7",
+            "emission_heavy_8",
+            "emission_heavy_9",
+            "emission_heavy_10",
+            "emission_heavy_11"
+          ]
+        },
+        "events": {
+          "light": 16,
+          "heavy": 28
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t10.js": "1cb64e129d6899ee41c67b51756b02c942eb19623f09075755de97878112a73b",
+        "public/assets/models/reference/t10.glb": "6e724c1a3a26a5cb912149f60710928a9593bfafd94057431bf2a352b5d3f1c4",
+        "public/js/forge/combatAssets/t10.js": "853aabf92534002b97319c0b74cecb1270ef5c967574f7d156b1d3afbc861641"
+      }
+    },
+    "s02": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s02.js": "02e28f43d6ed02fdc38fdc9b854f26d0d1fdf5ec392a3e404d644b93fb31e24f",
+        "public/assets/models/reference/s02.glb": "66bd2526437d77af77c085fe81f1fbac44f2e70ffb1d6b833e5c059d400c98a8",
+        "public/js/forge/combatAssets/s02.js": "1c5882dc76b284bc02575fbd7fdfea3ed577c0e35df39244b2c5b0b4a8145993"
+      }
+    },
+    "s04": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s04.js": "8278cdb72cbdf4fb2e608ba696886c0309401b02df42b8f055ebd5a11e552988",
+        "public/assets/models/reference/s04.glb": "9e27f9e73d45ef369725abd3523942f504b757ac36d9c939ccda5c3f48f4df01",
+        "public/js/forge/combatAssets/s04.js": "269b3bb8aecd5530ab41b0eb03f30b1189ca7ec3a79041ffed5601c306be993c"
+      }
+    },
+    "s05": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 12,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s05.js": "26ebc1d754d799e00dcdc66a3dfec696211c4ae23ccac7c6f319ed52ee2ee53e",
+        "public/assets/models/reference/s05.glb": "a9e00a034b7fddec8452330f0866701a1729ef1376e51d7f57d698fafbfaee8b",
+        "public/js/forge/combatAssets/s05.js": "4a1af80964a25b02167872b720768ecab6ce88a944986c08b09eab59456f8b5a"
+      }
+    },
+    "s08": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s08.js": "10f642bd563a15d05fccc51f1f9ca6c52ec8e998301b7b3e4fe52fe8b8a2196f",
+        "public/assets/models/reference/s08.glb": "007ad3ae362966da8fa2c8712ba454f729b62e5179e9c9dddf96a0e6d8347392",
+        "public/js/forge/combatAssets/s08.js": "ace4dfbd47e8ed5bef88dc05a1adf2518228fef70b7c7de1034b32d449a6a023"
+      }
+    },
+    "s11": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s11.js": "e49192d806aba712ddce4e25e27394386eacedfb5594b374c43720095d562548",
+        "public/assets/models/reference/s11.glb": "ed882a44b421058f3f38ed597961ca33c4d827ffe46ab2bc5c459e022f091ee7",
+        "public/js/forge/combatAssets/s11.js": "37e5fc52cfbe121c3092605521bb5950e071c1bfa6cbfc746b171c6166135526"
+      }
+    },
+    "s12": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s12.js": "ee0835f9d800df04d9b25db448ce3f8cba7750ef29c7962c0952967a04015e9d",
+        "public/assets/models/reference/s12.glb": "29fa0ceeee4d6d43410a0a7adac22861ac441729584d8ac98ac3bf683aa33fa8",
+        "public/js/forge/combatAssets/s12.js": "591a5e9cd21637800914df2f01d148c06ef893a8e2414496858b946a5ff21c0c"
+      }
+    },
+    "t07": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t07.js": "116388ba48511777674314a3f0bc4fc1db3bc4e3de57db789954380b8985646a",
+        "public/assets/models/reference/t07.glb": "d78ec594d2144f0f2f497ccdb35b6e7ae7fc0276466c716e1cb0240492b9c4ca",
+        "public/js/forge/combatAssets/t07.js": "23a0bbe82b8df300df1c303cbf5ea0f32c9564f92636e3e7004a6b7648f18b21"
+      }
+    },
+    "t08": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 19,
+          "heavy": 15
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t08.js": "8be3e0cbcd95655218e3ebe4cabbe77629ab4eb7f704881480ba5de9a2ce56a1",
+        "public/assets/models/reference/t08.glb": "2a1025b861671aff6b9173b3026fff20e827132764df6f58299e626f8e72284b",
+        "public/js/forge/combatAssets/t08.js": "1c5805abf7036144859e1ec6af26fcafaad5f1d7a25101391d146c07d6f1b5b1"
+      }
+    },
+    "t09": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3",
+            "emission_heavy_4",
+            "emission_heavy_5",
+            "emission_heavy_6",
+            "emission_heavy_7",
+            "emission_heavy_8",
+            "emission_heavy_9",
+            "emission_heavy_10",
+            "emission_heavy_11"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 28
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t09.js": "333936236f84063e06b9f16089800d127e525900dc805f7b0374f8ad32536602",
+        "public/assets/models/reference/t09.glb": "f43e8fab94a8b1194b382122b9378c32e7a1b5f4997f8190346973513397f002",
+        "public/js/forge/combatAssets/t09.js": "3d508be5a1aa2c1e52a60803f0a235ce1603804f3f16c0fd2714d4e3f52ed560"
+      }
+    },
+    "m03": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3",
+            "emission_heavy_4",
+            "emission_heavy_5"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 16
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m03.js": "3c70d8480b088f288b8dfb6722481a3f041ce7ec380b319630c688c6727d3f7a",
+        "public/assets/models/reference/m03.glb": "39c051c3b3203f83a79d14d8397f77ce0304e18195c35d7de2edda8bcec5551a",
+        "public/js/forge/combatAssets/m03.js": "2f763299f5ee0eb6647cd0051fbfca2e2281ecfe2d6d67f40518fa51790510e5"
+      }
+    },
+    "m04": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3"
+          ]
+        },
+        "events": {
+          "light": 17,
+          "heavy": 22
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m04.js": "97d6b13fa3570c833df0e566da1c2c3bd6b0ef7c1903820713346050c2e0ddea",
+        "public/assets/models/reference/m04.glb": "af5883ceed1c0351508ab382a6b5970fb958cd769af349255278b3b5547a1274",
+        "public/js/forge/combatAssets/m04.js": "baf11b76071577754006d23d2a095d2e30fbdece024f320eb13fa75b55488fa1"
+      }
+    },
+    "s06": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3",
+            "emission_heavy_4",
+            "emission_heavy_5"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 16
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s06.js": "62dcbabc07f90ab8454487f574d74c3439960e2a9474a42c562c138bc69c58ed",
+        "public/assets/models/reference/s06.glb": "d6f0a76abf287526913c5bf9a60e9952af7824dfae17ad9a70f249d20548aeae",
+        "public/js/forge/combatAssets/s06.js": "4717dc220ba97c24ea90a4af23151264ff116d38d0eb02bd87df175013b4ca6e"
+      }
+    },
+    "s07": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s07.js": "d8eb3802752ab15372ffdf92e16b91843450d15d818499cec208c5a2a21a1908",
+        "public/assets/models/reference/s07.glb": "4af580f1211533e7924533707a75ff18a788854e6b5241303171e7285d9804ac",
+        "public/js/forge/combatAssets/s07.js": "d517e648eba6b6712b92f5658e972a7f04973d4c490e304e47be93834e7f8f54"
+      }
+    },
+    "s09": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s09.js": "ddf7068b95207b3a5f1d0dd5064fdbc87e45c7ed8e7596e48c5bdd3cb1a00025",
+        "public/assets/models/reference/s09.glb": "7f488eb7d1743e71f08feaa75e8738677706bb979de6d478a42a489dd0c65160",
+        "public/js/forge/combatAssets/s09.js": "e711bf0cecdeb4380bec3a8de9a4e86c1054b3d4b303db8d944ed3d2088e735e"
+      }
+    },
+    "t01": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t01.js": "a85cf79bac3805c44f1f9c4108f21b41349ac04b3debcf956f456999c701eb10",
+        "public/assets/models/reference/t01.glb": "564ec63738f795eeceebc8322976abcfa2056a9285f75726586ea0f6cbc37a6f",
+        "public/js/forge/combatAssets/t01.js": "b89b7579374ae95689bcfad52436eaf80a50b2f07b0539273db30a2bc8ac66aa"
+      }
+    },
+    "t02": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t02.js": "3f15ee1fe9d86aa83b6b6c71321be1657a3b6a85c5f3d09433569f0e01b91f5a",
+        "public/assets/models/reference/t02.glb": "a326adc60f1671f77dde9a62c9297a9385f2f230fea3322eae32347be0e72322",
+        "public/js/forge/combatAssets/t02.js": "a07f97cdfec6a5c497ce63cb2b45c13fc8f168a4c6deb8a089b1c8b1f972d004"
+      }
+    },
+    "t03": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t03.js": "93c68328f4c55e10f22ca4d2db7867bcd81edce43485a42bc64d4d44ab026f00",
+        "public/assets/models/reference/t03.glb": "bddd5202d2cbb3b676ae75b0c5bb1efd4dba5272ce6a666e6b6fda05731805f0",
+        "public/js/forge/combatAssets/t03.js": "8cec2aa340e26a4e649f7589844bd0306ed7a3c8b5625243459cfcceca0312f8"
+      }
+    },
+    "t04": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t04.js": "1a61b15002a8175985b26bf4a1ff70f9c3d118f3df9980d3c9e29fa5291ebab7",
+        "public/assets/models/reference/t04.glb": "dfbf50c93c71688990d71c2c35fdf7993014d013935f84b90db07c48b2353d5e",
+        "public/js/forge/combatAssets/t04.js": "5f15e87a837d1ac22838787328aee057d50ee4d831b683be0eaf0545b0061ed5"
+      }
+    },
+    "t05": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t05.js": "fe65a47c3f434e90c86cc7da156d467eb40109f5dbe3c91a9553128bb6dfd741",
+        "public/assets/models/reference/t05.glb": "655456e835792dd31655dac53364e6d149be0eaa97d4012e069bf4ef62a96bc9",
+        "public/js/forge/combatAssets/t05.js": "57e1ae6054f20d8cfc3396bbf5b0c7987d832d53ee27167d37511e9bac89682b"
+      }
+    },
+    "t12": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t12.js": "1103ba887eea28e1e11dc69932b74e588b51f6941a386c49d53b326637c6cb13",
+        "public/assets/models/reference/t12.glb": "e74760fa2986ab08c5db96d0ac1279739c7503ea80d339f4dbc9f9813c2ad23e",
+        "public/js/forge/combatAssets/t12.js": "52ba636d01a6b4b4daa3cdd8e9c156066171794d289cb8e13a9681f8f3232e0c"
+      }
+    },
+    "m02": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m02.js": "c0b7756a586b1d33502073a4e1107c7b339c6d8b5c08c043d5c51d71c1db3dbf",
+        "public/assets/models/reference/m02.glb": "38917733c14a4081a8b10290ca3b5ecac6fe184baea119d58cfa0681d3b537ed",
+        "public/js/forge/combatAssets/m02.js": "908b005d3c026ef9344ae53ad0aada1231f90c5efeb06783dbc5f5ff52369857"
+      }
+    },
+    "m06": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m06.js": "88b0cab886a195f235ee94a4263c21384d450afbd991dc9087d6232cff9c1be1",
+        "public/assets/models/reference/m06.glb": "532067d63657a9ebb35a3155ee02df76906ef9c0aba0b4d9ee21ac26ca8f2c7f",
+        "public/js/forge/combatAssets/m06.js": "4652e6d979578c066791bd43c64bb871e899f0297ab6693d5f2680e2d5d03a0b"
+      }
+    },
+    "m01": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3",
+            "emission_light_4",
+            "emission_light_5"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 16,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3",
+            "emission_light_4",
+            "emission_light_5"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 16,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m01.js": "9a5d83fe2f8f9f262c5401bb9a15d000cf6a415b1df9954b4795995d17df037c",
+        "public/assets/models/reference/m01.glb": "0a482536634f368959a54615b4ba35868f324fed3930c2ba1a807d0b9a9a0aa3",
+        "public/js/forge/combatAssets/m01.js": "aa96addcf52c6c88e9794e2ba025c9bd98983387d8b8dd386256f3f48f3612a7"
+      }
+    },
+    "s03": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 18,
+          "heavy": 15
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 18,
+          "heavy": 15
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s03.js": "68053da446a71acc087dc01153a3e2986636aaceef77cfcf7a4eb21ec3853a6f",
+        "public/assets/models/reference/s03.glb": "ec022f2f10e140c4464abff6a9bc7a83b1963de81c443f120df2a8fcb79d8e84",
+        "public/js/forge/combatAssets/s03.js": "0f4f4eb961a697e78629f5ef1c157617ced69b00e5b0f31079633619ae637a37"
+      }
+    },
+    "s10": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 6,
+          "heavy": 6
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/s10.js": "021d7e2370e17a9ea8b43f20f16d0ef685974a4b871e271e4ea268531461c111",
+        "public/assets/models/reference/s10.glb": "d8ffa86887f49a9ab8c7a9e14ee499c9cf7448db1fe23085431f4209c00d1de8",
+        "public/js/forge/combatAssets/s10.js": "23e0665bc08fc13369b9ea30d21e2c1ae2c8f5b2a8e5bde9dd41ddcf16a04d83"
+      }
+    },
+    "t06": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 18,
+          "heavy": 15
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0"
+          ],
+          "heavy": [
+            "emission_heavy_0"
+          ]
+        },
+        "events": {
+          "light": 18,
+          "heavy": 15
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t06.js": "e728781a2c1264c064cd291f46cccc4f5e73aeda5f9cab41ee1d8bf4f54bff2b",
+        "public/assets/models/reference/t06.glb": "a31b5abdd75679023251149e455a6e5f3bcf92c1d735dbe96319cb015beea5f0",
+        "public/js/forge/combatAssets/t06.js": "edea3ad53225fe0565cb51ae3805002bdfbde4d1827a2127d92c1da4e65c850e"
+      }
+    },
+    "t11": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 12,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2",
+            "emission_light_3"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 12,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/t11.js": "472d94d074998a78328b77782453a8cfecb062946fe749995a18331e46ba65c9",
+        "public/assets/models/reference/t11.glb": "7bb4fff5772f5ec608c9c029a124750682d45e8834abbb248036ad55fabf71f5",
+        "public/js/forge/combatAssets/t11.js": "533f55237d62e3dcc493753ad620f8e37282381bb60a4828d8fa581274d81121"
+      }
+    },
+    "m05": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3"
+          ]
+        },
+        "events": {
+          "light": 20,
+          "heavy": 21
+        },
+        "armRanges": {
+          "L": 1.7959117549525165,
+          "R": 1.7979744395636084
+        },
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1",
+            "emission_light_2"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1",
+            "emission_heavy_2",
+            "emission_heavy_3"
+          ]
+        },
+        "events": {
+          "light": 20,
+          "heavy": 21
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m05.js": "14a078f8b243d70bdd358a4eab864b22e2d1faa99842fcedf0b5dc359e335c9d",
+        "public/assets/models/reference/m05.glb": "f7066e3a8c35d9dae281616dbad028aa13bcd44e3d4d46e1fd230ba6eb2151a4",
+        "public/js/forge/combatAssets/m05.js": "2b74bf0b865f41a10a431c7a03586cb87fa2b667afc5221953262c700aece107"
+      }
+    },
+    "m07": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 8,
+          "heavy": 8
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m07.js": "040d938373f268974cb8284dd9274a35f33e1b78194334cd8bc2405620e836b2",
+        "public/assets/models/reference/m07.glb": "03917eef3b4b109492863f62ee8f846dc9661481e5193be5c2171091e000c5a7",
+        "public/js/forge/combatAssets/m07.js": "2f821cde2265e019334c68b68ebc3801c658e719d2016e70cdecaf781675c81c"
+      }
+    },
+    "m08": {
+      "ground": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 17,
+          "heavy": 17
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "flight": {
+        "ports": {
+          "light": [
+            "emission_light_0",
+            "emission_light_1"
+          ],
+          "heavy": [
+            "emission_heavy_0",
+            "emission_heavy_1"
+          ]
+        },
+        "events": {
+          "light": 17,
+          "heavy": 17
+        },
+        "armRanges": {},
+        "fps": [
+          30,
+          60,
+          144
+        ]
+      },
+      "hashes": {
+        "public/js/forge/assets/m08.js": "308054568facdcd15d4dece6c51f6f7a18b5da9c40c6e2e25bb304ef5e1b0f58",
+        "public/assets/models/reference/m08.glb": "cd90ef25fa4d8c2f272524548e61f30b8e9ce8b99022992275bdf4d1110d348e",
+        "public/js/forge/combatAssets/m08.js": "f11f9f15b0d87128ef71b59ad56c48eccb2f50481aace9b3a525b934689ffd44"
+      }
+    }
+  },
+  "inputs": {
+    "public/js/locomotion.js": "533b1bab31b176687f9a26542e50cb30bd22d7d5ade985698eac12cd5cccd9ba",
+    "public/js/unitMotion.js": "931ccf20c8aaecfceabd22bdc9388ff581820a9d93cfe2c986ec1922327aa2eb",
+    "public/js/anatomicalPose.js": "416f04e566954c35855b3670885c3978bf06509ca68b085beec6f6f6a05e35dd",
+    "public/js/forge/referenceAsset.js": "dbc4ee783631ac66ace195bb27107f9804188ced67ae63ce36ceea395f7b9e63",
+    "public/js/forge/combatAsset.js": "7fd619e8d2ba8a1e1a1b79a1402991517d55840f08b5ca955eb9c485531a63f4",
+    "public/js/game.js": "8c47d75916f78ed5ea7957a102d494bc57aa49d2777c7fa6b524540f8f4c903a",
+    "public/js/charPreview.js": "41be0416ced425607677cbe3ada5d6111d59a1878a4d083893e0f60b298f4da5",
+    "public/js/vfx.js": "17206620eb4119dde77d4f946561e403c2bc522dc73909bf4de523a2ebd5da6a"
+  },
+  "gates": {
+    "sequencing": "pass",
+    "origin": "pass",
+    "specificPresentation": "pass",
+    "independentExport": "pass",
+    "visual": "pass"
+  }
+}

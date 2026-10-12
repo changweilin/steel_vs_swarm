@@ -1,0 +1,140 @@
+{
+  "s03": {
+    "jointSamples": 33020,
+    "maximumPivotError": 0.0000030695903557927064,
+    "maximumAngularError": 0.000559822348443475,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "s06": {
+    "jointSamples": 21228,
+    "maximumPivotError": 0.00001589422671566254,
+    "maximumAngularError": 0.0005610082434875195,
+    "maximumScaleError": 0.00002310193936614825
+  },
+  "s07": {
+    "jointSamples": 39360,
+    "maximumPivotError": 0.0000010002992548614753,
+    "maximumAngularError": 0.0004883245521547522,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "s09": {
+    "jointSamples": 13920,
+    "maximumPivotError": 0.000003917375036237987,
+    "maximumAngularError": 0.0005003930818279217,
+    "maximumScaleError": 2.9172600935457875e-7
+  },
+  "s10": {
+    "jointSamples": 39370,
+    "maximumPivotError": 0.000004000881600781396,
+    "maximumAngularError": 0.000559822348443475,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "t01": {
+    "jointSamples": 9840,
+    "maximumPivotError": 0.0000015737953589587244,
+    "maximumAngularError": 0.0005067257444369203,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "t02": {
+    "jointSamples": 9840,
+    "maximumPivotError": 0.0000022291102334098,
+    "maximumAngularError": 0.0005426916363459209,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "t03": {
+    "jointSamples": 9840,
+    "maximumPivotError": 0.000003843581470365966,
+    "maximumAngularError": 0.0005554908059621308,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "t04": {
+    "jointSamples": 13920,
+    "maximumPivotError": 6.774519548368855e-7,
+    "maximumAngularError": 0.0004882404814102799,
+    "maximumScaleError": 2.9172600935457875e-7
+  },
+  "t05": {
+    "jointSamples": 11808,
+    "maximumPivotError": 0.000001190050973119509,
+    "maximumAngularError": 0.00048824540852965444,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "t06": {
+    "jointSamples": 31440,
+    "maximumPivotError": 0.0000012041663016715276,
+    "maximumAngularError": 0.000542656169693694,
+    "maximumScaleError": 2.917260094827763e-7
+  },
+  "t07": {
+    "jointSamples": 10824,
+    "maximumPivotError": 0.0000024901998220505805,
+    "maximumAngularError": 0.00048717800284742553,
+    "maximumScaleError": 2.917260094186775e-7
+  },
+  "t08": {
+    "jointSamples": 22272,
+    "maximumPivotError": 0.0000014957769795542752,
+    "maximumAngularError": 0.0004870829321285975,
+    "maximumScaleError": 2.91726009546875e-7
+  },
+  "t10": {
+    "jointSamples": 15744,
+    "maximumPivotError": 0.000007422302373457888,
+    "maximumAngularError": 0.0005442038895369822,
+    "maximumScaleError": 2.6644812801498353e-7
+  },
+  "t11": {
+    "jointSamples": 35424,
+    "maximumPivotError": 0.0000013224637061964861,
+    "maximumAngularError": 0.0005125289063265806,
+    "maximumScaleError": 2.9172600935457875e-7
+  },
+  "t12": {
+    "jointSamples": 9840,
+    "maximumPivotError": 0.0000019062821818859847,
+    "maximumAngularError": 0.00048720371529321985,
+    "maximumScaleError": 1.903465510029321e-7
+  },
+  "m01": {
+    "jointSamples": 26445,
+    "maximumPivotError": 0.000001818431403483034,
+    "maximumAngularError": 0.0005055693090630916,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "m02": {
+    "jointSamples": 15312,
+    "maximumPivotError": 0.000001071516291473734,
+    "maximumAngularError": 0.0004881335614970445,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "m04": {
+    "jointSamples": 13448,
+    "maximumPivotError": 0.0000015639402762135643,
+    "maximumAngularError": 0.0005292254099471196,
+    "maximumScaleError": 0.000023102021634065982
+  },
+  "m05": {
+    "jointSamples": 47815,
+    "maximumPivotError": 0.0000010815145321252384,
+    "maximumAngularError": 0.000559822348443475,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "m06": {
+    "jointSamples": 14268,
+    "maximumPivotError": 0.00000390922197633407,
+    "maximumAngularError": 0.0005571235069396184,
+    "maximumScaleError": 1.9034655119522838e-7
+  },
+  "m07": {
+    "jointSamples": 56580,
+    "maximumPivotError": 0.0000020869793779571385,
+    "maximumAngularError": 0.0004910039451621617,
+    "maximumScaleError": 2.917260094507269e-7
+  },
+  "m08": {
+    "jointSamples": 35370,
+    "maximumPivotError": 0.0000029301613548786227,
+    "maximumAngularError": 0.0005571235069396184,
+    "maximumScaleError": 2.91726009546875e-7
+  }
+}

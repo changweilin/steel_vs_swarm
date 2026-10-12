@@ -1,476 +1,476 @@
 {
   "identities": {
     "s01": {
-      "runtime": "2cddb10d21cb89e317c9573e8f34f2af5f6e4dab2516cd38cf05d3f655990d7e",
-      "glb": "79e6131834ff958812af84bb315d4e847da61a9c3e9c6cb742adf1be7c45281b",
-      "triangles": 16836,
+      "runtime": "30acbc56dcdd5edbfe318e07eb0cdb59af8c748f87c660a2117be4cd39d4a5b3",
+      "glb": "0f15e2a3bd2b6d6821c0d2f17707ee9a674dfd144e657c285176d4366ffe2f1c",
+      "triangles": 16790,
       "meshes": 75
     },
     "s02": {
-      "runtime": "ee534eb53fa48469ffa0391634a3fb625e512a456afadce7746954fd7c915b2e",
-      "glb": "2a0f6153caa38fc4048405f99443f7998b877c1df220160a92dfe4eaaee1945b",
-      "triangles": 11348,
-      "meshes": 47
+      "runtime": "1c5882dc76b284bc02575fbd7fdfea3ed577c0e35df39244b2c5b0b4a8145993",
+      "glb": "88e20954944957bef75ef29617994dcd174074d382e75643cdc458c1cac76907",
+      "triangles": 10583,
+      "meshes": 45
     },
     "s03": {
-      "runtime": "97a9655665f5b120074d887caf4e1c9a20ec1f418094c06a844521c7abe42854",
-      "glb": "58c58e1a151c0ae780bb42beb626b62549df6546571a54a4a0b16572e8952489",
-      "triangles": 19448,
+      "runtime": "0f4f4eb961a697e78629f5ef1c157617ced69b00e5b0f31079633619ae637a37",
+      "glb": "86b6daedb5489ca4f8687197fecdbd1bcb8c4ccf2b74f61d42233714de446455",
+      "triangles": 18552,
       "meshes": 113
     },
     "s04": {
-      "runtime": "9da157b91f60657383876d691a27092c308f22ae2e7c11e1f24fac0729f11a77",
-      "glb": "d8eb0b071e61d6862e4a519d936849994483dbd5082a1a2b96350a9765ad88af",
-      "triangles": 10948,
-      "meshes": 47
+      "runtime": "269b3bb8aecd5530ab41b0eb03f30b1189ca7ec3a79041ffed5601c306be993c",
+      "glb": "77491d05b839d4f482b743ecd5b7edfbad45090c7a465ab12f90df00045b8e7e",
+      "triangles": 9284,
+      "meshes": 43
     },
     "s05": {
-      "runtime": "dbf0bd70ab58e5d03704f97c97de822855efa2128584192976762b9af8ed9389",
-      "glb": "854f7ce2c88c46b5b07fc528465cd741ca59ce08e54407ef20796bdafb58fbb4",
-      "triangles": 10632,
-      "meshes": 50
+      "runtime": "4a1af80964a25b02167872b720768ecab6ce88a944986c08b09eab59456f8b5a",
+      "glb": "d30b4a0f133043b75716a53aa8431e53627873c7030127f26b19361f90bea82a",
+      "triangles": 9146,
+      "meshes": 49
     },
     "s06": {
-      "runtime": "41f98471384a0cb6fd2e6e8124eb93beedb80f6755d202cca051cb9263c625fe",
-      "glb": "98c305f3c2d21c6cff8dfcf0712a835a8d875cf2aa4220e16fb864479d2df41b",
-      "triangles": 16508,
-      "meshes": 132
+      "runtime": "4717dc220ba97c24ea90a4af23151264ff116d38d0eb02bd87df175013b4ca6e",
+      "glb": "b3840bb7228fa2abbee45f90c8142da2039326666f9999528ce8ccac6a6c3819",
+      "triangles": 16266,
+      "meshes": 138
     },
     "s07": {
-      "runtime": "b379afb1a24e53871dccfc954bb14713d8454e659f8a0ea51e860566c1f3752b",
-      "glb": "15c18bfc3e9d93175b7856916518510533b729784a3fcef663a2355ac8eef219",
-      "triangles": 23542,
-      "meshes": 139
+      "runtime": "d517e648eba6b6712b92f5658e972a7f04973d4c490e304e47be93834e7f8f54",
+      "glb": "184a1f54c3c2ad4eeb13ee1658eb8ad43e305c5e92a61935f2a344255119e01d",
+      "triangles": 23247,
+      "meshes": 137
     },
     "s08": {
-      "runtime": "b698d27c7c6d9ecd415e04c4a48cee33832f6a1bdae4b76ef8897b31d87e1228",
-      "glb": "57f921ca45842097fa55ef91ce5f12636f7017d6f1f8511ec546edb9f1e24a63",
-      "triangles": 10584,
-      "meshes": 45
+      "runtime": "ace4dfbd47e8ed5bef88dc05a1adf2518228fef70b7c7de1034b32d449a6a023",
+      "glb": "95ea9e2f703a262d97245353d8869627ee7c4187dee057d9426dc2f1b530bf12",
+      "triangles": 9201,
+      "meshes": 43
     },
     "s09": {
-      "runtime": "741976d78ab81a4df8d0d8a94087dd92477f02dd1b2292a8adaa2f545a932cd6",
-      "glb": "f50c833a88a1e892a464231c98fc61b83c2fe81455ee0af1e8060ce03d9528e3",
-      "triangles": 14496,
-      "meshes": 104
+      "runtime": "e711bf0cecdeb4380bec3a8de9a4e86c1054b3d4b303db8d944ed3d2088e735e",
+      "glb": "f4d2ffbaa5adda5d08d193272141aa76c95e3f1c71226b9edfce5671b5e9ed82",
+      "triangles": 14480,
+      "meshes": 102
     },
     "s10": {
-      "runtime": "15fe60f6a5ae4d1ac274a59e92a3295533f9e89029306526bd93938405cfeb6b",
-      "glb": "664c3d74d2156f5c3af40a546baec160b1e99c27d5c55620bfcbcae5f2ddfb4d",
-      "triangles": 19840,
-      "meshes": 129
+      "runtime": "23e0665bc08fc13369b9ea30d21e2c1ae2c8f5b2a8e5bde9dd41ddcf16a04d83",
+      "glb": "6e807d227c2a393c27ecf261e557136c6a5247eb2f0789c45beae8660a688d54",
+      "triangles": 20915,
+      "meshes": 131
     },
     "s11": {
-      "runtime": "274d4058bdeb001f1032c463b91b60a7096f6b4dbffed4ca322057b5144b6e78",
-      "glb": "c6715539088357989798760c6eba65dd077467c0e301b9d1406ab12ed21e5758",
-      "triangles": 10468,
-      "meshes": 48
+      "runtime": "37e5fc52cfbe121c3092605521bb5950e071c1bfa6cbfc746b171c6166135526",
+      "glb": "9f4f91f832fe18003a516b414c2ad3c3293bb9acde7b52379fdd00cb2f61d11a",
+      "triangles": 9234,
+      "meshes": 45
     },
     "s12": {
-      "runtime": "b8856f869bc2718fecef15404bf14852bad5f2a4f48c2745621e231455e346a4",
-      "glb": "d52f0a2e570432bf7948dbcd22f769b47eee4bc0510c32ccaa247405fa9988a3",
-      "triangles": 10880,
-      "meshes": 53
+      "runtime": "591a5e9cd21637800914df2f01d148c06ef893a8e2414496858b946a5ff21c0c",
+      "glb": "0d5112b569a9e2b6f283209fc23f380808d57c8e92ac53138a870a8eee7ab7aa",
+      "triangles": 9607,
+      "meshes": 51
     },
     "t01": {
-      "runtime": "40f443dd7b4d6010d6714cecfe4ac02e577d130ca3685afbb6ca13bde8cd913f",
-      "glb": "35abd2e5cc57e6a28c310b4bdd4e2aecef8866c59612824682d8d1c65be2984f",
-      "triangles": 13717,
-      "meshes": 94
+      "runtime": "b89b7579374ae95689bcfad52436eaf80a50b2f07b0539273db30a2bc8ac66aa",
+      "glb": "c1cf6fc9e569096fc12e330a8bfb993708838081acddb14a360221d2ac13002d",
+      "triangles": 13787,
+      "meshes": 95
     },
     "t02": {
-      "runtime": "01e3050694ce0c7e37a1f2eefd67eda3e2fe70c7a7a9ddcf88f85f3aadc0b37c",
-      "glb": "b79247879aea185cdd58bcc9f3fa0604611fe87801e925a9f5db1750f4eeb271",
-      "triangles": 15574,
-      "meshes": 91
-    },
-    "t03": {
-      "runtime": "3107592271aa5f8cd8c716385b7a43e0d81a5af3d57a34bf0485f97b471b5fd7",
-      "glb": "7becf36349e41a6c809e85456c18191186e54be23ca4ac0c4fdaf03d2872115f",
-      "triangles": 13770,
+      "runtime": "a07f97cdfec6a5c497ce63cb2b45c13fc8f168a4c6deb8a089b1c8b1f972d004",
+      "glb": "26b9ffe7a40a8fa0545eb45b3b2336ac35a8adf6a5c79ecaeac0f7b7b9297b5f",
+      "triangles": 16148,
       "meshes": 89
     },
+    "t03": {
+      "runtime": "8cec2aa340e26a4e649f7589844bd0306ed7a3c8b5625243459cfcceca0312f8",
+      "glb": "ee9fcb8d4660ce2e33c010a04077ce9625a9160e31ea57a0e5aac5d1a5eb57b9",
+      "triangles": 14049,
+      "meshes": 87
+    },
     "t04": {
-      "runtime": "c8f94ab4b3462a8295e54a97f91e7418fe9c6dd0a607e9a7959def5f4e4575b7",
-      "glb": "dbae70f6f28b4c841f9dc6d206d7feb158ae4229528d0f7e0fb51e59e1d4c37c",
-      "triangles": 13972,
-      "meshes": 107
+      "runtime": "5f15e87a837d1ac22838787328aee057d50ee4d831b683be0eaf0545b0061ed5",
+      "glb": "9504ac4430399bb89f9fd314ea87de3283a45e8f64bba2aa15981bfcbbb25357",
+      "triangles": 14101,
+      "meshes": 109
     },
     "t05": {
-      "runtime": "4149c268af948da066f864540583214c018321774a1751481147d856dc571eb8",
-      "glb": "9dba6d913381494b438e3748258ec7b16469d719c2d6635e7bbcb26c8cff7a1a",
-      "triangles": 15876,
-      "meshes": 100
+      "runtime": "57e1ae6054f20d8cfc3396bbf5b0c7987d832d53ee27167d37511e9bac89682b",
+      "glb": "20eaa4bff77257c9b16e8dbe2656354ab0521edd39300bd0d669b29a4283f296",
+      "triangles": 14948,
+      "meshes": 101
     },
     "t06": {
-      "runtime": "09f072c1f855408ad99f9a58e295be62e0f6e6c9f7ae5709fdf2ebb2e100c9a5",
-      "glb": "40f96be38c48d83f985a12715d90eda1b3e92efc0132d11723c2aaf8a58a842e",
-      "triangles": 13518,
-      "meshes": 111
+      "runtime": "edea3ad53225fe0565cb51ae3805002bdfbde4d1827a2127d92c1da4e65c850e",
+      "glb": "d1020662f4e0d4c7da52454ba670461e08ad401ce3d0cd0445b389db45382b3c",
+      "triangles": 13750,
+      "meshes": 103
     },
     "t07": {
-      "runtime": "3bef5d9b901ac7439f8920f16acb30ab0c0da0fd004b2b3f42e11840fecec158",
-      "glb": "4200b34c4509a31e9c172d3c90c87ec3825c510773f8e4b09ce48d4d0cb5f5f6",
-      "triangles": 13072,
+      "runtime": "23a0bbe82b8df300df1c303cbf5ea0f32c9564f92636e3e7004a6b7648f18b21",
+      "glb": "494fe8e1047d93a13b3e91bd9193bbeb9d4bc3f96fce66346f9ec8aca96dd89d",
+      "triangles": 12361,
       "meshes": 83
     },
     "t08": {
-      "runtime": "2b9270fd2d9ce4bd78074b14a3ed815a3b8a1fc21ad964246a4dd9591d429980",
-      "glb": "065c07b68ffa9f548cad2e1307291edb4ba50e10fd10964b7d8857dcf59aeb80",
-      "triangles": 21560,
-      "meshes": 141
+      "runtime": "1c5805abf7036144859e1ec6af26fcafaad5f1d7a25101391d146c07d6f1b5b1",
+      "glb": "7e88a761c78dd9646b9fa8b14c83980d0b5e9fca7f8988eb95fe3d8159903fad",
+      "triangles": 19724,
+      "meshes": 148
     },
     "t09": {
-      "runtime": "41744a0140b2d42c496589f416c2c944de952db16306578ef297249be4788df4",
-      "glb": "cae6eaed9b9e37a772da5997b04cc393710a8b4d1d635cff69ba49d2bbf766c6",
-      "triangles": 10156,
-      "meshes": 42
+      "runtime": "3d508be5a1aa2c1e52a60803f0a235ce1603804f3f16c0fd2714d4e3f52ed560",
+      "glb": "3d1c1dd8fefd98ff84dcbf3bee3d7b0044a3c7d238e7ef7522d86949ba63cd0b",
+      "triangles": 8947,
+      "meshes": 40
     },
     "t10": {
-      "runtime": "849fdb194df302e6496eb5763dbc03beaa2f133ed0182df4ace30b2c2b49f6ea",
-      "glb": "d3063fa691d765689700a854ddff4631ad498ee4d029ff511962784cecb5ee20",
-      "triangles": 15484,
-      "meshes": 107
+      "runtime": "853aabf92534002b97319c0b74cecb1270ef5c967574f7d156b1d3afbc861641",
+      "glb": "36f6e536ad73f44974459f0743b9b659fb2800c1ff0dd34d75d0ccd060864af3",
+      "triangles": 15746,
+      "meshes": 105
     },
     "t11": {
-      "runtime": "af94dc3c825b2265eab04dd41b0e773c9667a8b7930afbaad595b99558500e97",
-      "glb": "2936c194647c933a0bbed5d080d6735b9f670a7779d29c7a5ea01208884b77cb",
-      "triangles": 15220,
-      "meshes": 150
+      "runtime": "533f55237d62e3dcc493753ad620f8e37282381bb60a4828d8fa581274d81121",
+      "glb": "82eb8e710e8c205232b327344191dba8ab5ff050f69d5c56abb437143bf3b0c2",
+      "triangles": 15063,
+      "meshes": 144
     },
     "t12": {
-      "runtime": "ecf4dda830800dede4a609bc001a7f83899a8a1c16fe0ef824a9ab1ed32f8c3c",
-      "glb": "87e4b342409263e0686dc0947b33ce6aa31bb20136772470304339fff0700b4e",
-      "triangles": 13232,
+      "runtime": "52ba636d01a6b4b4daa3cdd8e9c156066171794d289cb8e13a9681f8f3232e0c",
+      "glb": "ed5401b201bf0042aa469cbbc6401df27b807acac60ffeb9df4c0ab024a6cd0d",
+      "triangles": 12782,
       "meshes": 81
     },
     "m01": {
-      "runtime": "bd8ad9fe8bf33104f630255ba6caae07386258e2f224061537d904830cffe345",
-      "glb": "b9df37708921acd9b2e90f8f23818c82c190c4357647757722eaee3dafc2e580",
-      "triangles": 13724,
+      "runtime": "aa96addcf52c6c88e9794e2ba025c9bd98983387d8b8dd386256f3f48f3612a7",
+      "glb": "75e7f45c35c811b9fbed7a959425558d46b21daefad82495a0ec023dca881031",
+      "triangles": 14534,
       "meshes": 122
     },
     "m02": {
-      "runtime": "121748ed144d498cd36db23f69d12b150c983ca736594535796b19ed7bbaabf3",
-      "glb": "c868a02b03e6e7c5296b7ec1029e0ce832e1f6a61a1f86a5d01fd7f99ecc452b",
-      "triangles": 15264,
-      "meshes": 101
+      "runtime": "908b005d3c026ef9344ae53ad0aada1231f90c5efeb06783dbc5f5ff52369857",
+      "glb": "5237b1773ea5a50cda92079703d0a41aa8bb0e0e3392c9bca6f8207c0c03cec4",
+      "triangles": 14469,
+      "meshes": 104
     },
     "m03": {
-      "runtime": "a7f04f8a0afa826917b1bf7c13f3e2d6a202b60c3d0eeb56a3aad311d6d22df0",
-      "glb": "2e6a34163d346fc68facab5df4f31d6dc51d02f4a9f512d19d42937d942f155b",
-      "triangles": 9968,
-      "meshes": 44
+      "runtime": "2f763299f5ee0eb6647cd0051fbfca2e2281ecfe2d6d67f40518fa51790510e5",
+      "glb": "422125310dcb04822a628104cb1d3a4c7a8aac095f6447cb9b09d118ab57085c",
+      "triangles": 8696,
+      "meshes": 41
     },
     "m04": {
-      "runtime": "4c44cfbd0df9bc138d5420f35cfaa6e8b8f72c693a656a7e3ae24c95c68be5ac",
-      "glb": "15312d8861ca6f50ae36c54804677f5c8262ecd8a45a148926b19a318c2b4249",
-      "triangles": 14968,
-      "meshes": 85
+      "runtime": "baf11b76071577754006d23d2a095d2e30fbdece024f320eb13fa75b55488fa1",
+      "glb": "c58d56f46e5f5e48c5bc5faa88cc685cfadba03251de873aa6d4051c49788a3d",
+      "triangles": 14758,
+      "meshes": 90
     },
     "m05": {
-      "runtime": "7f731b8db693baf274041afc2a30d56f7940b02221ac5625562942bf9a33805c",
-      "glb": "b64aae63da1347e9d7b0bff2bb55843801ed395a5d896d9ef1fd2111764a2c55",
-      "triangles": 18512,
+      "runtime": "2b74bf0b865f41a10a431c7a03586cb87fa2b667afc5221953262c700aece107",
+      "glb": "3dbf7c6092e2d8003f1b0f160fc3c47b8a3b3499c93dedc2dac3ed345aa234fa",
+      "triangles": 20304,
       "meshes": 147
     },
     "m06": {
-      "runtime": "cef4047d184f025d8cdee79efe39d3f9877fe4c6fefbcbb196dfa12a39cd7625",
-      "glb": "2dbed1d84a3406518b2c51b773abb97bae31bdef3fee6171d904d719bfacfc91",
-      "triangles": 14724,
-      "meshes": 105
+      "runtime": "4652e6d979578c066791bd43c64bb871e899f0297ab6693d5f2680e2d5d03a0b",
+      "glb": "ab134051ad37d698246d7b80849598a493507396123be8aca9ed9d3a4335f1e9",
+      "triangles": 14599,
+      "meshes": 108
     },
     "m07": {
-      "runtime": "51e4f2d2decf4fc0f013a67ed34e849966728f4d96ae58d18420ea4577a6de14",
-      "glb": "dd38dfb14f1e8aa7c88e62b457c5839922fdc10c19e5ee8e330b6080705ea672",
-      "triangles": 15079,
-      "meshes": 124
+      "runtime": "2f821cde2265e019334c68b68ebc3801c658e719d2016e70cdecaf781675c81c",
+      "glb": "e90ceabedce72146779661e2040be78d9ac3a4e0ffb01b6b2297585c57c0d35a",
+      "triangles": 15171,
+      "meshes": 129
     },
     "m08": {
-      "runtime": "a9c84930802a1fad929cbb9ecab4d8662277adf4b8af5452b87cbc6d75707699",
-      "glb": "f91585aec2e851aaf79296edb96a2ed98b492227afe547e98dae257d009d698e",
-      "triangles": 18084,
-      "meshes": 123
+      "runtime": "f11f9f15b0d87128ef71b59ad56c48eccb2f50481aace9b3a525b934689ffd44",
+      "glb": "b7e7eb123c03370fc50b2c580e09c8913a21737facd352a623cc3fb7ee5a6c5c",
+      "triangles": 18561,
+      "meshes": 125
     }
   },
   "integration": {
-    "game.js": "9ce2230496f38dfa1d791e20920e0e9d2593f8f182579abd7283389625ff268d",
-    "vfx.js": "fd7489f3421a8e582fdcde8e9ae387a0854709fb4e54c19c0a472a833832fb4e",
-    "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47",
-    "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
-    "charPreview.js": "7e8fb92cbf3d0e9f5a99dc2bc015c9cdc5dc37f33a6ece7be413bae2e0a467db",
-    "castfx.js": "ec508ccf69da88bb1d4ba553b0e21c75388baa01133ec5b107368c159fff29a5",
+    "game.js": "8c47d75916f78ed5ea7957a102d494bc57aa49d2777c7fa6b524540f8f4c903a",
+    "vfx.js": "17206620eb4119dde77d4f946561e403c2bc522dc73909bf4de523a2ebd5da6a",
+    "unitMotion.js": "931ccf20c8aaecfceabd22bdc9388ff581820a9d93cfe2c986ec1922327aa2eb",
+    "locomotion.js": "533b1bab31b176687f9a26542e50cb30bd22d7d5ade985698eac12cd5cccd9ba",
+    "charPreview.js": "41be0416ced425607677cbe3ada5d6111d59a1878a4d083893e0f60b298f4da5",
+    "castfx.js": "37a45095e259ee5fecd9c580352e46a610e4a1067150e8996fefb05905faa085",
     "characterStyle.js": "740f5e2b81625ce2ab825a129244e23d062890779113a3e698e69e9b420cbbfb",
-    "models.js": "4df2b6b2741b0d7439f40f763f2bf25ba502212c1bc73048a54ed648a8634d3c",
-    "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
-    "forge/combatAsset.js": "d79bb3ea2b0880fcbfc34b54044a9057d1d0edf209e09b093dc48aa0e3c6a56d",
-    "forge/combatCast.js": "fee0dcbd8f7ba631da88ac9a8ea7e15391099697e6d84d1f8f7134300370bd5c",
-    "forge/combatKeys.js": "fcea68865c2254b6a3613f2c9a7b19ce0c5d4ffa1a18a115d19273fc8d7c904e",
+    "models.js": "1a1ff9fd5dd4cd2175b3551d97a7a4ee7f691f6bf994b75c0317706b8e82d3a9",
+    "forge/referenceAsset.js": "dbc4ee783631ac66ace195bb27107f9804188ced67ae63ce36ceea395f7b9e63",
+    "forge/combatAsset.js": "7fd619e8d2ba8a1e1a1b79a1402991517d55840f08b5ca955eb9c485531a63f4",
+    "forge/combatCast.js": "76d75037886988805ed8a8ea96083b5319af5ecc1f78555ef012cbbe67397b5f",
+    "forge/combatKeys.js": "3403efea96d52c8033d3b0e3a819d0009d8f36d9e7b76dc3c6fbe4cf8805c9d4",
     "castparticles.js": "3dcd8a2e4681b5d4726a2b69495b0cf89adfce0b4ff0b43fe34cfc2837773321"
   },
   "measures": {
     "s01": [
       {
         "form": "ground",
-        "meshes": 66,
-        "triangles": 16288
+        "meshes": 64,
+        "triangles": 16138
       }
     ],
     "s02": [
       {
         "form": "ground",
-        "meshes": 38,
-        "triangles": 10464
+        "meshes": 34,
+        "triangles": 10115
       }
     ],
     "s03": [
       {
         "form": "ground",
         "meshes": 101,
-        "triangles": 17240
+        "triangles": 17808
       },
       {
         "form": "flight",
         "meshes": 101,
-        "triangles": 17240
+        "triangles": 17808
       }
     ],
     "s04": [
       {
         "form": "ground",
-        "meshes": 35,
-        "triangles": 9624
+        "meshes": 31,
+        "triangles": 8984
       }
     ],
     "s05": [
       {
         "form": "ground",
-        "meshes": 40,
-        "triangles": 9236
+        "meshes": 37,
+        "triangles": 8748
       }
     ],
     "s06": [
       {
         "form": "ground",
-        "meshes": 122,
-        "triangles": 14944
+        "meshes": 126,
+        "triangles": 15580
       }
     ],
     "s07": [
       {
         "form": "ground",
-        "meshes": 129,
-        "triangles": 22504
+        "meshes": 126,
+        "triangles": 21887
       }
     ],
     "s08": [
       {
         "form": "ground",
-        "meshes": 36,
-        "triangles": 9136
+        "meshes": 32,
+        "triangles": 8551
       }
     ],
     "s09": [
       {
         "form": "ground",
-        "meshes": 93,
-        "triangles": 13240
+        "meshes": 90,
+        "triangles": 13880
       }
     ],
     "s10": [
       {
         "form": "ground",
-        "meshes": 119,
-        "triangles": 18140
+        "meshes": 120,
+        "triangles": 20215
       },
       {
         "form": "flight",
-        "meshes": 119,
-        "triangles": 18140
+        "meshes": 120,
+        "triangles": 20215
       }
     ],
     "s11": [
       {
         "form": "ground",
-        "meshes": 37,
-        "triangles": 9120
+        "meshes": 33,
+        "triangles": 8592
       }
     ],
     "s12": [
       {
         "form": "ground",
-        "meshes": 43,
-        "triangles": 9748
+        "meshes": 39,
+        "triangles": 9355
       }
     ],
     "t01": [
       {
         "form": "ground",
         "meshes": 84,
-        "triangles": 12392
+        "triangles": 13403
       }
     ],
     "t02": [
       {
         "form": "ground",
-        "meshes": 80,
-        "triangles": 14260
+        "meshes": 76,
+        "triangles": 15304
       }
     ],
     "t03": [
       {
         "form": "ground",
-        "meshes": 78,
-        "triangles": 12096
+        "meshes": 77,
+        "triangles": 13508
       }
     ],
     "t04": [
       {
         "form": "ground",
         "meshes": 98,
-        "triangles": 13480
+        "triangles": 13621
       }
     ],
     "t05": [
       {
         "form": "ground",
         "meshes": 89,
-        "triangles": 14352
+        "triangles": 14548
       }
     ],
     "t06": [
       {
         "form": "ground",
-        "meshes": 100,
-        "triangles": 12636
+        "meshes": 92,
+        "triangles": 13014
       },
       {
         "form": "flight",
-        "meshes": 122,
-        "triangles": 16188
+        "meshes": 114,
+        "triangles": 16566
       }
     ],
     "t07": [
       {
         "form": "ground",
-        "meshes": 74,
-        "triangles": 12044
+        "meshes": 72,
+        "triangles": 12085
       }
     ],
     "t08": [
       {
         "form": "ground",
-        "meshes": 129,
-        "triangles": 18072
+        "meshes": 135,
+        "triangles": 18620
       }
     ],
     "t09": [
       {
         "form": "ground",
-        "meshes": 33,
-        "triangles": 9100
+        "meshes": 29,
+        "triangles": 8547
       }
     ],
     "t10": [
       {
         "form": "ground",
-        "meshes": 98,
-        "triangles": 14512
+        "meshes": 94,
+        "triangles": 15170
       }
     ],
     "t11": [
       {
         "form": "ground",
-        "meshes": 141,
-        "triangles": 14520
+        "meshes": 135,
+        "triangles": 14455
       },
       {
         "form": "flight",
-        "meshes": 141,
-        "triangles": 14520
+        "meshes": 135,
+        "triangles": 14455
       }
     ],
     "t12": [
       {
         "form": "ground",
-        "meshes": 70,
-        "triangles": 11640
+        "meshes": 69,
+        "triangles": 12176
       }
     ],
     "m01": [
       {
         "form": "ground",
-        "meshes": 113,
-        "triangles": 12832
+        "meshes": 111,
+        "triangles": 14166
       },
       {
         "form": "flight",
-        "meshes": 113,
-        "triangles": 12832
+        "meshes": 111,
+        "triangles": 14166
       }
     ],
     "m02": [
       {
         "form": "ground",
-        "meshes": 92,
-        "triangles": 14096
+        "meshes": 95,
+        "triangles": 14203
       }
     ],
     "m03": [
       {
         "form": "ground",
-        "meshes": 33,
-        "triangles": 8544
+        "meshes": 29,
+        "triangles": 8144
       }
     ],
     "m04": [
       {
         "form": "ground",
-        "meshes": 76,
-        "triangles": 14044
+        "meshes": 79,
+        "triangles": 14306
       }
     ],
     "m05": [
       {
         "form": "ground",
-        "meshes": 137,
-        "triangles": 16908
+        "meshes": 135,
+        "triangles": 19896
       },
       {
         "form": "flight",
-        "meshes": 137,
-        "triangles": 16908
+        "meshes": 135,
+        "triangles": 19896
       }
     ],
     "m06": [
       {
         "form": "ground",
-        "meshes": 96,
-        "triangles": 13920
+        "meshes": 97,
+        "triangles": 14123
       }
     ],
     "m07": [
       {
         "form": "ground",
-        "meshes": 114,
-        "triangles": 14084
+        "meshes": 118,
+        "triangles": 14703
       },
       {
         "form": "flight",
-        "meshes": 114,
-        "triangles": 14084
+        "meshes": 118,
+        "triangles": 14703
       }
     ],
     "m08": [
       {
         "form": "ground",
-        "meshes": 114,
-        "triangles": 17536
+        "meshes": 116,
+        "triangles": 18297
       },
       {
         "form": "flight",
-        "meshes": 114,
-        "triangles": 17536
+        "meshes": 116,
+        "triangles": 18297
       }
     ]
   },
@@ -480,59 +480,59 @@
       "slot": "light",
       "subCones": 13,
       "testCases": 12,
-      "maximumBinOvershootRadians": 2.1236730790574754e-8
+      "maximumBinOvershootRadians": 0
     },
     {
       "id": "s04",
       "slot": "heavy",
       "subCones": 11,
       "testCases": 12,
-      "maximumBinOvershootRadians": 2.1883648559928304e-8
+      "maximumBinOvershootRadians": 2.855527067580077e-8
     },
     {
       "id": "s07",
       "slot": "heavy",
       "subCones": 17,
       "testCases": 12,
-      "maximumBinOvershootRadians": 3.029694645162451e-8
+      "maximumBinOvershootRadians": 2.415726435556209e-8
     },
     {
       "id": "s09",
       "slot": "light",
       "subCones": 15,
       "testCases": 12,
-      "maximumBinOvershootRadians": 2.6105083511529514e-8
+      "maximumBinOvershootRadians": 0
     },
     {
       "id": "t01",
       "slot": "heavy",
       "subCones": 13,
       "testCases": 12,
-      "maximumBinOvershootRadians": 2.761762912806276e-8
+      "maximumBinOvershootRadians": 0
     },
     {
       "id": "t03",
       "slot": "light",
       "subCones": 15,
       "testCases": 12,
-      "maximumBinOvershootRadians": 3.4633658274607626e-8
+      "maximumBinOvershootRadians": 0
     },
     {
       "id": "t06",
       "slot": "heavy",
       "subCones": 9,
       "testCases": 12,
-      "maximumBinOvershootRadians": 1.9567065356884683e-8
+      "maximumBinOvershootRadians": 2.055055464689204e-8
     },
     {
       "id": "m07",
       "slot": "heavy",
       "subCones": 19,
       "testCases": 12,
-      "maximumBinOvershootRadians": 2.4574460966153566e-8
+      "maximumBinOvershootRadians": 0
     }
   ],
   "uniquePatterns": 32,
-  "peakCalls": 267,
+  "peakCalls": 255,
   "browserErrors": []
 }

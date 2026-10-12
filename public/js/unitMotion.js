@@ -1,6 +1,47 @@
 // Event-driven presentation shares the shipped rig clock without modifying authority state.
 import { stepAuthoredCombat } from './forge/combatAsset.js';
 import { stepShieldMaterial, SHIELD_PRESENTATION_EXPAND } from './vfx.js';
+import { frictionFPS } from './data.js';
+
+/** Pre: one immutable event per accepted shot. Post: each slot advances once, including skipped LOD frames. */
+export function fireReferenceWeapon(rig, event) {
+  if (!rig || !event || !Number.isFinite(event.t0)) return null;
+  const slot = event.slot || 'light', sequence = rig.weaponSequences?.[slot];
+  if (!sequence) return null;
+  if (sequence.event === event) return sequence.entries[sequence.index];
+  sequence.event = event;
+  sequence.index = (sequence.index + 1) % sequence.entries.length;
+  const active = sequence.entries[sequence.index];
+  active.firedAt = event.t0;
+  if (active.payload) active.payload.scale.setScalar(.001);
+  rig.wpn[slot].ref = active.ref;
+  rig.wpn[slot].muz = active.muzzle;
+  rig.muzzles[slot].n = sequence.entries[(sequence.index + 1) % sequence.entries.length].muzzle;
+  if (rig.alternating?.slot === slot) rig.alternating.index = sequence.index;
+  const emitterNames = new Set(sequence.entries.map(entry => entry.muzzle.name));
+  for (const [name, parent] of rig.combat?.joints || []) {
+    if (emitterNames.has(parent)) active.muzzle.add(rig.combat.nodes.get(name));
+  }
+  for (const flame of rig.flames?.[slot] || []) active.muzzle.add(flame);
+  const hair = rig.hairFlick;
+  if (slot === 'light' && hair) {
+    if (event.t0 - hair.firedAt > hair.burstGap) hair.startedAt = event.t0;
+    hair.firedAt = event.t0;
+  }
+  return active;
+}
+
+/** Payload omission represents an ejected round; visible missiles retain their authored rigid dimensions. */
+export function poseWeaponPayloads(rig, now) {
+  for (const [slot, sequence] of Object.entries(rig?.weaponSequences || {})) {
+    const duration = rig.combat?.clips[slot]?.duration || .55;
+    for (const entry of sequence.entries) {
+      if (!entry.payload) continue;
+      const age = now - entry.firedAt;
+      entry.payload.scale.setScalar(age >= 0 && age < duration ? .001 : 1);
+    }
+  }
+}
 
 export function stepUnitSpinners(nodes, dt) {
   if (!nodes || !Number.isFinite(dt) || dt <= 0) return;
@@ -18,16 +59,27 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   const cf = ent.castFx, duration = rig.combat?.clips[cf?.slot]?.duration ?? (cf?.slot === 'atk' ? 1.35 : .95);
   const age = cf ? (now - cf.t0) / duration : -1;
   const cast = age >= 0 && age < 1 ? Math.sin(Math.PI * age) ** 2 : 0;
+  const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
+  rig._bowAim = rig.archery && rig._aimSlot==='light' && !(age>=0&&age<1) && !defending && !ent.dead
+    ? Math.max(0,Math.min(1,rig._fireAim || 0)) : 0;
   for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
     for (const track of tracks) {
       const phase = track.trigger === 'heavy' ? Math.max(0, rig._chg || 0, rig._aimH || 0) : weight;
-      track.node[track.channel][track.axis] = track.rest + track.amplitude * phase;
+      const fired = tracks === motion.fire ? track.emitters : null;
+      const pulse = fired?.length ? Math.max(...fired.map(({ slot, entry }) => {
+        const age = now - entry.firedAt;
+        return age >= 0 && Number.isFinite(age) ? frictionFPS(7, age) * (slot === 'heavy' ? 1 : .45) : 0;
+      })) : phase;
+      const active = fired?.length || track.barrel == null || track.barrel === rig.alternating?.index;
+      track.node[track.channel][track.axis] = track.rest + track.amplitude * (active ? pulse : 0);
     }
   }
   if (rig.launcher) {
     // Retraction restores the vertical rack before the support enters the rider's height range.
     rig.launcher.pivot.rotation.set(0, 0, 0);
     rig.launcher.lift.scale.y = 1;
+    const spread = Math.max(0,Math.min(1,rig._aimH || 0));
+    for (const pod of rig.launcher.pods || []) pod.node.position.x = pod.rest+(pod.deploy-pod.rest)*spread;
   }
   const spinner = motion.fireSpin;
   if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]
@@ -35,7 +87,6 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   stepAuthoredCombat(rig, ent, now);
   const shield = rig.shield;
   if (!shield) return;
-  const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
   const castShield = rig.combat && cf?.slot === 'def' && age >= 0 && age < 1;
   const target = !ent.dead && (!!defending || castShield);
   shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));
@@ -48,6 +99,15 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
 
 export function resetReferenceShieldPose(shield) {
   for (const track of shield?.pose || []) track.node.quaternion.copy(track.rest);
+}
+
+/** Hidden morph trees do not advance the event clock, but must release canceled presentation channels. */
+export function resetReferenceMotion(rig) {
+  const motion = rig?.referenceMotion;
+  if (!motion) return;
+  for (const tracks of [motion.fire, motion.charge, motion.cast]) {
+    for (const track of tracks) track.node[track.channel][track.axis] = track.rest;
+  }
 }
 
 /** Reapply presentation after a morph pose without advancing its shared clock twice. */

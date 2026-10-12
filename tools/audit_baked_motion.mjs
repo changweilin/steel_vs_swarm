@@ -6,8 +6,11 @@ import { serve } from './mech_prompt_review.mjs';
 import { CHARACTERS } from '../public/js/data.js';
 
 const output='out/anatomical_motion/after',ids=[];
+const option=process.argv.indexOf('--asset');
+const selected=option<0?Object.keys(CHARACTERS):process.argv[option+1].split(',');
+assert(selected.every(id=>CHARACTERS[id]),'Unknown motion asset');
 const samples={};
-for(const id of Object.keys(CHARACTERS)){
+for(const id of selected){
   let report;
   for(const directory of ['morph_reference','mech_reference']){
     try{report=JSON.parse(await readFile(`out/${directory}/${id}/validation.json`,'utf8'));break;}catch{}
@@ -36,7 +39,7 @@ try{
       const gltf=await new GLTFLoader().loadAsync(`/public/assets/models/reference/${sample.id}.glb`);
       const mixer=new THREE.AnimationMixer(gltf.scene);
       const expected=new THREE.Quaternion(),position=new THREE.Vector3();
-      let count=0,drift=0,angular=0;
+      let count=0,drift=0,angular=0,scaleError=0;
       for(const [name,data] of Object.entries(sample.clips)){
         const clip=gltf.animations.find(clip=>clip.name===name);
         if(!clip)throw new Error(sample.id+': missing exported clip '+name);
@@ -44,20 +47,22 @@ try{
         for(let frame=0;frame<data.frames.length;frame+=6){
           // Blender action keys start at frame one, which glTF retains as a positive time.
           mixer.setTime((frame+1)/data.fps);
-          for(const [name,at,q] of data.frames[frame]){
+          for(const [name,at,q,scale] of data.frames[frame]){
             if(name.startsWith('fx_'))continue;
             const node=gltf.scene.getObjectByName(name);
             if(!node)throw new Error(sample.id+': missing exported joint '+name);
             const distance=node.position.distanceTo(position.fromArray(at));
             const angle=node.quaternion.angleTo(expected.fromArray(q));
-            if(distance>2e-4||angle>2e-3)throw new Error(`${sample.id}/${clip.name}/${frame}/${name}: export drift ${distance}, rotation ${angle}`);
+            const scaleDrift=node.scale.distanceTo(position.fromArray(scale));
+            if(distance>2e-4||angle>2e-3||scaleDrift>2e-4)throw new Error(`${sample.id}/${clip.name}/${frame}/${name}: export drift ${distance}, rotation ${angle}, scale ${scaleDrift}`);
+            scaleError=Math.max(scaleError,scaleDrift);
             drift=Math.max(drift,distance);angular=Math.max(angular,angle);count++;
           }
         }
       }
       mixer.stopAllAction();mixer.uncacheRoot(gltf.scene);
       gltf.scene.traverse(node=>{if(node.isMesh){node.geometry.dispose();for(const material of [node.material].flat())material.dispose();}});
-      return {jointSamples:count,maximumPivotError:drift,maximumAngularError:angular};
+      return {jointSamples:count,maximumPivotError:drift,maximumAngularError:angular,maximumScaleError:scaleError};
     },samples[id]);
     console.log('GLB motion verified '+id);
   }

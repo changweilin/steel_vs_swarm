@@ -11,7 +11,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain, open_contract_source, authored_spec
 ROOT = HERE.parent.parent
 contract_file = HERE / 'assets.json'
 contract = json.loads(contract_file.read_text(encoding='utf8'))
@@ -41,7 +41,7 @@ def collision_tree(objects):
 
 selected=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else list(contract['assets'])
 for id in selected:
-    spec=contract['assets'][id]
+    spec=authored_spec(contract['assets'][id])
     blend = output / id / (id + '.blend')
     report_file = output / id / 'validation.json'
     report = json.loads(report_file.read_text(encoding='utf8'))
@@ -49,20 +49,28 @@ for id in selected:
     assert report['measurements']['source']['contract'] == sha(contract_file), id + ': stale contract'
     assert report['measurements']['source']['builder'] == sha(HERE / 'build.py'), id + ': stale recipe'
     assert report['measurements']['source']['catalog'] == sha(HERE / 'catalog.py'), id + ': stale catalog recipe'
-    bpy.ops.wm.open_mainfile(filepath=str(blend))
+    baked_source = open_contract_source(blend, report)
+    held_nodes={h[key] for h in spec['rig'].get('heldWeapons',[]) for key in ['node','grip']}
     skeleton = bpy.data.objects[id + '_skeleton']
     assert len(skeleton.data.bones) == len(spec['joints']), id + ': skeleton lost bones'
     for name, parent, position in spec['joints']:
         joint = bpy.data.objects[name]
         assert joint.parent.name == (parent or id), name + ': joint parent changed'
         expected = (position[0], -position[2], position[1])
-        assert max(abs(joint.location[i] - expected[i]) for i in range(3)) < 1e-5, name + ': pivot changed'
+        if name not in held_nodes:
+            assert max(abs(joint.location[i] - expected[i]) for i in range(3)) < 1e-5, name + ': pivot changed'
         bone = skeleton.pose.bones[name]
         assert bone.constraints[0].target == joint, name + ': skeleton lost its driver'
         assert math.isfinite(bone.length) and bone.length > 0, name + ': invalid bone'
         tracks = {track.name for track in joint.animation_data.nla_tracks}
         assert set(report['clips']).issubset(tracks), name + ': editable actions missing'
     meshes = [obj for obj in bpy.data.objects if obj.type == 'MESH']
+    bpy.context.view_layer.update()
+    for held in spec['rig'].get('heldWeapons',[]):
+        grip=bpy.data.objects[held['grip']]
+        contact=Vector((held['contact'][0],-held['contact'][2],held['contact'][1]))
+        expected=bpy.data.objects[held['hand']].matrix_world @ contact
+        assert (grip.matrix_world.translation-expected).length<1e-5, 'Grasp detached from wrist: '+id
     assert meshes and all(obj.parent and obj.data.materials for obj in meshes), id + ': orphan geometry'
     assert all(math.isfinite(v) for obj in meshes for vertex in obj.data.vertices for v in vertex.co), id + ': nonfinite geometry'
     anatomy = {'articulation':verify_articulated_body(spec,meshes)}
@@ -153,6 +161,9 @@ for id in selected:
     joints = [bpy.data.objects[name] for name, _, _ in spec['joints']]
     pose_samples = 0
     for clip in report['clips']:
+        # Runtime-baked clips are checked at every frame by verify_motion.py and by the equipment geometry audit.
+        if baked_source and clip in report['motionSource']['clips']:
+            continue
         for joint in joints:
             joint.animation_data.action = None
             for track in joint.animation_data.nla_tracks:
@@ -224,7 +235,8 @@ for id in selected:
         for track in joint.animation_data.nla_tracks:
             track.mute = True
     results[id] = {'blend': sha(blend), 'sourceMeshes': len(meshes), 'bones': len(skeleton.data.bones),
-                   'editableClips': report['clips'], 'poseSamples': pose_samples, 'anatomy': anatomy}
+                   'editableClips': report['clips'], 'poseSamples': pose_samples, 'anatomy': anatomy,
+                   'bakedSource': baked_source}
     report['gates']['editable_source'] = 'pass'
     pending = report_file.with_suffix('.json.tmp')
     pending.write_text(json.dumps(report, indent=2) + '\n', encoding='utf8')

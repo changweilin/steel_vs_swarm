@@ -1,6 +1,6 @@
 {
-  "blend": "d8617fa1361e511d59c24b5070780aeaedb0e790a08144d76283b73e70bdde1a",
-  "bones": 50,
+  "blend": "6c78a5bafd6d30cae37f04b04265516f422aaaf5b5e61b8a5869d019fb470a2a",
+  "bones": 52,
   "clips": [
     "idle",
     "run",
@@ -25,60 +25,67 @@
     "articulation": {
       "waist": null,
       "heldWeapons": 0
-    }
+    },
+    "sealedCoreMeshes": 6
   },
-  "foldedLimbBoundsInHullCoordinates": {
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/s03-a9fa9ee1e500.blend",
+    "contractSourceHash": "a9fa9ee1e5007748f0d26089f8ccffd670fbc4826b8ec9b5384f920686cd8424",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+  },
+  "deliveredShieldAlignment": null,
+  "foldedLimbBoundsInHullCoordinates": {},
+  "limbVerticesOutsideHull": 0,
+  "exposedLimbBoundsInHullCoordinates": {
     "leg_FL": {
       "min": [
-        0.08480001986026764,
+        0.9411999583244324,
         -0.5712802410125732,
         -0.3263871669769287
       ],
       "max": [
-        1.0351999998092651,
+        2.005199909210205,
         0.2496001273393631,
-        1.0598046779632568
+        1.115005612373352
       ]
     },
     "leg_FR": {
       "min": [
-        -1.0351999998092651,
+        -2.005199909210205,
         -0.5712802410125732,
         -0.3263871669769287
       ],
       "max": [
-        -0.08479996770620346,
+        -0.9411999583244324,
         0.2496001273393631,
-        1.0598046779632568
+        1.115005612373352
       ]
     },
     "leg_HL": {
       "min": [
-        -0.17936000227928162,
+        0.7606399655342102,
         -0.4972798228263855,
         -2.086338758468628
       ],
       "max": [
-        1.0993599891662598,
+        2.0393600463867188,
         0.4972801208496094,
         -0.5069265365600586
       ]
     },
     "leg_HR": {
       "min": [
-        -1.0993599891662598,
+        -2.0393600463867188,
         -0.4972798228263855,
         -2.086338758468628
       ],
       "max": [
-        0.17936000227928162,
+        -0.7606399655342102,
         0.4972801208496094,
         -0.5069265365600586
       ]
     }
   },
-  "limbVerticesOutsideHull": 0,
-  "exposedLimbBoundsInHullCoordinates": {},
   "outsideExamples": [],
   "editable_source": "pass",
   "flight_belly": "pass"

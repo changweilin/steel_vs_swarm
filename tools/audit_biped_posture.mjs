@@ -43,7 +43,8 @@ try {
         const rig = morph ? morph.ground : unit.userData.rig;
         const gripMounts = new Map((rig.heldWeapons || []).map(held => {
           const node = tree.getObjectByName(held.node);
-          return [node, node.quaternion.clone()];
+          const deployed = rig.anatomical?.controls.find(control => control.node === node)?.q;
+          return [node, (deployed || node.quaternion).clone()];
         }));
         const ent = { id, mesh: unit, heroY: 0, df: false, sp: 1 };
         const dt = 1 / fps;
@@ -84,14 +85,31 @@ try {
             check(Math.abs(normal.x) > .99999, 't11: running disk faces forward');
           }
         }
-        check(arms.every(a => range(a) > .15), `${id}: a running shoulder is frozen`);
-        check(elbows.every(a => range(a) > .1), `${id}: a running elbow is frozen`);
+        if (rig.predatory) {
+          check(arms.every(a=>range(a)>.015), `${id}: predatory shoulder loses its breathing motion`);
+          check(Math.abs(rig.armChainL[0].g.rotation.x-rig.predatory.elbow)<1e-5
+            && Math.abs(rig.armChainR[0].g.rotation.x-rig.predatory.elbow)<1e-5, `${id}: predatory grasping elbows leave their brace`);
+        } else {
+          check(arms.every(a => range(a) > .15), `${id}: a running shoulder is frozen`);
+          check(elbows.every(a => range(a) > .1), `${id}: a running elbow is frozen`);
+        }
         rig._fireAim = rig._aim = 1;
         const firing = [[], []];
         for (let i = 0; i < fps; i++) {
           step(speed);
+          for (const [slot,weapon] of Object.entries(rig.wpn)) {
+            if (slot!==(rig._aimSlot || 'light')&&!weapon.alwaysForward) continue;
+            const barrel=point().set(0,0,1).applyQuaternion(weapon.ref.getWorldQuaternion(quat()));
+            check(barrel.z>.95, `${id}: active firing barrel points away from the target`);
+          }
           for (const [index, side] of ['L', 'R'].entries()) {
             const wrist = rig[`armChain${side}`][1].g, elbow = rig[`armChain${side}`][0].g;
+            if (!Object.values(rig.wpn).some(weapon=>weapon.aimJoint===wrist && weapon.ref!==rig.hairFlick?.middle)) continue;
+            const stowed = rig.stowedWeapons?.find(control => control.node.parent===wrist && control.slot!==(rig._aimSlot || 'light'));
+            if (stowed) {
+              check(stowed.node.scale.x <= stowed.scale+1e-5, `${id}: inactive weapon does not stow`);
+              continue;
+            }
             const forward = wrist.getWorldPosition(point()).sub(elbow.getWorldPosition(point())).normalize();
             firing[index].push(Math.atan2(forward.y, forward.z));
             check(forward.z > .6, `${id}: ${side} firing forearm points away from the target`);
@@ -106,7 +124,7 @@ try {
             }
           }
         }
-        check(firing.every(a => range(a) < .08), `${id}: firing arms keep swinging`);
+        check(firing.filter(a=>a.length).every(a => range(a) < .08), `${id}: firing arms keep swinging`);
         rig._fireAim = rig._aim = 0;
         ent.df = true;
         for (let i = 0; i < fps * 3; i++) step(0);

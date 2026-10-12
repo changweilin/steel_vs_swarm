@@ -1,5 +1,5 @@
 // Combat presentation: complete roster, joint attachments, shield clearance, transported shot ownership,
-// independent GLB loading, finite event clocks and disposal. Existing project resource limits stay binding.
+// independent GLB loading, sampled spherical bounds, phase draw budgets and disposal. Existing resource limits stay binding.
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -19,8 +19,12 @@ assert(ids.every(id => roster.includes(id)), 'Unknown combat asset');
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
 const sha = value => createHash('sha256').update(value).digest('hex');
 const codeHash = sha(await readFile('tools/mech_authoring/combat.py'));
+const abilityHash = sha(await readFile('tools/mech_authoring/ability.py'));
 const builderHash = sha(await readFile('tools/mech_authoring/build.py'));
-const intents = JSON.parse(JSON.stringify(combatIntent(await readFile('docs/art_gen.md', 'utf8'))));
+const intents = JSON.parse(JSON.stringify(combatIntent(await readFile('docs/art_gen.md', 'utf8'),
+  await readFile('docs/ability-vfx-direction.md', 'utf8'))));
+const profiles = new Set([...readSrc('public', 'js', 'castfx.js').matchAll(/'([stm]\d{2}\.(?:def|atk)\.[a-z_]+)'/g)].map(match => match[1]));
+assert.deepEqual([...profiles].sort(), Object.values(intents).flatMap(intent => Object.values(intent.abilities).map(ability => ability.direction.profileId)).sort(), 'Direction and compositor profiles disagree');
 const identities = {};
 const integration = {};
 for (const file of ['game.js', 'vfx.js', 'unitMotion.js', 'locomotion.js', 'charPreview.js', 'castfx.js',
@@ -32,9 +36,25 @@ assert.equal(new Set(roster.map(id => characterCombatStyle(id).shieldForm)).size
 for (const id of ids) {
   const asset = COMBAT_ASSETS[id], style = characterCombatStyle(id);
   assert.equal(asset.source.combat, codeHash, `${id}: stale combat recipe`);
+  assert.equal(asset.combat.abilityHash, abilityHash, `${id}: stale ability recipe`);
   assert.equal(asset.source.builder, builderHash, `${id}: stale builder`);
   assert.deepEqual(asset.combat.intent, intents[id], `${id}: stale art or authority measures`);
   for (const key of ['color', 'accent', 'frame', 'shieldForm', 'variant']) assert.equal(asset.combat.intent[key], style[key], `${id}: stale ${key}`);
+  for (const slot of ['def', 'atk']) {
+    const field = asset.combat.fields[slot];
+    assert.equal(field.profileId, intents[id].abilities[slot].direction.profileId, `${id}/${slot}: wrong profile`);
+    assert.equal(new Set(field.nodes).size, field.nodes.length, `${id}/${slot}: repeated phase node`);
+    assert(field.beats.length === 3 && field.beats.every((time, i) => time > 0 && time < 1 && (!i || time > field.beats[i - 1])));
+  }
+  const silhouette = (slot, weapon = false) => {
+    const owners = weapon ? asset.combat.transported.filter(name => name.startsWith(`fx_${slot}_`)) : asset.combat.fields[slot].nodes;
+    const positions = asset.meshes.filter(part => owners.includes(part.parent)).flatMap(part => part.positions);
+    const extent = Math.max(...positions.map(Math.abs));
+    return sha(JSON.stringify(positions.map(value => Math.round(value / extent * 1000))));
+  };
+  assert.notEqual(silhouette('def'), silhouette('atk'), `${id}: Q/E differ only by material or uniform scale`);
+  assert.notEqual(silhouette('light', true), silhouette('heavy', true), `${id}: weapons differ only by material or uniform scale`);
+  assert.notDeepEqual(asset.combat.fields.def.beats, asset.combat.fields.atk.beats, `${id}: repeated Q/E timing`);
   assert.deepEqual(Object.keys(asset.combat.clips), slots);
   for (const clip of Object.values(asset.combat.clips)) {
     assert(clip.duration > 0 && Number.isFinite(clip.duration));
@@ -48,6 +68,10 @@ for (const id of ids) {
     if (!def.fan) continue;
     const ownership = asset.combat.fans[slot], half = fanArcHalf(def), span = half * 2 / fanSubs(def);
     assert.equal(ownership.count, fanSubs(def), `${id}/${slot}: wrong sub-cone count`);
+    for (const keys of [ownership.radiusKeys, ownership.opacityKeys]) {
+      assert(keys?.length >= 2 && keys.every(([time, value], i) => Number.isFinite(time) &&
+        value >= 0 && value <= 1 && (!i || time > keys[i - 1][0])), `${id}/${slot}: unsafe fan presentation curve`);
+    }
     for (const part of asset.meshes.filter(mesh => mesh.parent === `fx_${slot}_ion`)) {
       const owners = ownership.vertexBins[part.material];
       assert.equal(owners.length, part.positions.length / 3, `${id}/${slot}: lost sub-cone ownership`);
@@ -102,6 +126,7 @@ try {
     const { spawnCastFx } = await import('/public/js/castfx.js');
     const { characterShieldTexture } = await import('/public/js/castfx.js');
     const { characterCombatStyle } = await import('/public/js/characterStyle.js');
+    const { COMBAT_ASSETS } = await import('/public/js/forge/combatAssets.js');
     const createShield = new Function('THREE', 'makeShieldMaterial', 'characterCombatStyle', 'characterShieldTexture',
       `return ({${shieldFactory}})._createFrontShieldMesh`)(T, makeShieldMaterial, characterCombatStyle, characterShieldTexture);
     const check = (ok, message) => { if (!ok) throw new Error(message); };
@@ -118,6 +143,33 @@ try {
     });
     const fieldSheets = Array.from({ length: 4 }, () => {
       const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 8 * 264;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return { canvas, ctx };
+    });
+    const weaponSheets = Array.from({ length: 4 }, () => {
+      const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 8 * 264;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return { canvas, ctx };
+    });
+    const reviewWeapon = (id, slot, object, update, overhead = false) => {
+      object.updateWorldMatrix(true, true);
+      const box = new T.Box3().setFromObject(object), center = box.getCenter(new T.Vector3());
+      const radius = Math.max(.1, box.getSize(new T.Vector3()).length() * .5);
+      camera.up.set(0, overhead ? 0 : 1, overhead ? -1 : 0);
+      camera.position.copy(center).add(new T.Vector3(overhead ? 0 : 1, overhead ? 1 : .65, -.25).normalize().multiplyScalar(radius * 3.6));
+      camera.lookAt(center); renderer.setSize(300, 240);
+      const index = ids.indexOf(id), row = index % 8, sheet = weaponSheets[Math.floor(index / 8)];
+      for (const [beat, time] of [.1, .35, .65].entries()) {
+        update(time); renderer.render(scene, camera);
+        const col = (slot === 'heavy' ? 3 : 0) + beat;
+        sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
+        sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+        sheet.ctx.fillText(`${id} ${slot} t=${time}`, col * 300 + 8, row * 264 + 257);
+      }
+      camera.up.set(0, 1, 0);
+    };
+    const cycleSheets = Array.from({ length: 8 }, () => {
+      const canvas = document.createElement('canvas'); canvas.width = 2400; canvas.height = 8 * 264;
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       return { canvas, ctx };
     });
@@ -182,6 +234,12 @@ try {
           if (slot === 'light' || slot === 'heavy') ent.fireFx = event;
           else ent.castFx = event;
           const duration = rig.combat.clips[slot].duration;
+          const lead = rig.fireLead?.[slot] || 0;
+          if (lead) {
+            step(lead * .5);
+            check(rig.combat.joints.every(([name]) => name === 'fx_guard' || !rig.combat.nodes.get(name).visible), `${id}/${slot}: effects precede weapon preparation`);
+            step(lead * .5);
+          }
           for (let i = 0; i < 12; i++) step(duration / 30);
           check(rig.combat.joints.some(([name]) => name !== 'fx_guard' && rig.combat.nodes.get(name).visible), `${id}/${slot}: no attached effects`);
           if (slot === 'def') { check(rig.combat.guard.visible, `${id}: defense cast has no shield`); bodyBox(unit, rig); }
@@ -252,6 +310,19 @@ try {
                 }
               });
             }
+            if (COMBAT_ASSETS[id].combat.fans[slot].motion === 'sweep') {
+              const mesh = fan.children.find(mesh => mesh.geometry.attributes.color);
+              check(mesh, `${id}/${slot}: missing travelling staff sweep`);
+              const colors = mesh.geometry.attributes.color, owners = mesh.geometry.userData.fanBins;
+              const first = owners.indexOf(0), last = owners.indexOf(count - 1);
+              effects[0].fade(fan, .88);
+              check(colors.getX(first) > colors.getX(last), `${id}: sweep did not start on the left`);
+              effects[0].fade(fan, .33);
+              check(colors.getX(last) > colors.getX(first), `${id}: sweep did not reach the right`);
+              const expected = colors.getX(last);
+              effects[0].fade(fan, .33);
+              check(colors.getX(last) === expected, `${id}: repeated sweep frames drift`);
+            }
             scene.remove(fan); disposeTree(fan);
           }
           fanBounds.push({ id, slot, subCones: count, testCases: 12, maximumBinOvershootRadians });
@@ -266,6 +337,7 @@ try {
           fanContext.drawImage(renderer.domElement, x, y);
           fanContext.fillStyle = '#d9ecff'; fanContext.font = '15px monospace';
           fanContext.fillText(`${id} ${slot}: ${count} bins, ${def.range}m + center reach`, x + 8, y + 337);
+          reviewWeapon(id, slot, fan, time => effects[0].fade(fan, 1 - time), true);
           camera.up.set(0, 1, 0);
           renderer.setSize(300, 240); scene.remove(fan); disposeTree(fan);
         } else if (def.type === 'beam' || def.type === 'plasma') {
@@ -286,6 +358,7 @@ try {
               check(vertex.addScaledVector(direction, -distance).length() <= .80001, `${id}: discharge inflates radius`);
             }
           });
+          reviewWeapon(id, slot, energy.obj, time => energy.fade(energy.obj, 1 - time));
           for (const effect of effects) {
             for (const f of [1, .5, 0]) { effect.fade?.(effect.obj, f, .1); finite(effect.obj); }
             scene.remove(effect.obj); effect.dispose ? effect.dispose() : disposeTree(effect.obj);
@@ -293,7 +366,10 @@ try {
         } else {
           const shot = projectileMesh(def, { heavy: slot === 'heavy' });
           check(shot.userData.authoredProjectile?.ch === id, `${id}: shipped shot omitted Blender projectile`);
+          scene.add(shot);
+          reviewWeapon(id, slot, shot, time => stepProjectileFx(shot, time * .5, 300));
           for (const time of [0, .1, .5, 1]) { stepProjectileFx(shot, time, 300); finite(shot); }
+          scene.remove(shot);
           disposeTree(shot);
         }
       }
@@ -302,7 +378,12 @@ try {
         spawnCastFx(scene, effects, { ch: id, slot, fx: a.fx, at, r: radius, dur: a.dur, scale: 20 });
         const field = effects.find(effect => effect.obj.userData.authoredCast);
         check(field?.obj.userData.authoredCast.radius === radius, `${id}/${slot}: field ignores event radius`);
-        for (const fraction of [1, .92, .7, .4, 0]) {
+        const phaseTimes = COMBAT_ASSETS[id].combat.fields[slot].beats;
+        const [tell, release, contact] = phaseTimes;
+        const cycleTimes = [0, tell / 2, tell, release, (release + contact) / 2, contact, Math.min(.98, contact + .12), 1];
+        const samples = [...new Set([...Array.from({ length: 33 }, (_, i) => i / 32), ...phaseTimes, ...cycleTimes])].sort((a, b) => a - b);
+        for (const time of samples) {
+          const fraction = 1 - time;
           field.fade(field.obj, fraction); field.obj.updateWorldMatrix(true, true);
           field.obj.traverse(mesh => {
             if (!mesh.isMesh) return;
@@ -312,15 +393,25 @@ try {
               check(vertex.distanceTo(at) <= radius * 1.0001, `${id}/${slot}: animated field exceeds settled radius`);
             }
           });
-          const beat = [.92, .7, .4].indexOf(fraction);
-          if (radius === (a.r || 4) && beat >= 0) {
+          const beat = phaseTimes.indexOf(time);
+          const frame = cycleTimes.indexOf(time);
+          if (radius === (a.r || 4) && (beat >= 0 || frame >= 0)) {
             camera.far = Math.max(1000, radius * 5); camera.updateProjectionMatrix();
             camera.position.copy(at).add(new T.Vector3(.65, .5, 1).normalize().multiplyScalar(radius * 3.2));
             camera.lookAt(at); renderer.render(scene, camera);
-            const sheet = fieldSheets[Math.floor(index / 8)], row = index % 8, col = (slot === 'def' ? 0 : 3) + beat;
-            sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
-            sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
-            sheet.ctx.fillText(`${id} ${slot} ${['tell', 'release', 'contact'][beat]} r=${radius}m`, col * 300 + 8, row * 264 + 257);
+            check(renderer.info.render.calls <= (slot === 'def' ? 2 : 4), `${id}/${slot}: field leaves no draw-call budget for its hardpoint cue`);
+            if (beat >= 0) {
+              const sheet = fieldSheets[Math.floor(index / 8)], row = index % 8, col = (slot === 'def' ? 0 : 3) + beat;
+              sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
+              sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+              sheet.ctx.fillText(`${id} ${slot} ${['tell', 'release', 'contact'][beat]} r=${radius}m`, col * 300 + 8, row * 264 + 257);
+            }
+            if (frame >= 0) {
+              const move = index * 2 + (slot === 'atk' ? 1 : 0), sheet = cycleSheets[Math.floor(move / 8)], row = move % 8;
+              sheet.ctx.drawImage(renderer.domElement, frame * 300, row * 264);
+              sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+              sheet.ctx.fillText(`${id} ${slot} t=${time.toFixed(3)}`, frame * 300 + 8, row * 264 + 257);
+            }
           }
         }
         for (const effect of effects) { scene.remove(effect.obj); effect.dispose ? effect.dispose() : disposeTree(effect.obj); }
@@ -358,15 +449,21 @@ try {
     return { measures, fanBounds, uniquePatterns: patterns.size, peakCalls,
       fanSheet: fanSheet.toDataURL('image/png'),
       sheets: sheets.map(sheet => sheet.canvas.toDataURL('image/png')),
-      fieldSheets: fieldSheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
+      fieldSheets: fieldSheets.map(sheet => sheet.canvas.toDataURL('image/png')),
+      weaponSheets: weaponSheets.map(sheet => sheet.canvas.toDataURL('image/png')),
+      cycleSheets: cycleSheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
   }, { ids, slots, limits: contract.limits, shieldFactory });
   assert.deepEqual(errors, [], 'Browser or shader errors');
   for (let i = 0; i < result.sheets.length; i++) await writeFile(`${output}/actions-${i + 1}.png`, Buffer.from(result.sheets[i].split(',')[1], 'base64'));
   for (let i = 0; i < result.fieldSheets.length; i++) await writeFile(`${output}/fields-${i + 1}.png`, Buffer.from(result.fieldSheets[i].split(',')[1], 'base64'));
+  for (let i = 0; i < result.weaponSheets.length; i++) await writeFile(`${output}/weapons-${i + 1}.png`, Buffer.from(result.weaponSheets[i].split(',')[1], 'base64'));
+  for (let i = 0; i < result.cycleSheets.length; i++) await writeFile(`${output}/ability-cycle-${i + 1}.png`, Buffer.from(result.cycleSheets[i].split(',')[1], 'base64'));
   await writeFile(`${output}/fans.png`, Buffer.from(result.fanSheet.split(',')[1], 'base64'));
   delete result.fanSheet;
   delete result.sheets;
   delete result.fieldSheets;
+  delete result.weaponSheets;
+  delete result.cycleSheets;
   await writeFile(`${output}/runtime-validation.json`, JSON.stringify({ identities, integration, ...result, browserErrors: errors }, null, 2));
   for (const id of ids) {
     const path = `${output}/${id}/validation.json`, report = JSON.parse(await readFile(path, 'utf8'));

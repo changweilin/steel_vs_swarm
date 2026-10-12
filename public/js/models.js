@@ -293,6 +293,7 @@ function attachMuzzleFlames(rig) {
       new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.9,
         blending: THREE.AdditiveBlending, depthWrite: false }));
     f.userData.noOutline = true;
+    f.userData.presentationEffect = true;
     f.userData.noPaint = true;
     f.userData.geoKeep = true;   // LOD MUST NOT touch: stepCombatFx owns visible every heavy frame
     f.visible = false;
@@ -366,14 +367,6 @@ function buildHyperMissile(side, vis = null) {
   flame.userData.noOutline = true;
   // 螺旋航跡由伺服器逐 tick 給位置/朝向 ⇒ 這裡**不掛** userData.spin(自轉會與回報的 ry 打架)
   return g;
-}
-
-/** 變形者肩上的集束轟炸機掛點(組合/分離動畫的錨點;game.js 以 userData.decoyPod 控制顯隱與縮放) */
-function decoyPod(side, vis, target) {
-  const pod = buildDecoy(side, vis);
-  pod.scale.setScalar(target * 0.42 / pod.userData.decoyLen);
-  pod.position.set(-target * 0.3, target * 0.72, -target * 0.06);
-  return pod;
 }
 
 /**
@@ -2249,15 +2242,6 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false,
   for (const r of rigs) {
     if (ch && MOVE_SIG[ch]) r.moveSig = MOVE_SIG[ch];
     if (ch && CAST_SIG[ch]) r.castSig = CAST_SIG[ch];
-  }
-
-  // 變形者:肩上的餌機掛點(狙擊長按右鍵分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)。
-  // 2026-07-18:機甲(hero:robot)移除餌機(改重砲模式),不再掛餌機模組。
-  if (kind === 'hero:morph') {
-    const pod = decoyPod(side, vis, target);
-    outlinify(pod, outlineW(target));
-    g.add(pod);
-    g.userData.decoyPod = pod;
   }
 
   // Optional GLB tower bodies still need the procedural weapon assembly.

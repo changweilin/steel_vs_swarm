@@ -1,6 +1,6 @@
 {
-  "blend": "d58499b227e4ae4e39ab988dc3491cff0b84eb7b06e86e0ec4a1c1e6482aa4cc",
-  "bones": 50,
+  "blend": "f77396aaa95153e600663ae2cbef5d138ca7dae365c98ab69175392535226112",
+  "bones": 54,
   "clips": [
     "idle",
     "run",
@@ -26,55 +26,62 @@
       "waist": null,
       "heldWeapons": 0
     },
+    "sealedCoreMeshes": 3,
     "feathersBehindBones": 44
   },
+  "bakedSource": {
+    "contractSource": "out/anatomical_motion/before/m08-73ff1b12a7d4.blend",
+    "contractSourceHash": "73ff1b12a7d4ea43c4bc0a175eee1ddbe362b37cbbd306742c709458c3516cc5",
+    "motionVerification": "out/anatomical_motion/after/blender-validation.json"
+  },
+  "deliveredShieldAlignment": null,
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,
   "exposedLimbBoundsInHullCoordinates": {
     "leg_FL": {
       "min": [
-        0.07800997793674469,
-        0.2435874491930008,
+        0.9454999566078186,
+        0.16120001673698425,
         0.11894006282091141
       ],
       "max": [
-        1.8899999856948853,
+        2.799999952316284,
         0.796412467956543,
         0.8799999952316284
       ]
     },
     "leg_FR": {
       "min": [
-        -1.8899999856948853,
-        0.24358749389648438,
+        -2.799999952316284,
+        0.16120001673698425,
         0.11894006282091141
       ],
       "max": [
-        -0.07800997793674469,
+        -0.9454999566078186,
         0.796412467956543,
         0.8799999952316284
       ]
     },
     "leg_HL": {
       "min": [
-        -0.022789984941482544,
+        0.10721001029014587,
         -1.1588857173919678,
         -0.8649150729179382
       ],
       "max": [
-        0.8827899694442749,
+        1.0127899646759033,
         0.028689302504062653,
         0.1608574241399765
       ]
     },
     "leg_HR": {
       "min": [
-        -0.8827899694442749,
+        -1.0127899646759033,
         -1.1588857173919678,
         -0.8649150729179382
       ],
       "max": [
-        0.022789984941482544,
+        -0.10721001029014587,
         0.028689302504062653,
         0.1608574241399765
       ]

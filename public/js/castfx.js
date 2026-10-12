@@ -1801,10 +1801,10 @@ const PROFILE_ROWS = [
   ['t09.def.martyrs_elegy','t09','def','gate','poem'], ['t09.atk.missile_black_rain','t09','atk','zone','poem'],
   ['t10.def.prophetic_intercept','t10','def','scan','math'], ['t10.atk.sky_sanctuary','t10','atk','dome','shield'],
   ['t11.def.trench_doctrine','t11','def','circle','star'], ['t11.atk.veteran_muster','t11','atk','gate','shield'],
-  ['t12.def.firefly_spectrum','t12','def','scan','star'], ['t12.atk.collective_silence','t12','atk','bind','circuit'],
+  ['t12.def.firefly_spectrum','t12','def','scan','star'], ['t12.atk.resonance_lifetide','t12','atk','bind','circuit'],
   ['m01.def.night_bat_escape','m01','def','dash','wing'], ['m01.atk.blood_raven_feast','m01','atk','aura','flame'],
   ['m02.def.titan_stance','m02','def','dome','shield'], ['m02.atk.cornerstone_oath','m02','atk','circle','shield'],
-  ['m03.def.alpine_spring','m03','def','heal','frost'], ['m03.atk.aurora_revival','m03','atk','dome','frost'],
+  ['m03.def.alpine_spring','m03','def','heal','frost'], ['m03.atk.aurora_frostlock','m03','atk','dome','frost'],
   ['m04.def.steppe_mist','m04','def','veil','wing'], ['m04.atk.eagle_skyeye','m04','atk','scan','reticle'],
   ['m05.def.blackout_breaker','m05','def','bind','bolt'], ['m05.atk.thunder_judgement','m05','atk','zone','bolt'],
   ['m06.def.carnival_vanguard','m06','def','gate','note'], ['m06.atk.helicopter_carnival','m06','atk','atfield','wing'],
@@ -1861,13 +1861,13 @@ const PROFILE_SIGNATURES = {
   't11.def.trench_doctrine': { tellShape:'trench', layout:'contour', motion:'guide', contact:'gap', accentMotif:'star' },
   't11.atk.veteran_muster': { tellShape:'whistle', layout:'rows', motion:'march', contact:'advance', accentMotif:'shield' },
   't12.def.firefly_spectrum': { tellShape:'firefly', layout:'bands', motion:'rise', contact:'reveal', accentMotif:'star' },
-  't12.atk.collective_silence': { tellShape:'network', layout:'nodes', motion:'converge', contact:'extinguish', accentMotif:'circuit' },
+  't12.atk.resonance_lifetide': { tellShape:'network', layout:'nodes', motion:'converge', contact:'extinguish', accentMotif:'circuit' },
   'm01.def.night_bat_escape': { tellShape:'bat', layout:'wings', motion:'close', contact:'tear', accentMotif:'wing' },
   'm01.atk.blood_raven_feast': { tellShape:'moon', layout:'feast', motion:'orbit', contact:'return', accentMotif:'flame' },
   'm02.def.titan_stance': { tellShape:'strata', layout:'pillars', motion:'lock', contact:'dust', accentMotif:'shield' },
   'm02.atk.cornerstone_oath': { tellShape:'cornerstone', layout:'walls', motion:'close', contact:'stress', accentMotif:'shield' },
   'm03.def.alpine_spring': { tellShape:'alpine', layout:'contour', motion:'flow', contact:'crystal', accentMotif:'frost' },
-  'm03.atk.aurora_revival': { tellShape:'aurora', layout:'curtains', motion:'close', contact:'crown', accentMotif:'frost' },
+  'm03.atk.aurora_frostlock': { tellShape:'aurora', layout:'curtains', motion:'close', contact:'crown', accentMotif:'frost' },
   'm04.def.steppe_mist': { tellShape:'eagle', layout:'wind', motion:'cover', contact:'fade', accentMotif:'wing' },
   'm04.atk.eagle_skyeye': { tellShape:'eagle', layout:'compass', motion:'scan', contact:'mark', accentMotif:'reticle' },
   'm05.def.blackout_breaker': { tellShape:'breaker', layout:'switches', motion:'drop', contact:'blackout', accentMotif:'bolt' },
@@ -1964,6 +1964,8 @@ export function spawnCastFx(scene, effects, opts) {
     cap: opts.rvCap ?? Infinity,   // 呼叫端取景預算(展示台);戰場不設限
     col, col2: new THREE.Color(conf.c2 ?? conf.accent ?? FX_ACCENT[fx] ?? 0xffffff),
   };
-  spawnParticleCast(scene, effects, P, PARTICLE_RECIPES[profileId]);
-  if (!spawnAuthoredCast(scene, effects, P, opts.ch, opts.slot)) profileCastCompositor(scene, effects, P);
+  if (!spawnAuthoredCast(scene, effects, P, opts.ch, opts.slot)) {
+    spawnParticleCast(scene, effects, P, PARTICLE_RECIPES[profileId]);
+    profileCastCompositor(scene, effects, P);
+  }
 }
