@@ -1749,6 +1749,9 @@ async function initPreview3D() {
     compareGroup = new THREE.Group();
     preview3D.scene.add(compareGroup);
     gltfLoader = new GLTFLoader();
+    preview3D.onActionEnd = () => {
+      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+    };
     preview3D.start();
   } catch (err) {
     preview3D = null;
@@ -2018,7 +2021,9 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
     if (!clipsMap.has(clipName)) {
       if (slot === 'walk' && clipsMap.has('run')) clipName = 'run';
       else if (slot === 'skill' && clipsMap.has('def')) clipName = 'def';
+      else if (slot === 'def' && clipsMap.has('skill')) clipName = 'skill';
       else if (slot === 'ult' && clipsMap.has('atk')) clipName = 'atk';
+      else if (slot === 'atk' && clipsMap.has('ult')) clipName = 'ult';
     }
     const clip = clipsMap.get(clipName) || clipsMap.get('idle');
     if (!clip) return null;
@@ -2028,7 +2033,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
       currentAction.fadeOut(0.12);
     }
     next.reset();
-    const isOneShot = !loop || ['heavy', 'skill', 'ult', 'to_flight', 'to_ground'].includes(slot);
+    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'to_flight', 'to_ground'].includes(slot);
     if (isOneShot) {
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
@@ -2042,7 +2047,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   }
 
   mixer.addEventListener('finished', () => {
-    if (['heavy', 'skill', 'ult', 'to_flight', 'to_ground'].includes(activeSlot)) {
+    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'to_flight', 'to_ground'].includes(activeSlot)) {
       const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
       playAction(curForm === 'flight' ? 'flight_idle' : 'idle', { form: curForm, loop: true });
     }
@@ -2050,13 +2055,38 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
 
   playAction('idle', { form: 'ground', loop: true });
 
+  let jumpState = null;
+  function jump(high = false) {
+    if (jumpState) return false;
+    const dur = high ? 2.0 : 0.95;
+    const peak = high ? Math.max(5.2, (preview3D?.fitR || targetH * 0.5) * 1.35) : Math.max(1.8, (preview3D?.fitR || targetH * 0.5) * 0.55);
+    jumpState = { t: 0, dur, peak, high: !!high };
+    unitObj._jump = jumpState;
+    return true;
+  }
+
   const unitObj = {
     verKey,
     id,
     group,
     mixer,
     playAction,
-    update: (dt) => mixer.update(dt),
+    jump,
+    highJump: () => jump(true),
+    update: (dt) => {
+      mixer.update(dt);
+      if (jumpState) {
+        jumpState.t += dt;
+        const f = jumpState.t / jumpState.dur;
+        if (f >= 1) {
+          jumpState = null;
+          unitObj._jump = null;
+          group.position.y = 0;
+        } else {
+          group.position.y = Math.sin(f * Math.PI) * jumpState.peak;
+        }
+      }
+    },
     clips: Array.from(clipsMap.keys()),
   };
   glbUnitCache.set(cacheKey, unitObj);
@@ -2141,6 +2171,7 @@ async function syncCompareUnits() {
 
   compareGroup.clear();
   activeExternalUnits = [];
+  if (preview3D) preview3D.externalUnits = activeExternalUnits;
 
   if (activeList.length > 1 && activeList.includes('current')) {
     compareGroup.add(makeBannerSprite('1. 本專案 (steel_vs_swarm)', positions['current'], H * 1.08));
@@ -2157,6 +2188,7 @@ async function syncCompareUnits() {
       unit.group.position.x = positions[verKey];
       compareGroup.add(unit.group);
       activeExternalUnits.push(unit);
+      if (preview3D) preview3D.externalUnits = activeExternalUnits;
       if (activeList.length > 1) {
         const label = verKey === 'steel_v_swarm' ? '2. steel_v_swarm (Godot)' : '3. argon blender vfx (Blender)';
         compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
@@ -2722,8 +2754,14 @@ document.getElementById('btnActionUlt').onclick = () => {
   preview3D?.play('atk');
   syncExternalAction('ult');
 };
-document.getElementById('btnActionJump').onclick = () => preview3D?.jump(false);
-document.getElementById('btnActionHighJump').onclick = () => preview3D?.highJump();
+document.getElementById('btnActionJump').onclick = () => {
+  preview3D?.jump(false);
+  for (const u of activeExternalUnits) u.jump?.(false);
+};
+document.getElementById('btnActionHighJump').onclick = () => {
+  preview3D?.highJump();
+  for (const u of activeExternalUnits) u.highJump?.();
+};
 
 const selEnemyPos = document.getElementById('selEnemyPos');
 if (selEnemyPos) {

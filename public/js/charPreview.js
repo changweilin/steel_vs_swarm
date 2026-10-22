@@ -46,6 +46,7 @@ export class CharPreview {
     this.effects = [];
     this.holder = new THREE.Group();     // 招式演出的後座/浮沉都作用在這層,不動 makeUnit 內部骨架
     this.scene.add(this.holder);
+    this.externalUnits = [];
 
     this.unit = null;
     this.charId = null;
@@ -385,6 +386,7 @@ export class CharPreview {
 
   _clearUnit() {
     this.anim = null;
+    this.externalUnits = [];
     if (this.unit) {
       this.holder.remove(this.unit);
       disposeTree(this.unit);
@@ -437,8 +439,9 @@ export class CharPreview {
         const dir = castDirF(a.fx, a.range > 0);
         this._ent.castFx = { t0: this._now(), slot, dir };
       }
-      // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
-      this.wantR = Math.max(slot === 'atk' ? R * 2.2 : R * 1.5, a.r || 0);
+      // 大招法陣/劍氣取景適度放大以完整入鏡(至多 3.2R)，避免全圖/全域超大數值將鏡頭拉到無窮遠
+      const visualR = Math.min(a.r || 0, R * 3.2);
+      this.wantR = Math.max(slot === 'atk' ? R * 2.2 : R * 1.5, visualR);
     }
     this._auto = true;
     this.idle = 0;
@@ -501,125 +504,200 @@ export class CharPreview {
     return o;
   }
 
+  _getActiveActors() {
+    const list = [];
+    if (this.unit && this.holder.visible !== false) {
+      list.push({
+        isPrimary: true,
+        group: this.holder,
+        muzzle: (slot) => this._muzzle(slot),
+        targetY: this.targetY,
+        cue: (heavy) => this._fireCue(heavy),
+      });
+    }
+    for (const u of (this.externalUnits || [])) {
+      if (u && u.group && u.group.visible !== false) {
+        list.push({
+          isPrimary: false,
+          group: u.group,
+          muzzle: (slot) => (u.getMuzzle ? u.getMuzzle(slot) : this._externalMuzzle(u, slot)),
+          targetY: u.targetY || this.targetY,
+          cue: (heavy) => u.fireCue?.(heavy),
+        });
+      }
+    }
+    return list;
+  }
+
+  _externalMuzzle(u, slot = 'light') {
+    let best = null;
+    if (u.group) {
+      u.group.traverse((c) => {
+        if (!best && c.isObject3D && /muzzle|firepoint|gun_tip|barrel/i.test(c.name)) {
+          best = c;
+        }
+      });
+    }
+    if (best) return best.getWorldPosition(new THREE.Vector3());
+    const v = new THREE.Vector3(0, this.targetY * 1.15, (this.size?.z || 2) * 0.55);
+    return u.group ? u.group.localToWorld(v.clone()) : new THREE.Vector3();
+  }
+
   /**
    * 重武器演出:每種機制一套動作(與實戰同口徑)—
    * rail 蓄力電光→極速光束重後座 / beam 持續穩定光束(emp 附帶控場漣漪)/
    * plasma 扇形焰舌 / missile S 形追蹤俯衝 / launcher 雷射標定 + 上拋俯衝 / gun 蓄力單發。
    * 擊發後鏡頭交給砲彈追遠(_followShell);砲彈落點/光束端點一律對準虛擬目標 A.aimAt。
    */
-  _stepHeavy(A, R) {
+  _stepHeavy(A, R, actors = this._getActiveActors()) {
     const w = A.w;
     const hue = CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a;
-    const m = this._muzzle('heavy');
     const fwd = this._fwd();
     const up = new THREE.Vector3(0, 1, 0);
-    const target = A.aimAt || m.clone().addScaledVector(fwd, this._aimDist(w));
-    const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
 
     if (w.type === 'rail') {
       if (A.fired) return;
       const chg = Math.min(1, A.t / 0.5);                            // 線圈旋轉起跳(0.5s;非舊蓄力,已取消)
-      this.holder.position.y = -R * 0.03 * chg;                       // 起跳重心下沉
-      if (A.t >= (A.spark || 0)) {                                    // 軌道電光聚集
-        starburst(this.scene, this.effects, m.x, m.y, m.z, R * (0.06 + chg * 0.14), 0xaef4ff);
-        A.spark = A.t + 0.12;
+      for (const actor of actors) {
+        actor.group.position.y = -R * 0.03 * chg;                       // 起跳重心下沉
+        const m = actor.muzzle('heavy');
+        const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+        const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+        if (A.t >= (A.spark || 0)) {                                    // 軌道電光聚集
+          starburst(this.scene, this.effects, m.x, m.y, m.z, R * (0.06 + chg * 0.14), 0xaef4ff);
+        }
+        if (chg >= 1) {
+          lanceDischarge(this.scene, this.effects, m, aim, w, hue);
+          starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
+          actor.group.position.z -= R * 0.2;                            // 極速彈的重後座
+          actor.group.rotation.x -= 0.14;
+          actor.cue?.(true);
+          if (actor.isPrimary || !this.trackObj) {
+            this._followShell(m, aim, 0.55);                              // 鏡頭追極速彈
+          }
+        }
       }
-      if (chg >= 1) {
-        lanceDischarge(this.scene, this.effects, m, aim, w, hue);
-        starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
-        this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
-        this.holder.rotation.x -= 0.14;
-        this._fireCue(true);
-        this._followShell(m, aim, 0.55);                              // 鏡頭追極速彈
-        A.fired = 1;
-      }
+      if (A.t >= (A.spark || 0)) A.spark = A.t + 0.12;
+      if (chg >= 1) A.fired = 1;
     } else if (w.type === 'beam') {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
-        if (!A.tick) { this._fireCue(true); this._followShell(m, aim, 1.1); }   // 首拍 = 擊發
-        lanceDischarge(this.scene, this.effects, m, aim, w, hue);
-        starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
-        this.holder.position.z -= R * 0.004;                          // 持續微反壓
+        for (const actor of actors) {
+          const m = actor.muzzle('heavy');
+          const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+          const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+          if (!A.tick) {
+            actor.cue?.(true);
+            if (actor.isPrimary || !this.trackObj) this._followShell(m, aim, 1.1);
+          }
+          lanceDischarge(this.scene, this.effects, m, aim, w, hue);
+          starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
+          actor.group.position.z -= R * 0.004;                          // 持續微反壓
+        }
         A.tick = A.t + 0.11;
       }
       if (w.emp && !A.fired && A.t >= 0.7) {                          // EMP 附帶:控場癱瘓漣漪
-        shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 1.3, 0xb78aff);
+        for (const actor of actors) {
+          const m = actor.muzzle('heavy');
+          const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+          const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+          shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 1.3, 0xb78aff);
+        }
         A.fired = 1;
       }
     } else if (w.type === 'plasma') {
       if (A.fired === 0 && A.t < 0.45) {
-        this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
+        for (const actor of actors) {
+          actor.group.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
+        }
       } else if (A.fired === 0) {
-        fanDischarge(this.scene, this.effects, m, aim.clone().sub(m).normalize(), w);
-        this.holder.position.z -= R * 0.1;
-        this._fireCue(true);
-        this._followShell(m, aim, 0.5);
+        for (const actor of actors) {
+          const m = actor.muzzle('heavy');
+          const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+          const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+          fanDischarge(this.scene, this.effects, m, aim.clone().sub(m).normalize(), w);
+          actor.group.position.z -= R * 0.1;
+          actor.cue?.(true);
+          if (actor.isPrimary || !this.trackObj) this._followShell(m, aim, 0.5);
+        }
         A.fired = 1;
       }
     } else if (w.type === 'missile' || w.type === 'launcher') {
       if (A.fired === 0 && A.t >= 0.4) {
-        // 彈體離架:missile = 橫向 S 形獵殺;guided launcher = 上拋再俯衝(雷射標定線)。落點對準 aim。
-        const boomPos = aim.clone();
+        A.boomList = [];
         const T = 1.2;
-        const v = boomPos.clone().sub(m);
-        const side = fwd.clone().cross(up).normalize();
-        // 彈藥同源(2026-07-22):與戰場 FPV/第三人稱同一顆 projectileMesh(+z 朝前),依包圍球定尺
-        const proj = projectileMesh(w, { col: hue, hue, heavy: true });
-        proj.scale.setScalar(R * 0.09);
-        proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd);
-        proj.position.copy(m);
-        this.scene.add(proj);
         const weaving = w.type === 'missile';
-        this.trackObj = proj;                                         // 鏡頭跟著飛彈
-        this.wantR = R * (A.wide || 2.4);
-        this.effects.push({
-          obj: proj, ttl: T,
-          fade: (o, f, dt2) => {
-            const u = 1 - f;                                          // 0→1 沿彈道
-            const env = Math.sin(Math.min(1, u) * Math.PI);          // 頭尾貼合直線的擺動包絡
-            o.position.copy(m).addScaledVector(v, u)
-              .addScaledVector(weaving ? side : up, (weaving ? Math.sin(u * 6 * Math.PI) * 0.5 : 0.45) * R * env);
-            stepProjectileFx(o, u * T, v.length() / T);
-          },
-          dispose: () => {
-            if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; }
-            disposeTree(proj);
-          },
-        });
-        if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
-        this.holder.position.z -= R * 0.06;
-        this._fireCue(true);
-        // 拋物線槍管仰角(2026-07-22 規則 1 展示台閉環):launcher 出膛切線角回寫 gunPitch
-        // (與戰場 game._aimHeavyBarrel 同號約定:仰角向上 = rotation.x 減小;missile 導引不回寫)
-        if (!weaving) {
-          const rig = this.unit?.userData?.rig;
-          const gp = rig?.weap?.heavy === 'L' ? rig?.gunL : rig?.gunR;
-          if (gp) {
-            gp.aim0 ??= gp.aim;
-            gp.aim = gp.aim0 - Math.atan2(v.y + 0.45 * R * Math.PI, Math.hypot(v.x, v.z) || 1);
+        for (const actor of actors) {
+          const m = actor.muzzle('heavy');
+          const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+          const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+          const boomPos = aim.clone();
+          const v = boomPos.clone().sub(m);
+          const side = fwd.clone().cross(up).normalize();
+          const proj = projectileMesh(w, { col: hue, hue, heavy: true });
+          proj.scale.setScalar(R * 0.09);
+          proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd);
+          proj.position.copy(m);
+          this.scene.add(proj);
+          if (actor.isPrimary || !this.trackObj) {
+            this.trackObj = proj;                                         // 鏡頭跟著飛彈
+            this.wantR = R * (A.wide || 2.4);
           }
+          this.effects.push({
+            obj: proj, ttl: T,
+            fade: (o, f, dt2) => {
+              const u = 1 - f;                                          // 0→1 沿彈道
+              const env = Math.sin(Math.min(1, u) * Math.PI);          // 頭尾貼合直線的擺動包絡
+              o.position.copy(m).addScaledVector(v, u)
+                .addScaledVector(weaving ? side : up, (weaving ? Math.sin(u * 6 * Math.PI) * 0.5 : 0.45) * R * env);
+              stepProjectileFx(o, u * T, v.length() / T);
+            },
+            dispose: () => {
+              if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; }
+              disposeTree(proj);
+            },
+          });
+          if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
+          actor.group.position.z -= R * 0.06;
+          actor.cue?.(true);
+          if (!weaving && actor.isPrimary) {
+            const rig = this.unit?.userData?.rig;
+            const gp = rig?.weap?.heavy === 'L' ? rig?.gunL : rig?.gunR;
+            if (gp) {
+              gp.aim0 ??= gp.aim;
+              gp.aim = gp.aim0 - Math.atan2(v.y + 0.45 * R * Math.PI, Math.hypot(v.x, v.z) || 1);
+            }
+          }
+          A.boomList.push(boomPos);
         }
         A.boomAt = A.t + T;
-        A.boomPos = boomPos;
         A.fired = 1;
       } else if (A.fired === 1 && A.t >= A.boomAt) {
-        const p = A.boomPos;
-        explosionBurst(this.scene, this.effects, p.x, p.y, p.z, w.r || 0, 0xffaa33);
+        for (const p of (A.boomList || (A.boomPos ? [A.boomPos] : []))) {
+          explosionBurst(this.scene, this.effects, p.x, p.y, p.z, w.r || 0, 0xffaa33);
+        }
         A.fired = 2;
       }
     } else if (A.fired === 0 && A.t >= 0.55) {
       // 動能重砲(gun):蓄力後單發重擊 + 象徵性衝擊環
-      starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
-      impactBurst(this.scene, this.effects, aim,
-        { r: w.r || 0, color: 0xffd27a, core: 0xfff2b8, heavy: true });
-      lanceDischarge(this.scene, this.effects, m, aim, w, hue);
-      this.holder.position.z -= R * 0.12;
-      this.holder.rotation.x -= 0.10;
-      this._fireCue(true);
-      this._followShell(m, aim, 0.5);
+      for (const actor of actors) {
+        const m = actor.muzzle('heavy');
+        const target = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+        const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
+        starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
+        impactBurst(this.scene, this.effects, aim,
+          { r: w.r || 0, color: 0xffd27a, core: 0xfff2b8, heavy: true });
+        lanceDischarge(this.scene, this.effects, m, aim, w, hue);
+        actor.group.position.z -= R * 0.12;
+        actor.group.rotation.x -= 0.10;
+        actor.cue?.(true);
+        if (actor.isPrimary || !this.trackObj) this._followShell(m, aim, 0.5);
+      }
       A.fired = 1;
     } else if (A.fired === 0) {
-      this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);   // 蓄力下蹲
+      for (const actor of actors) {
+        actor.group.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);   // 蓄力下蹲
+      }
     }
   }
 
@@ -628,6 +706,8 @@ export class CharPreview {
     if (!A) return;
     A.t += dt;
     const R = this.fitR;   // 演出尺度綁包圍球:機甲與無人機體型差 3 倍,同一組常數才讀得出來
+    const actors = this._getActiveActors();
+    if (actors.length === 0) return;
 
     if (A.unitShot) {
       while (A.fired < A.shots && A.t >= A.next) {
@@ -645,52 +725,61 @@ export class CharPreview {
     } else if (A.slot === 'light' || A.slot === 'heavy') {
       if (A.slot === 'light') {
         while (A.fired < A.shots && A.t >= A.next) {
-          const m = this._muzzle();
-          starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
-          const direction = A.aimAt.clone().sub(m).normalize();
-          const end = m.clone().addScaledVector(direction, A.w.range);
-          if (A.w.fan) fanDischarge(this.scene, this.effects, m, direction, A.w, { ttl: .18 });
-          else if (A.w.type === 'beam') gundamBeam(this.scene, this.effects, m, end,
-            CHARACTERS[this.charId].visual.hue, { r: Math.min(lanceR(A.w), this.height * .035), ttl: .18, def: A.w });
-          else {
-            const projectile = projectileMesh(A.w);
-            const duration = Math.min(.35, Math.max(.08, A.w.range / (A.w.mv || 600)));
-            projectile.position.copy(m);
-            projectile.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
-            this.scene.add(projectile);
-            this.effects.push({ obj: projectile, ttl: duration, fade: (object, fraction) => {
-              object.position.copy(m).lerp(end, 1 - fraction);
-              stepProjectileFx(object, (1 - fraction) * duration, A.w.mv || 600);
-            } });
+          for (const actor of actors) {
+            const m = actor.muzzle('light');
+            starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
+            const aim = new THREE.Vector3(m.x, A.aimAt.y, A.aimAt.z);
+            const direction = aim.clone().sub(m).normalize();
+            const end = m.clone().addScaledVector(direction, A.w.range);
+            if (A.w.fan) fanDischarge(this.scene, this.effects, m, direction, A.w, { ttl: .18 });
+            else if (A.w.type === 'beam') gundamBeam(this.scene, this.effects, m, end,
+              CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a, { r: Math.min(lanceR(A.w), this.height * .035), ttl: .18, def: A.w });
+            else {
+              const projectile = projectileMesh(A.w);
+              const duration = Math.min(.35, Math.max(.08, A.w.range / (A.w.mv || 600)));
+              projectile.position.copy(m);
+              projectile.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+              this.scene.add(projectile);
+              this.effects.push({ obj: projectile, ttl: duration, fade: (object, fraction) => {
+                object.position.copy(m).lerp(end, 1 - fraction);
+                stepProjectileFx(object, (1 - fraction) * duration, A.w.mv || 600);
+              } });
+            }
+            actor.group.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
+            actor.cue?.(false);
           }
-          this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
-          this._fireCue(false);
           A.fired++; A.next += A.gap;
         }
       } else {
-        this._stepHeavy(A, R);                          // 重武器:依機制型別分家演出
+        this._stepHeavy(A, R, actors);                          // 重武器:依機制型別分家演出
       }
     } else {
       const isUlt = A.slot === 'atk';
       // 角色專屬演出(castfx.js;與戰場 cast 事件同一套):蓄勢半拍後施放
       if (A.fired === 0 && A.t >= (isUlt ? 0.45 : 0.25)) {
-        spawnCastFx(this.scene, this.effects, {
-          ch: this.charId, slot: A.slot, lvl: 1, fx: A.a.fx, side: this.unit.userData.side,
-          at: A.at || new THREE.Vector3(0, 0, 0),   // 有目標招式 → 落在虛擬目標上
-          casterPos: () => new THREE.Vector3(
-            this.holder.position.x, this.holder.position.y + this.targetY, this.holder.position.z),
-          groundY: () => 0,
-          // Camera fitting must not resize the settled effect footprint.
-          r: A.a.r || 0,
-          dur: A.a.dur, scale: Math.max(this.height, R * 0.8),
-        });
+        for (const actor of actors) {
+          const atPos = (A.at || new THREE.Vector3(0, 0, 0)).clone();
+          atPos.x = actor.group.position.x;
+          spawnCastFx(this.scene, this.effects, {
+            ch: this.charId, slot: A.slot, lvl: 1, fx: A.a.fx, side: this.unit?.userData?.side || 'STEEL',
+            at: atPos,   // 有目標招式 → 落在虛擬目標上
+            casterPos: () => new THREE.Vector3(
+              actor.group.position.x, actor.group.position.y + actor.targetY, actor.group.position.z),
+            groundY: () => 0,
+            // Camera fitting must not resize the settled effect footprint.
+            r: A.a.r || 0,
+            dur: A.a.dur, scale: Math.max(this.height, R * 0.8),
+          });
+        }
         A.fired = 1;
       }
       // 施放姿態:大招浮空 + 慢旋,小招輕彈跳
       const f = Math.min(1, A.t / A.dur);
       const rise = Math.sin(f * Math.PI);
-      this.holder.position.y = rise * R * (isUlt ? 0.25 : 0.08);
-      if (isUlt) this.holder.rotation.y += dt * 2.4 * rise;
+      for (const actor of actors) {
+        actor.group.position.y = rise * R * (isUlt ? 0.25 : 0.08);
+        if (isUlt) actor.group.rotation.y += dt * 2.4 * rise;
+      }
     }
 
     if (A.t >= A.dur) {
@@ -698,6 +787,7 @@ export class CharPreview {
       if (this._ent?.heavyFx?.phase === 'charge') this._ent.heavyFx = null;
       this._hideTarget();
       this.anim = null;
+      this.onActionEnd?.();
     }
   }
 
@@ -914,6 +1004,16 @@ export class CharPreview {
       }
       this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * adt);
       if (!this.anim && !this._jump) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * adt);
+
+      for (const u of (this.externalUnits || [])) {
+        if (!u?.group) continue;
+        if (!this.anim) {
+          u.group.rotation.y = 0;
+          u.group.rotation.x += (0 - u.group.rotation.x) * Math.min(1, 8 * adt);
+        }
+        u.group.position.z += (0 - u.group.position.z) * Math.min(1, 9 * adt);
+        if (!this.anim && !u._jump) u.group.position.y += (0 - u.group.position.y) * Math.min(1, 9 * adt);
+      }
 
       this._stepLoco(adt, this.clockT);
 
