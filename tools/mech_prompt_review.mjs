@@ -1512,7 +1512,7 @@ function renderHtmlPage(localThree = false) {
       <div class="subpanel-bar">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="subpanel-title">
-            <span>🎮 3D WebGL 模型</span>
+            <span>🎮 3D WebGL 模型 (遊戲真品)</span>
             <span id="referenceReviewLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">立繪重建・骨架與護盾動作</span>
             <span id="morphPoseLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">地面型 (Pose 0)</span>
           </span>
@@ -1524,13 +1524,27 @@ function renderHtmlPage(localThree = false) {
             <button class="btn-tool-sm" id="btnComplexity" style="margin-left:4px;color:#facc15;border-color:rgba(250,204,21,0.4);" title="陳列三版本建模組成複雜度">📊 建模複雜度</button>
           </div>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
           <button class="btn-tool-sm" id="btnActionLight">輕射擊</button>
           <button class="btn-tool-sm" id="btnActionAttack">重射擊</button>
           <button class="btn-tool-sm" id="btnActionSkill">防守招式</button>
           <button class="btn-tool-sm" id="btnActionUlt">攻擊招式</button>
+          <button class="btn-tool-sm" id="btnActionJump">跳躍</button>
+          <button class="btn-tool-sm" id="btnActionHighJump">大跳躍</button>
           <button class="btn-tool-sm" id="btnRunMode">🏃 運動：靜止</button>
           <button class="btn-tool-sm" id="btnMorphToggle" style="display:none;color:#38bdf8;">🔄 切換飛行型</button>
+          <label style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#94a3b8;margin-left:4px;">
+            <span>🎯 敵人位置：</span>
+            <select id="selEnemyPos" class="btn-tool-sm" style="padding:2px 4px;font-size:11px;background:#0f172a;color:#e2e8f0;cursor:pointer;">
+              <option value="default">預設（招式／武器原始射程）</option>
+              <option value="close">近距（8m）</option>
+              <option value="mid">中距（18m）</option>
+              <option value="far">遠距（35m）</option>
+              <option value="air">高空（前 20m・高 12m）</option>
+              <option value="left">左前中距（18m・偏左 30°）</option>
+              <option value="right">右前中距（18m・偏右 30°）</option>
+            </select>
+          </label>
         </div>
       </div>
       <div class="view-viewport" style="background:#151c2e;">
@@ -2334,6 +2348,8 @@ function update3DModel() {
     document.getElementById('btnRig').classList.remove('active');
     preview3D.setRigVisible(false);
     preview3D.setShield(false);
+    const selEnemy = document.getElementById('selEnemyPos');
+    if (selEnemy) preview3D.setEnemyPos(selEnemy.value);
 
     const isMorpher = currentMech.category === 'morphers';
     const btnMorph = document.getElementById('btnMorphToggle');
@@ -2706,7 +2722,17 @@ document.getElementById('btnActionUlt').onclick = () => {
   preview3D?.play('atk');
   syncExternalAction('ult');
 };
+document.getElementById('btnActionJump').onclick = () => preview3D?.jump(false);
+document.getElementById('btnActionHighJump').onclick = () => preview3D?.highJump();
 
+const selEnemyPos = document.getElementById('selEnemyPos');
+if (selEnemyPos) {
+  selEnemyPos.onchange = (e) => {
+    if (!preview3D) return;
+    preview3D.setEnemyPos(e.target.value);
+    preview3D.previewTarget();
+  };
+}
 document.getElementById('btnShieldDeploy').onclick = () => {
   preview3D?.setShield(true);
   syncExternalAction('shield_deploy');
