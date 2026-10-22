@@ -1529,6 +1529,7 @@ function renderHtmlPage(localThree = false) {
           <button class="btn-tool-sm" id="btnActionAttack">重射擊</button>
           <button class="btn-tool-sm" id="btnActionSkill">防守招式</button>
           <button class="btn-tool-sm" id="btnActionUlt">攻擊招式</button>
+          <button class="btn-tool-sm" id="btnShieldToggle" disabled>展開護盾</button>
           <button class="btn-tool-sm" id="btnActionJump">跳躍</button>
           <button class="btn-tool-sm" id="btnActionHighJump">大跳躍</button>
           <button class="btn-tool-sm" id="btnRunMode">🏃 運動：靜止</button>
@@ -1536,8 +1537,8 @@ function renderHtmlPage(localThree = false) {
           <label style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#94a3b8;margin-left:4px;">
             <span>🎯 敵人位置：</span>
             <select id="selEnemyPos" class="btn-tool-sm" style="padding:2px 4px;font-size:11px;background:#0f172a;color:#e2e8f0;cursor:pointer;">
-              <option value="default">預設（招式／武器原始射程）</option>
               <option value="close">近距（8m）</option>
+              <option value="default">預設（招式／武器原始射程）</option>
               <option value="mid">中距（18m）</option>
               <option value="far">遠距（35m）</option>
               <option value="air">高空（前 20m・高 12m）</option>
@@ -1554,9 +1555,9 @@ function renderHtmlPage(localThree = false) {
         <button class="btn-tool-sm" id="btn3dReset">重置視角</button>
         <button class="btn-tool-sm" id="btn3dSpin">暫停自轉</button>
         <button class="btn-tool-sm" id="btn3dGrid">參考地網</button>
-        <button class="btn-tool-sm" id="btnShieldDeploy" disabled>展開護盾</button>
-        <button class="btn-tool-sm" id="btnShieldRetract" disabled>收起護盾</button>
         <button class="btn-tool-sm" id="btnRig" disabled>顯示骨架</button>
+        <button class="btn-tool-sm" id="btnShieldDeploy" disabled style="display:none;">展開護盾</button>
+        <button class="btn-tool-sm" id="btnShieldRetract" disabled style="display:none;">收起護盾</button>
       </div>
     </div>
   </section>
@@ -2093,6 +2094,87 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   return unitObj;
 }
 
+
+function saveReviewSettings() {
+  try {
+    const activeCatBtn = document.querySelector('.btn-filter.active');
+    const activeVerdictBtn = document.querySelector('.btn-verdict-filter.active');
+    const data = {
+      enemyPos: document.getElementById('selEnemyPos')?.value || 'close',
+      runMode: preview3D?.runMode || 'idle',
+      autoSpin: !!autoSpin,
+      showGrid: !!showGrid,
+      bg: document.getElementById('imgViewport')?.style.background || '',
+      category: activeCatBtn?.dataset.cat || 'all',
+      verdict: activeVerdictBtn?.dataset.v || 'all',
+      search: document.getElementById('searchInput')?.value || '',
+      activePane: typeof activePane !== 'undefined' ? activePane : 'spec',
+      selectedMech: currentMech?.id || null
+    };
+    localStorage.setItem('mech_review_ui_settings', JSON.stringify(data));
+  } catch (_) {}
+}
+
+function restoreReviewSettings() {
+  try {
+    const raw = localStorage.getItem('mech_review_ui_settings');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return;
+
+    if (data.enemyPos) {
+      const sel = document.getElementById('selEnemyPos');
+      if (sel) {
+        sel.value = data.enemyPos;
+        if (preview3D) {
+          preview3D.setEnemyPos(data.enemyPos);
+        }
+      }
+    }
+    if (data.runMode && preview3D) {
+      preview3D.setRun(data.runMode);
+      updateRunModeButton();
+      syncExternalAction(data.runMode === 'idle' ? 'idle' : 'run');
+    }
+    if (typeof data.autoSpin === 'boolean') {
+      autoSpin = data.autoSpin;
+      if (preview3D) preview3D.spinScale = autoSpin ? 1 : 0;
+      const bSpin = document.getElementById('btn3dSpin');
+      if (bSpin) bSpin.textContent = autoSpin ? '暫停自轉' : '恢復自轉';
+    }
+    if (typeof data.showGrid === 'boolean') {
+      showGrid = data.showGrid;
+      if (preview3D && preview3D.ground) preview3D.ground.visible = showGrid;
+      const bGrid = document.getElementById('btn3dGrid');
+      if (bGrid) bGrid.textContent = showGrid ? '隱藏地網' : '顯示地網';
+    }
+    if (typeof data.bg === 'string') {
+      const vp = document.getElementById('imgViewport');
+      if (vp) vp.style.background = data.bg;
+    }
+    if (data.category) {
+      activeCat = data.category;
+      document.querySelectorAll('.btn-filter').forEach(b => {
+        b.classList.toggle('active', b.dataset.cat === activeCat);
+      });
+    }
+    if (data.verdict) {
+      activeVerdict = data.verdict;
+      document.querySelectorAll('.btn-verdict-filter').forEach(b => {
+        b.classList.toggle('active', b.dataset.v === activeVerdict);
+      });
+    }
+    if (typeof data.search === 'string') {
+      searchQuery = data.search;
+      const si = document.getElementById('searchInput');
+      if (si) si.value = searchQuery;
+    }
+    if (data.activePane && typeof switchPane === 'function') {
+      switchPane(data.activePane);
+    }
+  } catch (_) {}
+}
+
 function saveVersionCheckboxes() {
   try {
     const data = {
@@ -2235,8 +2317,17 @@ async function fetchMechs() {
   updateStats();
   renderRoster();
   if (allMechs.length > 0) {
-    const requested = new URLSearchParams(location.search).get('mech');
-    selectMech(allMechs.some(m => m.id === requested) ? requested : allMechs[0].id);
+    let targetId = new URLSearchParams(location.search).get('mech');
+    if (!targetId) {
+      try {
+        const raw = localStorage.getItem('mech_review_ui_settings');
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d?.selectedMech) targetId = d.selectedMech;
+        }
+      } catch (_) {}
+    }
+    selectMech(allMechs.some(m => m.id === targetId) ? targetId : allMechs[0].id);
   }
 }
 
@@ -2316,6 +2407,7 @@ function selectMech(id) {
   const m = allMechs.find(x => x.id === id);
   if (!m) return;
   currentMech = m;
+  saveReviewSettings();
 
   // 更新卡片選取態
   document.querySelectorAll('.mech-card-item').forEach(el => {
@@ -2376,10 +2468,14 @@ function update3DModel() {
     preview3D.setChar(currentMech.id, currentMech.side);
     const authored = !!preview3D.unit?.userData.rig?.referenceMotion;
     document.getElementById('referenceReviewLabel').style.display = authored ? '' : 'none';
-    for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnRig']) document.getElementById(id).disabled = !authored;
+    for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnShieldToggle', 'btnRig']) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !authored;
+    }
     document.getElementById('btnRig').classList.remove('active');
     preview3D.setRigVisible(false);
     preview3D.setShield(false);
+    updateShieldButton();
     const selEnemy = document.getElementById('selEnemyPos');
     if (selEnemy) preview3D.setEnemyPos(selEnemy.value);
 
@@ -2395,6 +2491,7 @@ function update3DModel() {
       btnMorph.style.display = 'none';
       morphLabel.style.display = 'none';
     }
+    updateRunModeButton();
 
     syncCompareUnits();
   } catch (err) {
@@ -2687,6 +2784,7 @@ document.querySelectorAll('.btn-filter').forEach(btn => {
     btn.classList.add('active');
     activeCat = btn.dataset.cat;
     renderRoster();
+    saveReviewSettings();
   };
 });
 
@@ -2696,24 +2794,29 @@ document.querySelectorAll('.btn-verdict-filter').forEach(btn => {
     btn.classList.add('active');
     activeVerdict = btn.dataset.v;
     renderRoster();
+    saveReviewSettings();
   };
 });
 
 document.getElementById('searchInput').oninput = (e) => {
   searchQuery = e.target.value;
   renderRoster();
+  saveReviewSettings();
 };
 
 // 2D 立繪固定使用 PNG 透明版(色幕 JPG 已移至外部存檔,不再提供切換)。
 
 document.getElementById('btnBgGrid').onclick = () => {
   document.getElementById('imgViewport').style.background = '';
+  saveReviewSettings();
 };
 document.getElementById('btnBgBlack').onclick = () => {
   document.getElementById('imgViewport').style.background = '#000000';
+  saveReviewSettings();
 };
 document.getElementById('btnBgWhite').onclick = () => {
   document.getElementById('imgViewport').style.background = '#ffffff';
+  saveReviewSettings();
 };
 document.getElementById('btnResetZoom').onclick = () => {
   document.getElementById('standeeImg').style.transform = 'scale(1)';
@@ -2734,6 +2837,7 @@ document.getElementById('btnMorphToggle').onclick = () => {
   document.getElementById('morphPoseLabel').textContent = isFlight ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
   document.getElementById('btnMorphToggle').textContent = isFlight ? '🔄 切換地面型' : '🔄 切換飛行型';
   syncExternalAction(isFlight ? 'to_flight' : 'to_ground');
+  updateRunModeButton();
 };
 
 document.getElementById('btnActionAttack').onclick = () => {
@@ -2769,27 +2873,58 @@ if (selEnemyPos) {
     if (!preview3D) return;
     preview3D.setEnemyPos(e.target.value);
     preview3D.previewTarget();
+    saveReviewSettings();
   };
 }
+function updateShieldButton() {
+  const btn = document.getElementById('btnShieldToggle');
+  if (!btn) return;
+  const isDeployed = !!preview3D?._ent?.df;
+  btn.textContent = isDeployed ? '收起護盾' : '展開護盾';
+  btn.classList.toggle('active', isDeployed);
+}
+
+document.getElementById('btnShieldToggle').onclick = () => {
+  if (!preview3D) return;
+  const next = !preview3D._ent?.df;
+  preview3D.setShield(next);
+  syncExternalAction(next ? 'shield_deploy' : 'shield_retract');
+  updateShieldButton();
+};
 document.getElementById('btnShieldDeploy').onclick = () => {
   preview3D?.setShield(true);
   syncExternalAction('shield_deploy');
+  updateShieldButton();
 };
 document.getElementById('btnShieldRetract').onclick = () => {
   preview3D?.setShield(false);
   syncExternalAction('shield_retract');
+  updateShieldButton();
 };
 document.getElementById('btnRig').onclick = event => {
   const on = event.currentTarget.classList.toggle('active');
   preview3D?.setRigVisible(on);
 };
 
+function updateRunModeButton() {
+  const btn = document.getElementById('btnRunMode');
+  if (!btn || !preview3D) return;
+  const isFlight = preview3D.morphTarget > 0.5;
+  let label = '靜止';
+  if (preview3D.runMode === 'slow') {
+    label = isFlight ? '慢速飛翔' : '慢跑';
+  } else if (preview3D.runMode === 'normal') {
+    label = isFlight ? '快速飛翔' : '衝刺';
+  }
+  btn.textContent = '🏃 運動：' + label;
+}
+
 document.getElementById('btnRunMode').onclick = () => {
   if (!preview3D) return;
   preview3D.cycleRun(1);
-  const label = preview3D.runMode === 'idle' ? '靜止' : (preview3D.runMode === 'slow' ? '慢跑' : '衝刺');
-  document.getElementById('btnRunMode').textContent = '🏃 運動：' + label;
+  updateRunModeButton();
   syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+  saveReviewSettings();
 };
 
 for (const id of ['chkVerCurrent', 'chkVerSteel', 'chkVerArgon']) {
@@ -2977,6 +3112,7 @@ document.getElementById('btn3dSpin').onclick = () => {
   autoSpin = !autoSpin;
   if (preview3D) preview3D.spinScale = autoSpin ? 1 : 0;
   document.getElementById('btn3dSpin').textContent = autoSpin ? '暫停自轉' : '恢復自轉';
+  saveReviewSettings();
 };
 
 document.getElementById('btn3dReset').onclick = () => {
@@ -2994,12 +3130,14 @@ document.getElementById('btn3dGrid').onclick = () => {
     preview3D.ground.visible = showGrid;
   }
   document.getElementById('btn3dGrid').textContent = showGrid ? '隱藏地網' : '顯示地網';
+  saveReviewSettings();
 };
 
 let notesCache = [];
 let activePane = 'spec';
 function switchPane(name) {
   activePane = name;
+  saveReviewSettings();
   document.getElementById('workbenchForm').style.display = name === 'spec' ? '' : 'none';
   document.getElementById('notesPane').style.display = name === 'notes' ? '' : 'none';
   document.getElementById('tabSpec').classList.toggle('active', name === 'spec');
@@ -3106,17 +3244,23 @@ document.getElementById('tabNotes').onclick = function() { switchPane('notes'); 
 document.getElementById('notesTableSel').onchange = function(e) { loadNotesTable(e.target.value); };
 
 restoreVersionCheckboxes();
+restoreReviewSettings();
 setup2DResize();
 setupWorkbenchResize();
 fetchMechs();
-initPreview3D().then(() => { if (currentMech) update3DModel(); });
+initPreview3D().then(() => {
+  restoreReviewSettings();
+  if (currentMech) update3DModel();
+});
 window.__MECH_REVIEW = {
   get preview() { return preview3D; },
   selectMech,
   toggle2DStandee,
   toggleWorkbench,
   saveVersionCheckboxes,
-  restoreVersionCheckboxes
+  restoreVersionCheckboxes,
+  saveReviewSettings,
+  restoreReviewSettings
 };
 </script>
 </body>

@@ -97,8 +97,9 @@ export class CharPreview {
     // 虛擬目標(有目標招式 / 重武器 / NPC 攻擊演出對準用);NPC 路徑旗標;跳躍演示狀態
     this.isUnit = false;
     this._jump = null;
-    this.enemyPosMode = 'default';
+    this.enemyPosMode = 'close';
     this._targetTimer = null;
+    this.targetMarkers = [];
     this._buildTargetMarker();
 
     this._bindInput();
@@ -256,7 +257,7 @@ export class CharPreview {
   _now() { return this.clockT; }
 
   /** 虛擬目標標記:地面警戒環 + 浮空菱形(敵方紅);預設隱藏,施放有目標招式/攻擊時亮起 */
-  _buildTargetMarker() {
+  _createSingleTargetMarker() {
     const g = new THREE.Group();
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.82, 1.0, 28),
@@ -273,7 +274,13 @@ export class CharPreview {
     g.add(ring, dia, altLine);
     g.visible = false;
     g.userData = { dia, ring, altLine };
+    return g;
+  }
+
+  _buildTargetMarker() {
+    const g = this._createSingleTargetMarker();
     this.targetMarker = g;
+    this.targetMarkers = [g];
     this.scene.add(g);
   }
 
@@ -333,25 +340,39 @@ export class CharPreview {
     return p;
   }
 
-  /** 在機體正前方 dist(世界公尺)顯示虛擬目標;回傳其世界座標(供 castFx 的 at) */
+  /** 在各機體前方 dist(世界公尺)顯示虛擬目標;回傳主機體目標世界座標(供 castFx 的 at) */
   _showTarget(dist) {
     const s = Math.max(1, this.fitR * 0.6);
     const p = this._calcTargetPos(dist);
-    this.targetMarker.position.set(p.x, p.y, p.z);
-    this.targetMarker.scale.setScalar(s);
-    if (this.targetMarker.userData.ring) {
-      this.targetMarker.userData.ring.position.y = -p.y;
+    const actors = this._getActiveActors();
+    const needed = Math.max(1, actors.length);
+    while (this.targetMarkers.length < needed) {
+      const extra = this._createSingleTargetMarker();
+      this.targetMarkers.push(extra);
+      this.scene.add(extra);
     }
-    if (this.targetMarker.userData.altLine) {
-      if (p.y > 0.1) {
-        this.targetMarker.userData.altLine.visible = true;
-        this.targetMarker.userData.altLine.scale.set(1, p.y, 1);
-        this.targetMarker.userData.altLine.position.y = -p.y / 2;
+    for (let i = 0; i < this.targetMarkers.length; i++) {
+      const marker = this.targetMarkers[i];
+      if (i < actors.length) {
+        const actor = actors[i];
+        const actorX = actor.group?.position?.x ?? 0;
+        marker.position.set(p.x + actorX, p.y, p.z);
+        marker.scale.setScalar(s);
+        if (marker.userData.ring) marker.userData.ring.position.y = -p.y;
+        if (marker.userData.altLine) {
+          if (p.y > 0.1) {
+            marker.userData.altLine.visible = true;
+            marker.userData.altLine.scale.set(1, p.y, 1);
+            marker.userData.altLine.position.y = -p.y / 2;
+          } else {
+            marker.userData.altLine.visible = false;
+          }
+        }
+        marker.visible = true;
       } else {
-        this.targetMarker.userData.altLine.visible = false;
+        marker.visible = false;
       }
     }
-    this.targetMarker.visible = true;
     return this.targetMarker.position.clone();
   }
 
@@ -365,7 +386,11 @@ export class CharPreview {
     return p;
   }
 
-  _hideTarget() { if (this.targetMarker) this.targetMarker.visible = false; }
+  _hideTarget() {
+    for (const m of (this.targetMarkers || [])) {
+      if (m) m.visible = false;
+    }
+  }
 
   _measure() { return measureBox(this.unit); }
 
