@@ -19,6 +19,7 @@ import { ROOT } from './audit_src.mjs';
 import { rosterByCat } from '../public/js/forge/roster.js';
 import { handleForgeApi } from './humanoid_forge/specstore.mjs';
 import { handleBoardApi } from './humanoid_forge/boardapi.mjs';
+import { handleCompareApi } from './humanoid_forge/compareapi.mjs';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -50,6 +51,7 @@ const srv = createServer(async (req, res) => {
     // 截圖落盤 + 原型圖名冊(2D 定案圖 / CC0 原型照):住 boardapi.mjs,與覆核台 :8641
     // 同一支 —— 兩邊各寫一份的話,同一格在兩座看板上會列出不一樣的圖,而兩邊都很正常。
     if (await handleBoardApi(req, res, send)) return;
+    if (await handleCompareApi(req, res, send)) return;
     // 名冊與分類(看板以外的消費端 —— 例如截圖工具 —— 直接吃這一份)
     if (req.method === 'GET' && url === '/api/roster') {
       return send(200, JSON.stringify({ cats: rosterByCat() }), MIME['.json']);

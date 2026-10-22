@@ -42,7 +42,7 @@ Archery uses the final aimed bow as the draw-hand target. Dense quaternion sampl
 | 剛性關節與呈現邊界     | 關節為剛性分離裝甲（不跨肘／膝蒙皮）；護盾、雷達膜、特效皆為呈現層，不改防禦／護盾值／傷害／碰撞／武器時序（伺服器權威）。                                |
 | 尺寸估計與不可見面推斷 | 可見尺寸為單張立繪估計，非CAD實測；背面／腹側／腹艙／鉸鏈行程／護盾發生器為推斷之機械設計。                                                               |
 | 部件數量與左右歸屬     | 部件數量與解剖武器左右以Prompt為準，立繪若鏡像顛倒以Prompt為準。                                                                                          |
-| 護盾與特效呈現邊界     | 不要干擾其他零件的活動，有盾牌（或冷兵器）者使用盾牌（或冷兵器）發射護盾，單手持武器者安裝在非慣用手平貼手肘外側（1個），雙持武器者分別安裝在兩隻武器上。 |
+| 護盾與特效呈現邊界     | 不要干擾其他零件活動。護盾發射器安裝優先順序為：盾牌 ＞ 冷兵器 ＞ 其他（無盾無冷兵器者：單手持武器安裝在非慣用手平貼手肘外側1個，雙持武器者分別安裝在兩隻武器上）。防守招式的動作施展亦嚴格以此優先順序設計（持盾頂推衝撞 ＞ 冷兵器格擋架勢 ＞ 小臂身軀戒備）。 |
 | 姿態自然與雙肩骨盆結構 | Humans, birds and vertebrate-inspired bionics need functional head, neck, shoulder, thoracic, lumbar and pelvic regions. Visible geometry must follow the joints and permit side-facing, axial twist and back arching; decorative bone names or a single rigid torso are insufficient. Centaurs retain separate horse and rider axial chains; serpentine bodies use longer articulated chains, and species-specific tails remain separate controls. Insects use head/thorax/abdomen; cephalopods use a mantle and radial flexible arms rather than a forced humanoid neck or face. |
 
 ---
@@ -54,7 +54,7 @@ Archery uses the final aimed bow as the draw-hand target. Dense quaternion sampl
 | 項目                       | 內容                                                                         |
 | :------------------------- | :--------------------------------------------------------------------------- |
 | 四肢解剖鏈與關節朝向       | 手的肱骨/尺骨/掌骨與腳的股骨/脛骨/蹠骨的運動也要符合對應動物的結構。         |
-| 熱兵器握柄槍管同向手腕靈活 | 熱兵器都有握柄，槍管保持與手臂同方向，手腕靈活。手持武器姿勢正確、射擊朝前。 |
+| 熱兵器握柄槍管同向手腕靈活 | 熱兵器都有握柄，槍管保持與手臂同方向，手腕靈活。手持武器姿勢正確、射擊朝前。手掌握柄需貼緊握把上緣海狸尾處且食指扣於扳機上，嚴禁握在握柄尾端（不合人體工學且無法扣引扳機）。 |
 | 胸腰分開與腰身骨盆         | 胸與腰都要分開設計，要有腰身，骨盆的結構才會清楚。                           |
 
 ### 3.2 仿生獸型（s06、s07、s09、t03、t04、t05、m02、m06、s03地面型、s10地面型、m05地面型、m08地面型）
@@ -70,7 +70,7 @@ Archery uses the final aimed bow as the draw-hand target. Dense quaternion sampl
 | 項目                                     | 內容                                                                                                                                        |
 | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
 | 翼結構形式（三段羽翼／膜翼／鞘翅＋膜翅） | 羽毛或翼膜不要超前翅膀肢體。鳥類都要補上尾羽。變形者鳥翼同規：肱骨/尺骨/掌骨結構，勿完全筆直展開，初級/次級翅膀連續，羽向不呆板，注意排列。 |
-| 四肢解剖鏈與關節朝向                     | 翅膀的肱骨/尺骨/掌骨與後腳的股骨/脛骨/蹠骨的運動也要符合對應動物的結構。                                                                    |
+| 四肢解剖鏈與關節朝向                     | 翅膀的肱骨/尺骨/掌骨與後腳的股骨/脛骨/蹠骨的運動也要符合對應動物的結構。飛行爪子巡航時收攏貼腹或扣槽，狩獵/俯衝時可向前微屈伸展呈抓捕姿態，嚴禁無張力呆板垂直下垂或如陸行站立拖行。折翼時呈 Z 形後折，不可如人手臂直垂兩側。 |
 | 尾羽尾刺結構                             | 鳥類都要補上尾羽。                                                                                                                          |
 
 ### 3.4 飛行載具（s01、s02、s04、s05、s08、s11、s12、t09、m03）

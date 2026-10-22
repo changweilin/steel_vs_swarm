@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handleCompareApi } from './humanoid_forge/compareapi.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -617,7 +618,7 @@ function renderHtmlPage(localThree = false) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>機體立繪與 3D 比對審查工作台 · Steel vs Swarm</title>
+<title>機體審查台 · Steel vs Swarm</title>
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -697,7 +698,7 @@ function renderHtmlPage(localThree = false) {
     align-items: center;
     gap: 8px;
   }
-  .btn-filter, .btn-verdict-filter {
+  .btn-filter, .btn-verdict-filter, .btn-toggle-wb {
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid rgba(148, 163, 184, 0.25);
     color: var(--text-muted);
@@ -708,11 +709,11 @@ function renderHtmlPage(localThree = false) {
     cursor: pointer;
     transition: all 0.15s;
   }
-  .btn-filter:hover, .btn-verdict-filter:hover {
+  .btn-filter:hover, .btn-verdict-filter:hover, .btn-toggle-wb:hover {
     color: #fff;
     border-color: var(--accent-cyan);
   }
-  .btn-filter.active, .btn-verdict-filter.active {
+  .btn-filter.active, .btn-verdict-filter.active, .btn-toggle-wb.active {
     background: rgba(56, 189, 248, 0.2);
     border-color: var(--accent-cyan);
     color: #fff;
@@ -732,15 +733,26 @@ function renderHtmlPage(localThree = false) {
     border-color: var(--accent-cyan);
   }
 
-  /* 主區域三分欄 */
+  /* 主區域三分欄（右側規格 workbench 預設向右收合，支援邊界拖曳調整寬度） */
   main.app-workspace {
     flex: 1 1 0;
     min-height: 0;
     height: calc(100vh - 52px);
     display: grid;
-    grid-template-columns: 240px 1fr 480px;
+    grid-template-columns: 240px minmax(0, 1fr) var(--wb-width, 480px);
     grid-template-rows: 100%;
     overflow: hidden;
+    transition: grid-template-columns 0.15s ease;
+  }
+  main.app-workspace.workbench-collapsed {
+    grid-template-columns: 240px minmax(0, 1fr) 0px !important;
+  }
+  main.app-workspace.workbench-collapsed .spec-workbench-pane {
+    display: none !important;
+  }
+  main.app-workspace.resizing {
+    transition: none !important;
+    user-select: none;
   }
 
   /* 左側機體列表 */
@@ -839,14 +851,122 @@ function renderHtmlPage(localThree = false) {
   .badge-verdict.redraw { background: var(--redraw-bg); border: 1px solid var(--redraw-border); color: #fb7185; }
   .badge-verdict.none { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: #94a3b8; }
 
-  /* 中間視覺比對區：2D vs 3D 雙視圖 */
+  /* 中間視覺比對區：2D 立繪預設向左收合，3D 完整佔滿 */
   .visual-compare-pane {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: row;
     background: #0f1523;
     overflow: hidden;
     position: relative;
     border-right: 1px solid var(--panel-border);
+    height: 100%;
+    min-height: 0;
+  }
+  .view-subpanel.standee-pane {
+    flex: 0 0 var(--standee-width, 460px);
+    width: var(--standee-width, 460px);
+    max-width: calc(100% - 320px);
+    min-width: 240px;
+    transition: width 0.15s ease, flex-basis 0.15s ease;
+  }
+  .view-subpanel.standee-pane.collapsed {
+    display: none !important;
+  }
+  .visual-compare-pane.resizing .standee-pane {
+    transition: none !important;
+    user-select: none;
+  }
+  .view-subpanel.canvas-3d-pane {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  /* 邊界拖曳與收合/展開熱區（滑鼠懸停在邊界上才會出現按鍵，並支援拖曳調整寬度） */
+  .edge-collapse-zone {
+    position: absolute;
+    top: 38px;
+    bottom: 0;
+    width: 22px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    cursor: col-resize;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .edge-collapse-zone.left {
+    left: 0;
+    justify-content: flex-start;
+  }
+  .edge-collapse-zone.right {
+    right: 0;
+    justify-content: flex-end;
+  }
+  .edge-collapse-zone.left:hover, .edge-collapse-zone.left.dragging {
+    background: linear-gradient(to right, rgba(56, 189, 248, 0.22) 0%, transparent 100%);
+    border-left: 2px solid var(--accent-cyan);
+  }
+  .edge-collapse-zone.right:hover, .edge-collapse-zone.right.dragging {
+    background: linear-gradient(to left, rgba(56, 189, 248, 0.22) 0%, transparent 100%);
+    border-right: 2px solid var(--accent-cyan);
+  }
+
+  .edge-collapse-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease, box-shadow 0.2s ease;
+    background: rgba(12, 18, 32, 0.94);
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 6px;
+    user-select: none;
+  }
+  .edge-collapse-btn.left {
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 2px 0 16px rgba(56, 189, 248, 0.35);
+    transform: translateX(-4px);
+  }
+  .edge-collapse-btn.right {
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -2px 0 16px rgba(56, 189, 248, 0.35);
+    transform: translateX(4px);
+  }
+
+  .edge-collapse-zone:hover .edge-collapse-btn,
+  .edge-collapse-btn:hover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+  .edge-collapse-btn:hover {
+    background: rgba(22, 38, 70, 0.98);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+  }
+
+  .edge-collapse-icon {
+    font-size: 10px;
+    line-height: 1;
+    color: #fff;
+  }
+  .edge-collapse-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 2px;
+    line-height: 1.2;
   }
   .view-subpanel {
     display: flex;
@@ -943,6 +1063,7 @@ function renderHtmlPage(localThree = false) {
     overflow: hidden;
     height: 100%;
     min-height: 0;
+    min-width: 0;
   }
   .workbench-header {
     padding: 14px 18px;
@@ -1215,6 +1336,107 @@ function renderHtmlPage(localThree = false) {
     white-space: nowrap;
     opacity: 0.85;
   }
+  /* 建模複雜度比較彈窗 */
+  .comp-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(4, 7, 13, 0.78);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .comp-modal-card {
+    background: #0d1424;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.85), 0 0 24px rgba(56, 189, 248, 0.2);
+    border-radius: 10px;
+    width: 920px;
+    max-width: 96vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .comp-modal-header {
+    padding: 12px 18px;
+    background: rgba(22, 32, 54, 0.85);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .comp-modal-body {
+    padding: 18px 22px;
+    overflow-y: auto;
+    font-size: 12px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .comp-table th, .comp-table td {
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+  }
+  .comp-table th {
+    background: rgba(18, 26, 44, 0.95);
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+  .comp-table td.num {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .comp-table td.hl {
+    color: #fbbf24;
+    font-weight: 700;
+  }
+  .comp-bar-wrap {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .comp-bar-lb {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .comp-bar-bg {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .comp-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .comp-bar-fill.c1 { background: #38bdf8; }
+  .comp-bar-fill.c2 { background: #34d399; }
+  .comp-bar-fill.c3 { background: #fbbf24; }
+  .anim-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 2px 3px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+  }
 </style>
 </head>
 <body>
@@ -1222,7 +1444,7 @@ function renderHtmlPage(localThree = false) {
 <header class="app-nav">
   <div class="brand-group">
     <div class="brand-title">
-      <span>戰術審查台</span>
+      <span>機體審查台</span>
     </div>
     <div class="brand-badge" id="statsBadge">載入中...</div>
   </div>
@@ -1241,7 +1463,7 @@ function renderHtmlPage(localThree = false) {
   </div>
 </header>
 
-<main class="app-workspace">
+<main class="app-workspace workbench-collapsed" id="appWorkspace">
   <!-- 左欄：機體清單 -->
   <aside class="mech-roster-pane">
     <div class="roster-header">
@@ -1253,8 +1475,8 @@ function renderHtmlPage(localThree = false) {
 
   <!-- 中欄：2D 立繪 vs 3D 即時模型雙比對 -->
   <section class="visual-compare-pane">
-    <!-- 2D 立繪展示 -->
-    <div class="view-subpanel">
+    <!-- 2D 立繪展示 (向左預設收合) -->
+    <div class="view-subpanel standee-pane collapsed" id="standeeSubpanel">
       <div class="subpanel-bar">
         <span class="subpanel-title">
           <span>🖼️ 2D Standee 遊戲立繪</span>
@@ -1273,14 +1495,36 @@ function renderHtmlPage(localThree = false) {
     </div>
 
     <!-- 3D 即時模型展示 -->
-    <div class="view-subpanel">
+    <div class="view-subpanel canvas-3d-pane">
+      <!-- 左右兩側邊界滑鼠懸停收合/展開熱區 -->
+      <div class="edge-collapse-zone left" id="edgeZoneLeft" title="展開 / 收合 2D 立繪">
+        <button class="edge-collapse-btn left" id="btnEdgeToggle2D" title="展開 2D 立繪">
+          <span class="edge-collapse-icon">▶</span>
+          <span class="edge-collapse-text">展開 2D</span>
+        </button>
+      </div>
+      <div class="edge-collapse-zone right" id="edgeZoneRight" title="展開 / 收合 Prompt 規格">
+        <button class="edge-collapse-btn right" id="btnEdgeToggleWorkbench" title="展開 Prompt 規格">
+          <span class="edge-collapse-icon">◀</span>
+          <span class="edge-collapse-text">展開 Prompt</span>
+        </button>
+      </div>
       <div class="subpanel-bar">
-        <span class="subpanel-title">
-          <span>🎮 3D WebGL 模型 (遊戲真品)</span>
-          <span id="referenceReviewLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">立繪重建・骨架與護盾動作</span>
-          <span id="morphPoseLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">地面型 (Pose 0)</span>
-        </span>
-        <div style="display:flex;gap:4px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="subpanel-title">
+            <span>🎮 3D WebGL 模型</span>
+            <span id="referenceReviewLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">立繪重建・骨架與護盾動作</span>
+            <span id="morphPoseLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">地面型 (Pose 0)</span>
+          </span>
+          <div class="version-select-group" style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.25);border-radius:6px;">
+            <span style="font-size:11px;font-weight:700;color:var(--accent-cyan);">版本:</span>
+            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerCurrent" checked> 本專案</label>
+            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerSteel"> steel_v_swarm</label>
+            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerArgon"> argon blender vfx</label>
+            <button class="btn-tool-sm" id="btnComplexity" style="margin-left:4px;color:#facc15;border-color:rgba(250,204,21,0.4);" title="陳列三版本建模組成複雜度">📊 建模複雜度</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
           <button class="btn-tool-sm" id="btnActionLight">輕射擊</button>
           <button class="btn-tool-sm" id="btnActionAttack">重射擊</button>
           <button class="btn-tool-sm" id="btnActionSkill">防守招式</button>
@@ -1443,7 +1687,26 @@ function renderHtmlPage(localThree = false) {
   </aside>
 </main>
 
+<!-- 建模複雜度比較彈窗 -->
+<div id="complexityModal" class="comp-modal-backdrop" style="display:none;">
+  <div class="comp-modal-card">
+    <div class="comp-modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:14px;font-weight:900;color:#fff;">📊 三版本建模組成複雜度比對</span>
+        <span id="compMechIdBadge" class="brand-badge">--</span>
+      </div>
+      <button class="btn-tool-sm" id="btnCloseCompModal">✕ 關閉</button>
+    </div>
+    <div class="comp-modal-body" id="compModalContent">
+      <div style="padding:20px;text-align:center;color:#94a3b8;">載入數據中...</div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
 let allMechs = [];
 let currentMech = null;
 let activeCat = 'all';
@@ -1454,6 +1717,14 @@ let preview3DError = '';
 let autoSpin = true;
 let showGrid = true;
 
+// 比對模式多版本管理
+let compareGroup = null;
+let gltfLoader = null;
+const glbUnitCache = new Map();
+let activeExternalUnits = [];
+let currentLoadToken = 0;
+const compCache = {};
+
 // 3D 展示台與名冊載入解耦:3D 失敗(CDN 被擋/WebGL 不可用/模組錯誤)不可拖垮左側清單。
 // 動態 import + try/catch,名冊 fetch 不等待 3D。
 async function initPreview3D() {
@@ -1461,6 +1732,9 @@ async function initPreview3D() {
     const { CharPreview } = await import('/public/js/charPreview.js');
     const cv3d = document.getElementById('cv3d');
     preview3D = new CharPreview(cv3d);
+    compareGroup = new THREE.Group();
+    preview3D.scene.add(compareGroup);
+    gltfLoader = new GLTFLoader();
     preview3D.start();
   } catch (err) {
     preview3D = null;
@@ -1468,6 +1742,429 @@ async function initPreview3D() {
     console.error('3D 展示台初始化失敗(名冊不受影響):', err);
   }
 }
+
+// 2D 立繪展開/收合開關
+function toggle2DStandee(force) {
+  const pane = document.getElementById('standeeSubpanel');
+  if (!pane) return;
+  const willCollapse = force !== undefined ? !force : !pane.classList.contains('collapsed');
+  pane.classList.toggle('collapsed', willCollapse);
+  const edgeBtn = document.getElementById('btnEdgeToggle2D');
+  if (edgeBtn) {
+    edgeBtn.querySelector('.edge-collapse-icon').textContent = willCollapse ? '▶' : '◀';
+    edgeBtn.querySelector('.edge-collapse-text').textContent = willCollapse ? '展開 2D' : '收合 2D';
+    edgeBtn.title = willCollapse ? '展開 2D 立繪' : '收合 2D 立繪';
+  }
+  preview3D?._resize();
+}
+
+function setup2DResize() {
+  const zone = document.getElementById('edgeZoneLeft');
+  const pane = document.getElementById('standeeSubpanel');
+  const comparePane = document.querySelector('.visual-compare-pane');
+  if (!zone || !pane || !comparePane) return;
+
+  const savedWidth = localStorage.getItem('mech_review_standee_width');
+  if (savedWidth) {
+    const w = parseInt(savedWidth, 10);
+    if (w >= 220 && w <= 1200) {
+      document.documentElement.style.setProperty('--standee-width', w + 'px');
+    }
+  }
+
+  let isDragging = false;
+  let hasMoved = false;
+  let startX = 0;
+  let justDragged = false;
+
+  zone.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    hasMoved = false;
+    startX = e.clientX;
+    zone.setPointerCapture(e.pointerId);
+  });
+
+  zone.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    if (!hasMoved && Math.abs(dx) > 3) {
+      hasMoved = true;
+      comparePane.classList.add('resizing');
+      zone.classList.add('dragging');
+    }
+    if (!hasMoved) return;
+
+    if (pane.classList.contains('collapsed')) {
+      if (dx > 30) toggle2DStandee(true);
+      else return;
+    }
+
+    const rect = comparePane.getBoundingClientRect();
+    const rawW = e.clientX - rect.left;
+    const maxW = Math.max(300, rect.width - 320);
+    const newW = Math.min(maxW, Math.max(200, rawW));
+    document.documentElement.style.setProperty('--standee-width', newW + 'px');
+    preview3D?._resize();
+  });
+
+  const endDrag = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    try { zone.releasePointerCapture(e.pointerId); } catch (_) {}
+    comparePane.classList.remove('resizing');
+    zone.classList.remove('dragging');
+
+    if (hasMoved) {
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 80);
+      const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--standee-width')) || pane.getBoundingClientRect().width;
+      if (curW < 220) {
+        toggle2DStandee(false);
+      } else {
+        localStorage.setItem('mech_review_standee_width', String(Math.round(curW)));
+      }
+      preview3D?._resize();
+    }
+  };
+
+  zone.addEventListener('pointerup', endDrag);
+  zone.addEventListener('pointercancel', endDrag);
+
+  zone.addEventListener('click', (e) => {
+    if (justDragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    toggle2DStandee();
+  });
+}
+
+// 右側規格/Prompt Workbench 展開/收合開關
+function toggleWorkbench(force) {
+  const ws = document.getElementById('appWorkspace');
+  if (!ws) return;
+  const willCollapse = force !== undefined ? !force : !ws.classList.contains('workbench-collapsed');
+  ws.classList.toggle('workbench-collapsed', willCollapse);
+  const edgeBtn = document.getElementById('btnEdgeToggleWorkbench');
+  if (edgeBtn) {
+    edgeBtn.querySelector('.edge-collapse-icon').textContent = willCollapse ? '◀' : '▶';
+    edgeBtn.querySelector('.edge-collapse-text').textContent = willCollapse ? '展開 Prompt' : '收合 Prompt';
+    edgeBtn.title = willCollapse ? '展開 Prompt 規格' : '收合 Prompt 規格';
+  }
+  preview3D?._resize();
+}
+
+function setupWorkbenchResize() {
+  const zone = document.getElementById('edgeZoneRight');
+  const ws = document.getElementById('appWorkspace');
+  if (!zone || !ws) return;
+
+  const savedWidth = localStorage.getItem('mech_review_wb_width');
+  if (savedWidth) {
+    const w = parseInt(savedWidth, 10);
+    if (w >= 260 && w <= 1400) {
+      document.documentElement.style.setProperty('--wb-width', w + 'px');
+    }
+  }
+
+  let isDragging = false;
+  let hasMoved = false;
+  let startX = 0;
+  let justDragged = false;
+
+  zone.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    isDragging = true;
+    hasMoved = false;
+    startX = e.clientX;
+    zone.setPointerCapture(e.pointerId);
+  });
+
+  zone.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    if (!hasMoved && Math.abs(dx) > 3) {
+      hasMoved = true;
+      ws.classList.add('resizing');
+      zone.classList.add('dragging');
+    }
+    if (!hasMoved) return;
+
+    if (ws.classList.contains('workbench-collapsed')) {
+      if (dx < -30) toggleWorkbench(true);
+      else return;
+    }
+
+    const rawW = window.innerWidth - e.clientX;
+    const maxW = Math.max(360, window.innerWidth - 600);
+    const newW = Math.min(maxW, Math.max(220, rawW));
+    document.documentElement.style.setProperty('--wb-width', newW + 'px');
+    preview3D?._resize();
+  });
+
+  const endDrag = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    try { zone.releasePointerCapture(e.pointerId); } catch (_) {}
+    ws.classList.remove('resizing');
+    zone.classList.remove('dragging');
+
+    if (hasMoved) {
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 80);
+      const curW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--wb-width')) || 480;
+      if (curW < 250) {
+        toggleWorkbench(false);
+      } else {
+        localStorage.setItem('mech_review_wb_width', String(Math.round(curW)));
+      }
+      preview3D?._resize();
+    }
+  };
+
+  zone.addEventListener('pointerup', endDrag);
+  zone.addEventListener('pointercancel', endDrag);
+
+  zone.addEventListener('click', (e) => {
+    if (justDragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    toggleWorkbench();
+  });
+}
+
+function makeBannerSprite(text, x, y) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 384;
+  canvas.height = 72;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(18, 22, 30, 0.88)';
+  ctx.strokeStyle = '#41526b';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(4, 4, 376, 64, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#7fd8ff';
+  ctx.font = 'bold 22px "Noto Sans TC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 192, 36);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.set(x, y, 0);
+  sprite.scale.set(3.8, 0.72, 1);
+  return sprite;
+}
+
+async function loadGlbUnit(verKey, id, targetH = 6.0) {
+  const cacheKey = verKey + '_' + id;
+  if (glbUnitCache.has(cacheKey)) {
+    return glbUnitCache.get(cacheKey);
+  }
+  const url = '/api/compare/glb?ver=' + verKey + '&id=' + id;
+  const gltf = await gltfLoader.loadAsync(url);
+  const model = gltf.scene;
+  const group = new THREE.Group();
+  group.add(model);
+
+  const box = new THREE.Box3().setFromObject(model);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const scale = size.y > 0 ? (targetH / size.y) : 1;
+  model.scale.setScalar(scale);
+
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  model.position.x = -center.x * scale;
+  model.position.z = -center.z * scale;
+  model.position.y = -box.min.y * scale;
+
+  const mixer = new THREE.AnimationMixer(model);
+  const clipsMap = new Map();
+  for (const c of gltf.animations || []) {
+    clipsMap.set(c.name, c);
+  }
+
+  let currentAction = null;
+  let activeSlot = 'idle';
+
+  function playAction(slot, { form = 'ground', loop = true } = {}) {
+    activeSlot = slot;
+    let clipName = slot;
+    if (form === 'flight') {
+      if (clipsMap.has('flight_' + slot)) clipName = 'flight_' + slot;
+    }
+    if (!clipsMap.has(clipName)) {
+      if (slot === 'walk' && clipsMap.has('run')) clipName = 'run';
+      else if (slot === 'skill' && clipsMap.has('def')) clipName = 'def';
+      else if (slot === 'ult' && clipsMap.has('atk')) clipName = 'atk';
+    }
+    const clip = clipsMap.get(clipName) || clipsMap.get('idle');
+    if (!clip) return null;
+
+    const next = mixer.clipAction(clip);
+    if (currentAction && currentAction !== next) {
+      currentAction.fadeOut(0.12);
+    }
+    next.reset();
+    const isOneShot = !loop || ['heavy', 'skill', 'ult', 'to_flight', 'to_ground'].includes(slot);
+    if (isOneShot) {
+      next.setLoop(THREE.LoopOnce, 1);
+      next.clampWhenFinished = true;
+    } else {
+      next.setLoop(THREE.LoopRepeat, Infinity);
+    }
+    next.timeScale = slot === 'walk' ? 0.6 : 1;
+    next.fadeIn(0.12).play();
+    currentAction = next;
+    return next;
+  }
+
+  mixer.addEventListener('finished', () => {
+    if (['heavy', 'skill', 'ult', 'to_flight', 'to_ground'].includes(activeSlot)) {
+      const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
+      playAction(curForm === 'flight' ? 'flight_idle' : 'idle', { form: curForm, loop: true });
+    }
+  });
+
+  playAction('idle', { form: 'ground', loop: true });
+
+  const unitObj = {
+    verKey,
+    id,
+    group,
+    mixer,
+    playAction,
+    update: (dt) => mixer.update(dt),
+    clips: Array.from(clipsMap.keys()),
+  };
+  glbUnitCache.set(cacheKey, unitObj);
+  return unitObj;
+}
+
+function saveVersionCheckboxes() {
+  try {
+    const data = {
+      current: !!document.getElementById('chkVerCurrent')?.checked,
+      steel: !!document.getElementById('chkVerSteel')?.checked,
+      argon: !!document.getElementById('chkVerArgon')?.checked
+    };
+    localStorage.setItem('mech_review_checked_versions', JSON.stringify(data));
+  } catch (_) {}
+}
+
+function restoreVersionCheckboxes() {
+  try {
+    const raw = localStorage.getItem('mech_review_checked_versions');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data === 'object') {
+      const c = !!data.current;
+      const s = !!data.steel;
+      const a = !!data.argon;
+      if (!c && !s && !a) {
+        document.getElementById('chkVerCurrent').checked = true;
+      } else {
+        document.getElementById('chkVerCurrent').checked = c;
+        document.getElementById('chkVerSteel').checked = s;
+        document.getElementById('chkVerArgon').checked = a;
+      }
+    }
+  } catch (_) {}
+}
+
+async function syncCompareUnits() {
+  if (!preview3D || !currentMech || !compareGroup) return;
+  const loadToken = ++currentLoadToken;
+
+  const chkCurrent = document.getElementById('chkVerCurrent');
+  const chkSteel = document.getElementById('chkVerSteel');
+  const chkArgon = document.getElementById('chkVerArgon');
+
+  const activeList = [];
+  if (chkCurrent.checked) activeList.push('current');
+  if (chkSteel.checked) activeList.push('steel_v_swarm');
+  if (chkArgon.checked) activeList.push('argon_vfx');
+
+  if (activeList.length === 0) {
+    chkCurrent.checked = true;
+    activeList.push('current');
+    saveVersionCheckboxes();
+  }
+
+  const H = preview3D.height || 6.0;
+  const spacing = Math.max(4.8, (preview3D.fitR || 3) * 1.5);
+  const positions = {};
+
+  if (activeList.length === 1) {
+    positions[activeList[0]] = 0;
+    preview3D.wantR = preview3D.fitR;
+  } else if (activeList.length === 2) {
+    positions[activeList[0]] = -spacing * 0.65;
+    positions[activeList[1]] = spacing * 0.65;
+    preview3D.wantR = preview3D.fitR * 1.45;
+  } else if (activeList.length === 3) {
+    positions['current'] = -spacing;
+    positions['steel_v_swarm'] = 0;
+    positions['argon_vfx'] = spacing;
+    preview3D.wantR = preview3D.fitR * 2.1;
+  }
+
+  // 1. 本專案模型位置與可見度
+  if (activeList.includes('current')) {
+    preview3D.holder.visible = true;
+    preview3D.holder.position.x = positions['current'];
+  } else {
+    preview3D.holder.visible = false;
+  }
+
+  compareGroup.clear();
+  activeExternalUnits = [];
+
+  if (activeList.length > 1 && activeList.includes('current')) {
+    compareGroup.add(makeBannerSprite('1. 本專案 (steel_vs_swarm)', positions['current'], H * 1.08));
+  }
+
+  const curForm = preview3D.morphTarget > 0.5 ? 'flight' : 'ground';
+  const curRun = preview3D.runMode === 'idle' ? 'idle' : 'run';
+
+  for (const verKey of ['steel_v_swarm', 'argon_vfx']) {
+    if (!activeList.includes(verKey)) continue;
+    try {
+      const unit = await loadGlbUnit(verKey, currentMech.id, H);
+      if (loadToken !== currentLoadToken) return;
+      unit.group.position.x = positions[verKey];
+      compareGroup.add(unit.group);
+      activeExternalUnits.push(unit);
+      if (activeList.length > 1) {
+        const label = verKey === 'steel_v_swarm' ? '2. steel_v_swarm (Godot)' : '3. argon blender vfx (Blender)';
+        compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
+      }
+      unit.playAction(curRun, { form: curForm, loop: true });
+    } catch (err) {
+      console.warn('載入比對模型失敗 (' + verKey + '):', err);
+    }
+  }
+}
+
+let lastAnimT = performance.now();
+function animCompareLoop() {
+  requestAnimationFrame(animCompareLoop);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastAnimT) / 1000) * (preview3D?.timeScale ?? 1);
+  lastAnimT = now;
+  for (const u of activeExternalUnits) {
+    u.update?.(dt);
+  }
+}
+requestAnimationFrame(animCompareLoop);
 
 // 載入機體資料(獨立於 3D;失敗要顯示原因而非空白清單)
 async function fetchMechs() {
@@ -1650,6 +2347,8 @@ function update3DModel() {
       btnMorph.style.display = 'none';
       morphLabel.style.display = 'none';
     }
+
+    syncCompareUnits();
   } catch (err) {
     console.error('3D 模型載入失敗:', err);
   }
@@ -1972,6 +2671,13 @@ document.getElementById('btnResetZoom').onclick = () => {
   document.getElementById('standeeImg').style.transform = 'scale(1)';
 };
 
+function syncExternalAction(slot, opts = {}) {
+  const form = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
+  for (const u of activeExternalUnits) {
+    u.playAction?.(slot, { form, ...opts });
+  }
+}
+
 // 3D 控制按鈕
 document.getElementById('btnMorphToggle').onclick = () => {
   if (!preview3D) return;
@@ -1979,18 +2685,36 @@ document.getElementById('btnMorphToggle').onclick = () => {
   const isFlight = preview3D.morphTarget > 0.5;
   document.getElementById('morphPoseLabel').textContent = isFlight ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
   document.getElementById('btnMorphToggle').textContent = isFlight ? '🔄 切換地面型' : '🔄 切換飛行型';
+  syncExternalAction(isFlight ? 'to_flight' : 'to_ground');
 };
 
 document.getElementById('btnActionAttack').onclick = () => {
   if (!preview3D || !currentMech) return;
   preview3D.play('heavy');
+  syncExternalAction('heavy');
 };
 
-for (const [id, action] of [['btnActionLight', 'light'], ['btnActionSkill', 'def'], ['btnActionUlt', 'atk']]) {
-  document.getElementById(id).onclick = () => preview3D?.play(action);
-}
-document.getElementById('btnShieldDeploy').onclick = () => preview3D?.setShield(true);
-document.getElementById('btnShieldRetract').onclick = () => preview3D?.setShield(false);
+document.getElementById('btnActionLight').onclick = () => {
+  preview3D?.play('light');
+  syncExternalAction('light');
+};
+document.getElementById('btnActionSkill').onclick = () => {
+  preview3D?.play('def');
+  syncExternalAction('skill');
+};
+document.getElementById('btnActionUlt').onclick = () => {
+  preview3D?.play('atk');
+  syncExternalAction('ult');
+};
+
+document.getElementById('btnShieldDeploy').onclick = () => {
+  preview3D?.setShield(true);
+  syncExternalAction('shield_deploy');
+};
+document.getElementById('btnShieldRetract').onclick = () => {
+  preview3D?.setShield(false);
+  syncExternalAction('shield_retract');
+};
 document.getElementById('btnRig').onclick = event => {
   const on = event.currentTarget.classList.toggle('active');
   preview3D?.setRigVisible(on);
@@ -2001,6 +2725,188 @@ document.getElementById('btnRunMode').onclick = () => {
   preview3D.cycleRun(1);
   const label = preview3D.runMode === 'idle' ? '靜止' : (preview3D.runMode === 'slow' ? '慢跑' : '衝刺');
   document.getElementById('btnRunMode').textContent = '🏃 運動：' + label;
+  syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+};
+
+for (const id of ['chkVerCurrent', 'chkVerSteel', 'chkVerArgon']) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.onchange = () => {
+      saveVersionCheckboxes();
+      syncCompareUnits();
+    };
+  }
+}
+
+// 建模組成複雜度比對彈窗
+function fmtNum(n) {
+  return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString();
+}
+function fmtSize(b) {
+  if (b == null || isNaN(b) || b === 0) return '—';
+  return (b / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+async function showComplexityModal() {
+  if (!currentMech) return;
+  const modal = document.getElementById('complexityModal');
+  const badge = document.getElementById('compMechIdBadge');
+  const content = document.getElementById('compModalContent');
+  badge.textContent = currentMech.id.toUpperCase() + ' ' + (currentMech.nickname || currentMech.pilot);
+  modal.style.display = 'flex';
+
+  const id = currentMech.id;
+  if (!compCache[id]) {
+    content.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;">載入三版本複雜度中...</div>';
+    try {
+      const res = await fetch('/api/compare/complexity?id=' + id);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      compCache[id] = await res.json();
+    } catch (e) {
+      content.innerHTML = '<div style="padding:24px;color:#f87171;">無法載入複雜度數據: ' + escapeHtml(e.message) + '</div>';
+      return;
+    }
+  }
+
+  const d = compCache[id];
+  if (!d) return;
+
+  const cur = d.current || {};
+  const stl = d.steel_v_swarm || {};
+  const arg = d.argon_vfx || {};
+
+  const maxTri = Math.max(cur.triCount || 1, stl.triCount || 1, arg.triCount || 1);
+  const wCur = Math.round(((cur.triCount || 0) / maxTri) * 100);
+  const wStl = Math.round(((stl.triCount || 0) / maxTri) * 100);
+  const wArg = Math.round(((arg.triCount || 0) / maxTri) * 100);
+
+  const maxBytes = Math.max(cur.fileSize || 1, stl.fileSize || 1, arg.fileSize || 1);
+  const sCur = Math.round(((cur.fileSize || 0) / maxBytes) * 100);
+  const sStl = Math.round(((stl.fileSize || 0) / maxBytes) * 100);
+  const sArg = Math.round(((arg.fileSize || 0) / maxBytes) * 100);
+
+  const argAnims = arg.animations || [];
+  const stlAnims = stl.animations || [];
+  const curAnims = cur.animations || [];
+
+  const triRatio = ((arg.triCount || 0) / Math.max(1, stl.triCount || 1)).toFixed(1);
+  const sizeRatio = ((arg.fileSize || 0) / Math.max(1, stl.fileSize || 1)).toFixed(1);
+
+  content.innerHTML = \`
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th style="width:25%;">比對維度</th>
+          <th style="width:25%;color:#38bdf8;">1. 本專案 (steel_vs_swarm)</th>
+          <th style="width:25%;color:#34d399;">2. steel_v_swarm (Godot)</th>
+          <th style="width:25%;color:#fbbf24;">3. argon blender vfx (高精)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>架構定位</b></td>
+          <td>程序具名零件 (JS Module)</td>
+          <td>遊戲最佳化戰鬥 GLB</td>
+          <td>Blender 原生高精 VFX GLB</td>
+        </tr>
+        <tr>
+          <td><b>模型檔案大小</b></td>
+          <td class="num">\${fmtSize(cur.fileSize)}</td>
+          <td class="num">\${fmtSize(stl.fileSize)}</td>
+          <td class="num hl">\${fmtSize(arg.fileSize)} <small style="color:#94a3b8">(\${sizeRatio}x)</small></td>
+        </tr>
+        <tr>
+          <td><b>三角面數 (Tris)</b></td>
+          <td class="num">\${fmtNum(cur.triCount)}</td>
+          <td class="num">\${fmtNum(stl.triCount)}</td>
+          <td class="num hl">\${fmtNum(arg.triCount)} <small style="color:#94a3b8">(\${triRatio}x)</small></td>
+        </tr>
+        <tr>
+          <td><b>頂點數量 (Verts)</b></td>
+          <td class="num">\${fmtNum(cur.vertCount)}</td>
+          <td class="num">\${fmtNum(stl.vertCount)}</td>
+          <td class="num hl">\${fmtNum(arg.vertCount)}</td>
+        </tr>
+        <tr>
+          <td><b>網格組數 (Meshes)</b></td>
+          <td class="num">\${fmtNum(cur.meshCount)}</td>
+          <td class="num">\${fmtNum(stl.meshCount)}</td>
+          <td class="num">\${fmtNum(arg.meshCount)}</td>
+        </tr>
+        <tr>
+          <td><b>繪製批次 (Primitives)</b></td>
+          <td class="num">\${fmtNum(cur.primCount)}</td>
+          <td class="num">\${fmtNum(stl.primCount)}</td>
+          <td class="num">\${fmtNum(arg.primCount)}</td>
+        </tr>
+        <tr>
+          <td><b>階層節點數 (Nodes)</b></td>
+          <td class="num">\${fmtNum(cur.nodeCount)}</td>
+          <td class="num">\${fmtNum(stl.nodeCount)}</td>
+          <td class="num">\${fmtNum(arg.nodeCount)}</td>
+        </tr>
+        <tr>
+          <td><b>材質槽位數 (Materials)</b></td>
+          <td class="num">\${fmtNum(cur.materialCount)}</td>
+          <td class="num">\${fmtNum(stl.materialCount)}</td>
+          <td class="num">\${fmtNum(arg.materialCount)}</td>
+        </tr>
+        <tr>
+          <td><b>動作剪輯數 (Actions)</b></td>
+          <td class="num">\${curAnims.length} 個程序步態</td>
+          <td class="num">\${stlAnims.length} 個 GLB 動作</td>
+          <td class="num">\${argAnims.length} 個 GLB 動作</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="comp-bar-wrap">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#f1f5f9;">📐 面數 (Triangles) 分布比較</div>
+      <div class="comp-bar-lb">
+        <span style="color:#38bdf8;">本專案: \${fmtNum(cur.triCount)} (\${wCur}%)</span>
+        <span style="color:#34d399;">steel_v_swarm: \${fmtNum(stl.triCount)} (\${wStl}%)</span>
+        <span style="color:#fbbf24;">argon vfx: \${fmtNum(arg.triCount)} (\${wArg}%)</span>
+      </div>
+      <div class="comp-bar-bg" style="height:10px;"><div class="comp-bar-fill c1" style="width:\${wCur}%"></div></div>
+      <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c2" style="width:\${wStl}%"></div></div>
+      <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c3" style="width:\${wArg}%"></div></div>
+    </div>
+
+    <div class="comp-bar-wrap">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#f1f5f9;">💾 模型檔案大小分布比較</div>
+      <div class="comp-bar-lb">
+        <span style="color:#38bdf8;">本專案: \${fmtSize(cur.fileSize)}</span>
+        <span style="color:#34d399;">steel_v_swarm: \${fmtSize(stl.fileSize)}</span>
+        <span style="color:#fbbf24;">argon vfx: \${fmtSize(arg.fileSize)}</span>
+      </div>
+      <div class="comp-bar-bg" style="height:10px;"><div class="comp-bar-fill c1" style="width:\${sCur}%"></div></div>
+      <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c2" style="width:\${sStl}%"></div></div>
+      <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c3" style="width:\${sArg}%"></div></div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#f1f5f9;">🎬 動作清單 (共 \${argAnims.length} 個，點擊 3D 工具列動作按鈕同步連動)</div>
+      <div>
+        \${argAnims.map(a => '<span class="anim-tag">' + escapeHtml(a) + '</span>').join('')}
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:#94a3b8;line-height:1.6;background:rgba(255,255,255,0.03);padding:10px;border-radius:6px;">
+      <div><b>・本專案資源:</b> <code>\${escapeHtml(cur.path || 'public/js/forge/')}</code></div>
+      <div><b>・steel_v_swarm 資源:</b> <code>\${escapeHtml(stl.path || 'app/steel_v_swarm/')}</code></div>
+      <div><b>・argon blender vfx 資源:</b> <code>\${escapeHtml(arg.path || 'tools/ai3d/argon blender vfx/')}</code></div>
+    </div>
+  \`;
+}
+
+document.getElementById('btnComplexity').onclick = showComplexityModal;
+document.getElementById('btnCloseCompModal').onclick = () => {
+  document.getElementById('complexityModal').style.display = 'none';
+};
+document.getElementById('complexityModal').onclick = (e) => {
+  if (e.target === document.getElementById('complexityModal')) {
+    document.getElementById('complexityModal').style.display = 'none';
+  }
 };
 
 document.getElementById('btn3dSpin').onclick = () => {
@@ -2135,9 +3041,19 @@ document.getElementById('tabSpec').onclick = function() { switchPane('spec'); };
 document.getElementById('tabNotes').onclick = function() { switchPane('notes'); };
 document.getElementById('notesTableSel').onchange = function(e) { loadNotesTable(e.target.value); };
 
+restoreVersionCheckboxes();
+setup2DResize();
+setupWorkbenchResize();
 fetchMechs();
 initPreview3D().then(() => { if (currentMech) update3DModel(); });
-window.__MECH_REVIEW = { get preview() { return preview3D; }, selectMech };
+window.__MECH_REVIEW = {
+  get preview() { return preview3D; },
+  selectMech,
+  toggle2DStandee,
+  toggleWorkbench,
+  saveVersionCheckboxes,
+  restoreVersionCheckboxes
+};
 </script>
 </body>
 </html>`;
@@ -2174,6 +3090,12 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
 
   const server = http.createServer(async (req, res) => {
     try {
+      const send = (code, body, type = 'text/plain; charset=utf-8') => {
+        res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store' });
+        res.end(body);
+      };
+      if (await handleCompareApi(req, res, send)) return;
+
       const url = new URL(req.url, `http://localhost:${port}`);
       const pathname = decodeURIComponent(url.pathname);
 
@@ -2244,7 +3166,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
 
       // Static resource mappings
       let targetFile = localModules.get(pathname) || null;
-      if (!targetFile && pathname.startsWith('/public/')) {
+      if (!targetFile && (pathname.startsWith('/public/') || pathname.startsWith('/tools/'))) {
         targetFile = path.join(ROOT, pathname);
       } else if (pathname === '/favicon.png') {
         targetFile = path.join(ROOT, 'public', 'favicon.png');

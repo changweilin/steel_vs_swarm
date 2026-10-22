@@ -48,6 +48,9 @@ export const ICONS = {
   spin: svg('<path d="M20 12a8 8 0 1 1-2.7-6"/><path d="M20 4v4.5h-4.5"/>'),
   joints: svg('<circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7.5 7.5l3.3 8.8M16.5 7.5l-3.3 8.8M8 6h8"/>'),
   verNew: svg('<path d="M12 3l2 5.4 5.4 2-5.4 2-2 5.4-2-5.4-5.4-2 5.4-2z"/><path d="M5 20h14"/>'),
+  verSteelV: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 16h18M9 4v16"/>'),
+  verArgon: svg('<path d="M12 2l8 4.5v11L12 22 4 17.5v-11z"/><path d="M12 2v20M4 6.5l16 9M4 17.5l16-9"/>'),
+  verCompare: svg('<rect x="2" y="4" width="5.5" height="16" rx="1"/><rect x="9.25" y="4" width="5.5" height="16" rx="1"/><rect x="16.5" y="4" width="5.5" height="16" rx="1"/>'),
   verOld: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.4l3.4 2"/>'),
 };
 
@@ -129,14 +132,32 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
     for (const j of st.unit?.joints || []) j.visible = on && st.ver.caps.joints;
   }
 
-  function build() {
-    if (st.unit) { scene.remove(st.unit.group); disposeTree(st.unit.group); }   // A25
-    st.unit = st.ver.build(st.spec, { ovrOf, draft: st.draft });
+  let _buildSeq = 0;
+  async function build() {
+    const seq = ++_buildSeq;
+    if (st.unit) {
+      scene.remove(st.unit.group);
+      disposeTree(st.unit.group);
+      st.unit = null;
+    }
+    const res = st.ver.build(st.spec, { ovrOf, draft: st.draft, THREE });
+    const unit = (res && typeof res.then === 'function') ? await res : res;
+    if (seq !== _buildSeq) {
+      if (unit?.group) disposeTree(unit.group);
+      return;
+    }
+    st.unit = unit;
     st._key = keyOf(st.spec);
-    scene.add(st.unit.group);
-    showJoints(st._joints);
-    st.ent = { id: st.spec.id, mesh: st.unit.group, heroY: 0 };   // loco 狀態綁 mesh
+    if (st.unit?.group) {
+      scene.add(st.unit.group);
+      showJoints(st._joints);
+      st.ent = { id: st.spec.id, mesh: st.unit.group, heroY: 0 };
+      if (st.unit.morph) st.unit.group.userData.morph = st.unit.morph;
+      if (st.unit.rig) st.unit.group.userData.rig = st.unit.rig;
+      st.unit.playAction?.(st._spdSel || 'idle', { form: st.spec.form, loop: true });
+    }
     st._onBuild?.(st.unit, st.spec);
+    st.applyView(false);
   }
 
   /** 換到某一格。同一台變形者的另一個型態 **MUST NOT 重鍛**(重鍛把 locomotion 的型態狀態
@@ -167,16 +188,21 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
   st.applyView = (reframe = true) => {
     const H = st.spec.height;
     if (reframe) st._reframe = true;      // 姿勢落定後再量一次(見 step 那一條)
-    const w = st.view === 'mech' ? null : wpnOf(st.unit, st.view);
-    showWpn(st.unit, st.view);            // 顯示子集(切回機體時尊重紙娃娃的隱藏覆寫)
+    const w = (!st.unit || st.view === 'mech') ? null : wpnOf(st.unit, st.view);
+    if (st.unit) showWpn(st.unit, st.view);            // 顯示子集(切回機體時尊重紙娃娃的隱藏覆寫)
     grid.visible = st.view === 'mech';
     plate.visible = !alpha && st.view === 'mech';
     // 武器頁**停止移動**:武器掛在會動的肢體上,取景框定住而機體繼續走 ⇒ 武器飄出畫面
     if (w) { st._speedTgt = 0; st._speed = 0; st._firing = false; }
     if (!w) {
       if (reframe) {
+        const isComp = st.ver.key === 'compare';
         controls.target.set(0, H * 0.52, 0);
-        camera.position.set(H * 1.6, H * 0.62, H * 2.1);
+        if (isComp) {
+          camera.position.set(0, H * 0.85, H * 3.4);
+        } else {
+          camera.position.set(H * 1.6, H * 0.62, H * 2.1);
+        }
       }
     } else {
       const f = wpnFrame(st.unit, st.view);
@@ -200,6 +226,7 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
     st._spdSel = sel;
     st._speedTgt = f * (st.spec.kind === 'air' ? (st.spec.air?.top ?? 30) : (st.spec.gait?.top ?? 8));
     if (!f) st._speed = Math.min(st._speed, 0);
+    st.unit?.playAction?.(sel, { form: st.spec.form, loop: true, speed: f });
     syncBar();
   };
   /**
@@ -208,6 +235,7 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
    * 鈕面只送槽位,MUST NOT 在這裡自己判「這招是不是指向型」(第三份實作)。
    */
   st.play = (slot) => {
+    st.unit?.playAction?.(slot, { form: st.spec.form, loop: slot === 'light' ? !st._firing : false });
     if (!st.ent) return;
     if (slot === 'light') { st._firing = !st._firing; syncBar(); return; }
     if (slot === 'heavy') {
@@ -231,6 +259,8 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
     if (st._speed < 0.02 && st._speedTgt === 0) st._speed = 0;
     st._travel += st._speed * dt;
     grid.position.z = -(st._travel % CELL);
+    st.unit?.update?.(dt);
+    if (st.unit?.mixer) st.unit.mixer.update(dt);
     if (!st.ent) return;
     if (st._firing && st._t >= st._nextShot) {
       st.ent.fireFx = { t0: st._t, slot: 'light' };
@@ -250,7 +280,9 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
     if (st._reframe && st.view !== 'mech') { st._reframe = false; st.applyView(true); }
     // 飛行型離地懸停:型態進度只**讀** locomotion 算好的那一份(自己再阻尼一次 = 第二條曲線)
     const m = st.morphM();
-    st.unit.group.position.y = m * st.spec.height * (FLY_LIFT + Math.sin(st._t * 2.4) * FLY_BOB);
+    if (st.unit?.group) {
+      st.unit.group.position.y = m * st.spec.height * (FLY_LIFT + Math.sin(st._t * 2.4) * FLY_BOB);
+    }
     // 旋翼自轉:與戰場同一份名冊(userData.spin);轉速隨速度(靜止仍怠速轉)
     if (st.unit.spin?.length) {
       const k = 6 + (st._speed / Math.max(1, st.spec.air?.top ?? 30)) * 26;
@@ -258,7 +290,7 @@ export function makeStage({ alpha = false, ovrOf = () => null, onBuild = null } 
     }
   }
   st.step = (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) step(dt); };
-  st.morphM = () => st.unit?.morph?.m ?? st.ent?.loco?.morph ?? 0;
+  st.morphM = () => st.unit?.morph?.m ?? st.ent?.loco?.morph ?? (st.spec?.form === 'flight' ? 1 : 0);
   st.render = () => {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (w && h && (canvas.width !== w || canvas.height !== h)) {

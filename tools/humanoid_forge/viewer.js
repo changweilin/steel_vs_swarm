@@ -57,7 +57,7 @@ async function saveOvr(id, patch) {
 // ---- 狀態 ----
 const ROSTER = rosterByCat();
 /** 右欄分頁(標記 = 覆核意見 + 紙娃娃;它同時就是編輯模式的開關,見 setTab) */
-const PANEL_TABS = [['data', '資料'], ['ref', '參考圖'], ['rig', '結構'], ['mark', '標記']];
+const PANEL_TABS = [['data', '資料'], ['comp', '建模複雜度'], ['ref', '參考圖'], ['rig', '結構'], ['mark', '標記']];
 let cat = CATS[0].key;              // 目前管理頁
 let tab = 'data';                   // 右欄分頁
 let spec = SPECS[0];
@@ -262,6 +262,9 @@ function renderPanel() {
   // 維護選取態,而它們遲早會說出不一樣的話(使用者第六輪:「整併重複的資訊與功能」)。
   const body = {
     data: () => pilotHTML(spec),
+    comp: () => `
+      <h4>三個版本建模組成複雜度陳列</h4>
+      <div id="compPanelContent"><div class="dim">載入複雜度數據中…</div></div>`,
     ref: () => `
       <h4>2D 定案圖(建模設計權威;點圖開大圖)</h4>
       <div id="artStrip" class="proto-strip"><div class="dim">載入中…</div></div>
@@ -281,6 +284,7 @@ function renderPanel() {
 
   $('panelBody').innerHTML = body();
   renderTabs();
+  if (tab === 'comp') fillComplexityPanel(spec.id);
   if (tab === 'ref') { fillArtStrip(spec.id); fillRefStrip(spec.id); }
   if (tab === 'mark') bindMarkTab();
 }
@@ -439,3 +443,168 @@ editor = makeDollEditor({
 editor.mount($('dollPanel'));
 
 setSpec(SPECS[0]);
+
+// ---- 建模複雜度比較 (本專案 / steel_v_swarm / argon blender vfx) ----
+let compCache = {};
+function fmtNum(n) {
+  return n != null ? Number(n).toLocaleString() : '—';
+}
+function fmtSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+function renderComplexityHTML(d, s) {
+  const cur = d.current || {};
+  const stl = d.steel_v_swarm || {};
+  const arg = d.argon_vfx || {};
+
+  const maxTri = Math.max(cur.triCount || 0, stl.triCount || 0, arg.triCount || 0, 1);
+  const wCur = (((cur.triCount || 0) / maxTri) * 100).toFixed(1);
+  const wStl = (((stl.triCount || 0) / maxTri) * 100).toFixed(1);
+  const wArg = (((arg.triCount || 0) / maxTri) * 100).toFixed(1);
+
+  const triRatio = stl.triCount ? (arg.triCount / stl.triCount).toFixed(1) : '—';
+  const sizeRatio = stl.fileSize ? (arg.fileSize / stl.fileSize).toFixed(1) : '—';
+
+  const curAnims = cur.animations || [];
+  const stlAnims = stl.animations || [];
+  const argAnims = arg.animations || [];
+
+  return `
+    <div class="note" style="margin-bottom:8px;">
+      對照機體：<b>${esc(s.pilot?.machine || s.label)}</b> (${esc(s.ch)}) ・ 基準高度 ${s.height} m
+    </div>
+
+    <div class="comp-btn-row">
+      <button class="segb" onclick="window.__setStageVersion('forge')">本專案</button>
+      <button class="segb" onclick="window.__setStageVersion('steel_v_swarm')">steel_v_swarm</button>
+      <button class="segb" onclick="window.__setStageVersion('argon_vfx')">argon vfx</button>
+      <button class="segb hl" onclick="window.__setStageVersion('compare')">⚔️ 三版並排比對</button>
+    </div>
+
+    <h4>建模組成維度與複雜度對比矩陣</h4>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>維度 / 指標</th>
+          <th style="color:#6ea8ff">1. 本專案</th>
+          <th style="color:#8fd8a0">2. steel_v_swarm</th>
+          <th style="color:#ffd479">3. argon vfx</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>建模型態</td>
+          <td>程序零件組裝</td>
+          <td>戰鬥 GLB</td>
+          <td>高精 VFX GLB</td>
+        </tr>
+        <tr>
+          <td>模型檔案大小</td>
+          <td class="num">${fmtSize(cur.fileSize)}</td>
+          <td class="num">${fmtSize(stl.fileSize)}</td>
+          <td class="num hl">${fmtSize(arg.fileSize)} <small class="dim">(${sizeRatio}x)</small></td>
+        </tr>
+        <tr>
+          <td>三角面數 (Tris)</td>
+          <td class="num">${fmtNum(cur.triCount)}</td>
+          <td class="num">${fmtNum(stl.triCount)}</td>
+          <td class="num hl">${fmtNum(arg.triCount)} <small class="dim">(${triRatio}x)</small></td>
+        </tr>
+        <tr>
+          <td>頂點數量 (Verts)</td>
+          <td class="num">${fmtNum(cur.vertCount)}</td>
+          <td class="num">${fmtNum(stl.vertCount)}</td>
+          <td class="num hl">${fmtNum(arg.vertCount)}</td>
+        </tr>
+        <tr>
+          <td>網格組數 (Meshes)</td>
+          <td class="num">${fmtNum(cur.meshCount)}</td>
+          <td class="num">${fmtNum(stl.meshCount)}</td>
+          <td class="num">${fmtNum(arg.meshCount)}</td>
+        </tr>
+        <tr>
+          <td>繪製批次 (Primitives)</td>
+          <td class="num">${fmtNum(cur.primCount)}</td>
+          <td class="num">${fmtNum(stl.primCount)}</td>
+          <td class="num">${fmtNum(arg.primCount)}</td>
+        </tr>
+        <tr>
+          <td>階層節點數 (Nodes)</td>
+          <td class="num">${fmtNum(cur.nodeCount)}</td>
+          <td class="num">${fmtNum(stl.nodeCount)}</td>
+          <td class="num">${fmtNum(arg.nodeCount)}</td>
+        </tr>
+        <tr>
+          <td>材質槽位數 (Materials)</td>
+          <td class="num">${fmtNum(cur.materialCount)}</td>
+          <td class="num">${fmtNum(stl.materialCount)}</td>
+          <td class="num">${fmtNum(arg.materialCount)}</td>
+        </tr>
+        <tr>
+          <td>動作剪輯數 (Actions)</td>
+          <td class="num">${curAnims.length} 個程序步態</td>
+          <td class="num">${stlAnims.length} 個 NLA</td>
+          <td class="num">${argAnims.length} 個 NLA</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>面數 (Triangles) 佔比視覺化</h4>
+    <div class="comp-bar-wrap">
+      <div class="comp-bar-lb">
+        <span style="color:#6ea8ff">本專案: ${fmtNum(cur.triCount)}</span>
+        <span style="color:#8fd8a0">steel_v: ${fmtNum(stl.triCount)}</span>
+        <span style="color:#ffd479">argon: ${fmtNum(arg.triCount)}</span>
+      </div>
+      <div class="comp-bar-bg" style="height:10px;">
+        <div class="comp-bar-fill c1" style="width:${wCur}%" title="本專案: ${cur.triCount}"></div>
+      </div>
+      <div class="comp-bar-bg" style="height:10px; margin-top:3px;">
+        <div class="comp-bar-fill c2" style="width:${wStl}%" title="steel_v_swarm: ${stl.triCount}"></div>
+      </div>
+      <div class="comp-bar-bg" style="height:10px; margin-top:3px;">
+        <div class="comp-bar-fill c3" style="width:${wArg}%" title="argon vfx: ${arg.triCount}"></div>
+      </div>
+    </div>
+
+    <h4>動作 (Actions) 清單與覆蓋比對</h4>
+    <div class="note" style="margin-bottom:6px;">點擊舞台工具列的速度 (靜止/巡航/全速) 或演出 (射擊/蓄力/小招/大招) 即可即時連動比較：</div>
+    <div>
+      ${argAnims.map((a) => `<span class="anim-tag">${esc(a)}</span>`).join('')}
+    </div>
+
+    <h4>版本路徑與架構權威</h4>
+    <div class="note" style="line-height:1.6;">
+      ・<b>本專案 (steel_vs_swarm)</b>: <code>${esc(cur.path || 'public/js/forge/')}</code><br>
+      ・<b>steel_v_swarm</b>: <code>${esc(stl.path || 'app/steel_v_swarm/')}</code><br>
+      ・<b>argon blender vfx</b>: <code>${esc(arg.path || 'tools/ai3d/argon blender vfx/')}</code>
+    </div>
+  `;
+}
+
+async function fillComplexityPanel(forId) {
+  const box = $('compPanelContent');
+  if (!box) return;
+  const ch = spec.ch || spec.id.split('@')[0];
+  if (!compCache[ch]) {
+    try {
+      const res = await fetch(`/api/compare/complexity?id=${ch}`);
+      if (res.ok) compCache[ch] = await res.json();
+    } catch (e) {
+      box.innerHTML = `<div class="note">無法載入複雜度數據: ${esc(e.message)}</div>`;
+      return;
+    }
+  }
+  if (spec.id !== forId || !$('compPanelContent')) return;
+  const d = compCache[ch];
+  if (!d) return;
+  box.innerHTML = renderComplexityHTML(d, spec);
+}
+
+window.__setStageVersion = (key) => {
+  stage.setVersion(key);
+  stage.syncBar();
+  renderPanel();
+};
