@@ -96,6 +96,8 @@ export class CharPreview {
     // 虛擬目標(有目標招式 / 重武器 / NPC 攻擊演出對準用);NPC 路徑旗標;跳躍演示狀態
     this.isUnit = false;
     this._jump = null;
+    this.enemyPosMode = 'default';
+    this._targetTimer = null;
     this._buildTargetMarker();
 
     this._bindInput();
@@ -263,21 +265,103 @@ export class CharPreview {
       new THREE.OctahedronGeometry(0.42),
       new THREE.MeshBasicMaterial({ color: 0xff8a8a, transparent: true, opacity: 0.65, depthWrite: false }));
     dia.position.y = 1.8;
-    g.add(ring, dia);
+    const altLine = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 1, 8),
+      new THREE.MeshBasicMaterial({ color: 0xff5a5a, transparent: true, opacity: 0.5, depthWrite: false }));
+    altLine.visible = false;
+    g.add(ring, dia, altLine);
     g.visible = false;
-    g.userData = { dia, ring };
+    g.userData = { dia, ring, altLine };
     this.targetMarker = g;
     this.scene.add(g);
+  }
+
+  /** 設定預設敵人位置模式: 'default' | 'close' | 'mid' | 'far' | 'air' | 'left' | 'right' 或自訂向量物件 */
+  setEnemyPos(mode = 'default') {
+    this.enemyPosMode = mode;
+  }
+
+  /** 依所選模式計算虛擬目標座標(世界公尺) */
+  _calcTargetPos(defaultDist = 0) {
+    const mode = this.enemyPosMode || 'default';
+    const fwd = this._fwd();
+    let d = defaultDist;
+    let y = 0;
+    let angle = 0;
+
+    if (typeof mode === 'object' && mode !== null) {
+      d = mode.dist ?? defaultDist;
+      y = mode.y ?? 0;
+      angle = mode.angle ?? 0;
+    } else {
+      switch (mode) {
+        case 'close':
+          d = 8;
+          break;
+        case 'mid':
+          d = 18;
+          break;
+        case 'far':
+          d = 35;
+          break;
+        case 'air':
+          d = 20;
+          y = 12;
+          break;
+        case 'left':
+          d = 18;
+          angle = -Math.PI / 6;
+          break;
+        case 'right':
+          d = 18;
+          angle = Math.PI / 6;
+          break;
+        case 'default':
+        default:
+          d = defaultDist;
+          break;
+      }
+    }
+
+    const dir = fwd.clone();
+    if (angle !== 0) {
+      dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+    }
+    const p = dir.multiplyScalar(d);
+    p.y = y;
+    return p;
   }
 
   /** 在機體正前方 dist(世界公尺)顯示虛擬目標;回傳其世界座標(供 castFx 的 at) */
   _showTarget(dist) {
     const s = Math.max(1, this.fitR * 0.6);
-    const p = this._fwd().multiplyScalar(dist);   // 沿槍口前向(機體實際朝向)
-    this.targetMarker.position.set(p.x, 0, p.z);
+    const p = this._calcTargetPos(dist);
+    this.targetMarker.position.set(p.x, p.y, p.z);
     this.targetMarker.scale.setScalar(s);
+    if (this.targetMarker.userData.ring) {
+      this.targetMarker.userData.ring.position.y = -p.y;
+    }
+    if (this.targetMarker.userData.altLine) {
+      if (p.y > 0.1) {
+        this.targetMarker.userData.altLine.visible = true;
+        this.targetMarker.userData.altLine.scale.set(1, p.y, 1);
+        this.targetMarker.userData.altLine.position.y = -p.y / 2;
+      } else {
+        this.targetMarker.userData.altLine.visible = false;
+      }
+    }
     this.targetMarker.visible = true;
     return this.targetMarker.position.clone();
+  }
+
+  /** 預覽目標標記 (切換敵人位置選項時呼叫) */
+  previewTarget(dur = 1.8) {
+    const p = this._showTarget(this.fitR * 2.6);
+    if (this._targetTimer) clearTimeout(this._targetTimer);
+    this._targetTimer = setTimeout(() => {
+      if (!this.anim) this._hideTarget();
+    }, dur * 1000);
+    return p;
   }
 
   _hideTarget() { if (this.targetMarker) this.targetMarker.visible = false; }
@@ -465,7 +549,7 @@ export class CharPreview {
       if (A.fired === 0 && A.t < 0.45) {
         this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
       } else if (A.fired === 0) {
-        fanDischarge(this.scene, this.effects, m, fwd, w);
+        fanDischarge(this.scene, this.effects, m, aim.clone().sub(m).normalize(), w);
         this.holder.position.z -= R * 0.1;
         this._fireCue(true);
         this._followShell(m, aim, 0.5);
@@ -651,13 +735,23 @@ export class CharPreview {
 
   /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);
    *  變形者 = 蓄力跳彈射變形(對應遊戲的 Space)。 */
-  jump() {
+  /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);
+   *  @param {boolean} [high=false] false=普通小跳; true=大跳躍(頂點抱團滯空與深蹲吸收) */
+  jump(high = false) {
     if (this.isUnit) return false;   // NPC/建築不跳
-    if (this.morphRig) return this.toggleMorph();
     if (!this._ent || this._jump) return false;
-    this._jump = { t: 0, dur: 0.95, peak: this.fitR * 0.7 };
+    if (this.morphRig && this.morphTarget > 0.5) return false; // 飛行型態不跳
+    const dur = high ? 2.0 : 0.95;
+    const peak = high ? Math.max(5.2, this.fitR * 1.35) : Math.max(1.8, this.fitR * 0.55);
+    this._jump = { t: 0, dur, peak, high: !!high };
+    if (high) this.wantR = Math.max(this.wantR, this.fitR * 1.35);
     this.idle = 0;
     return true;
+  }
+
+  /** 大跳躍演示 (高空頂點滯空 + 深蹲緩衝) */
+  highJump() {
+    return this.jump(true);
   }
 
   /** NPC / 攻擊建築武器演出:w = 整形後武器 {name,type,dmg,r,rate,mag,range}。
@@ -704,8 +798,11 @@ export class CharPreview {
     if (this._jump) {
       this._jump.t += dt;
       const f = this._jump.t / this._jump.dur;
-      if (f >= 1) { this._jump = null; }
-      else {
+      if (f >= 1) {
+        const wasHigh = this._jump.high;
+        this._jump = null;
+        if (wasHigh && !this.trackObj && !this.anim) this.wantR = this.fitR;
+      } else {
         hy = Math.max(hy, Math.sin(f * Math.PI) * this._jump.peak);
         if (!this.anim) this.holder.position.y = hy;   // 機體實際離地(無招式時由此主導 y)
       }
@@ -831,7 +928,11 @@ export class CharPreview {
 
       const ty = this.targetY;
       // 聚焦點:預設看機體中心;重武器擊發後暫時追蹤砲彈(_followShell / 飛彈本體)→ 鏡頭跟彈拉遠
-      const wf = this.trackObj ? this.trackObj.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, ty, 0);
+      const holderY = this.holder.position.y;
+      const jumpYOffset = this._jump?.high ? holderY * 0.45 : holderY * 0.25;
+      const wf = this.trackObj
+        ? this.trackObj.getWorldPosition(new THREE.Vector3())
+        : new THREE.Vector3(0, ty + jumpYOffset, 0);
       this.focus.lerp(wf, Math.min(1, (this.trackObj ? 5 : 4) * dt));
       const cp = Math.cos(this.pitch);
       this.camera.position.set(
