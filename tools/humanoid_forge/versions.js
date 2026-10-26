@@ -102,7 +102,9 @@ export async function loadGlbUnit(verKey, spec) {
     if (!clipsMap.has(clipName)) {
       if (slot === 'walk' && clipsMap.has('run')) clipName = 'run';
       else if (slot === 'skill' && clipsMap.has('def')) clipName = 'def';
+      else if (slot === 'def' && clipsMap.has('skill')) clipName = 'skill';
       else if (slot === 'ult' && clipsMap.has('atk')) clipName = 'atk';
+      else if (slot === 'atk' && clipsMap.has('ult')) clipName = 'ult';
     }
     const clip = clipsMap.get(clipName) || clipsMap.get('idle');
     if (!clip) return null;
@@ -112,7 +114,7 @@ export async function loadGlbUnit(verKey, spec) {
       currentAction.fadeOut(0.12);
     }
     next.reset();
-    const isOneShot = !loop || slot === 'heavy' || slot === 'skill' || slot === 'ult' || slot === 'to_flight' || slot === 'to_ground';
+    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'shield_deploy', 'shield_retract', 'jump', 'to_flight', 'to_ground'].includes(slot);
     if (isOneShot) {
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
@@ -126,7 +128,7 @@ export async function loadGlbUnit(verKey, spec) {
   }
 
   mixer.addEventListener('finished', () => {
-    if (['heavy', 'skill', 'ult', 'to_flight', 'to_ground'].includes(activeSlot)) {
+    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
       playAction('idle', { form: spec.form, loop: true });
     }
   });

@@ -2034,7 +2034,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
       currentAction.fadeOut(0.12);
     }
     next.reset();
-    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'to_flight', 'to_ground'].includes(slot);
+    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'shield_deploy', 'shield_retract', 'jump', 'to_flight', 'to_ground'].includes(slot);
     if (isOneShot) {
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
@@ -2048,9 +2048,10 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   }
 
   mixer.addEventListener('finished', () => {
-    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'to_flight', 'to_ground'].includes(activeSlot)) {
+    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
       const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
-      playAction(curForm === 'flight' ? 'flight_idle' : 'idle', { form: curForm, loop: true });
+      const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? 'run' : 'idle';
+      playAction(curForm === 'flight' ? 'flight_idle' : curRun, { form: curForm, loop: true });
     }
   });
 
@@ -2063,6 +2064,9 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
     const peak = high ? Math.max(5.2, (preview3D?.fitR || targetH * 0.5) * 1.35) : Math.max(1.8, (preview3D?.fitR || targetH * 0.5) * 0.55);
     jumpState = { t: 0, dur, peak, high: !!high };
     unitObj._jump = jumpState;
+    if (clipsMap.has('jump')) {
+      playAction('jump', { loop: false });
+    }
     return true;
   }
 
@@ -2083,6 +2087,9 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
           jumpState = null;
           unitObj._jump = null;
           group.position.y = 0;
+          const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
+          const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? 'run' : 'idle';
+          playAction(curForm === 'flight' ? 'flight_idle' : curRun, { form: curForm, loop: true });
         } else {
           group.position.y = Math.sin(f * Math.PI) * jumpState.peak;
         }
