@@ -45,6 +45,18 @@ const FILES = {
     title: '變形者篇（Morphers）',
     file: UNIFIED_FILE,
     section: '4.3'
+  },
+  npc_units: {
+    category: 'npc_units',
+    title: 'NPC戰鬥單位篇（NPC Units）',
+    file: UNIFIED_FILE,
+    section: '4.4'
+  },
+  npc_buildings: {
+    category: 'npc_buildings',
+    title: 'NPC戰鬥建築篇（NPC Buildings）',
+    file: UNIFIED_FILE,
+    section: '4.5'
   }
 };
 
@@ -320,6 +332,8 @@ function scanSpecTables(lines) {
       if (/^###?\s+4\.1|機甲篇規格表/.test(head)) { categoryKey = 'robots'; break; }
       if (/^###?\s+4\.2|無人機篇規格表/.test(head)) { categoryKey = 'drones'; break; }
       if (/^###?\s+4\.3|變形者篇規格表/.test(head)) { categoryKey = 'morphers'; break; }
+      if (/^###?\s+4\.4|NPC戰鬥單位篇規格表/.test(head)) { categoryKey = 'npc_units'; break; }
+      if (/^###?\s+4\.5|NPC戰鬥建築篇規格表/.test(head)) { categoryKey = 'npc_buildings'; break; }
     }
     tables.push({ headerIdx: i, categoryKey });
   }
@@ -359,10 +373,10 @@ export async function parseMarkdownFile(categoryKey) {
       rowObj[rawHeaders[c]] = rawCells[c] || '';
     }
 
-    // 擷取乾淨 ID (例如 "**s06**" -> "s06")
-    const idRaw = rowObj['機體編號'] || '';
-    const idMatch = idRaw.match(/[smt]\d{2}/i);
-    const id = idMatch ? idMatch[0].toLowerCase() : idRaw;
+    // 擷取乾淨 ID (例如 "**s06**" -> "s06", "**steel_soldier**" -> "steel_soldier")
+    const idRaw = (rowObj['機體編號'] || '').replace(/[*`]/g, '').trim();
+    const idMatch = idRaw.match(/^[smt]\d{2}$/i);
+    const id = idMatch ? idMatch[0].toLowerCase() : idRaw.toLowerCase();
     rowObj._id = id;
     rowObj._rawLineIdx = cur;
     rowObj._category = categoryKey;
@@ -402,7 +416,7 @@ export async function getAllMechsData() {
   const mechAssetFiles = fs.existsSync(mechsDir) ? fs.readdirSync(mechsDir) : [];
 
   const list = [];
-  for (const cat of ['robots', 'drones', 'morphers']) {
+  for (const cat of ['robots', 'drones', 'morphers', 'npc_units', 'npc_buildings']) {
     const parsed = await parseMarkdownFile(cat);
     for (const r of parsed.rows) {
       const id = r._id;
@@ -418,19 +432,32 @@ export async function getAllMechsData() {
       const fallbackTraits = INITIAL_TRAITS[id] || {};
       const traits = parseTraits(rawTraits, fallbackTraits);
 
+      let side = 'SPEC';
+      if (id.startsWith('t') && /^t\d{2}$/i.test(id)) side = 'STEEL';
+      else if (id.startsWith('s') && /^s\d{2}$/i.test(id)) side = 'SWARM';
+      else if (id.startsWith('steel_')) side = 'STEEL';
+      else if (id.startsWith('swarm_')) side = 'SWARM';
+      else if (id.startsWith('guer_')) side = 'GUER';
+      else if (id.startsWith('mili_')) side = 'MILI';
+
+      const unitKind = (cat === 'npc_units' || cat === 'npc_buildings')
+        ? id.replace(/^(steel|swarm|guer|mili)_/, '')
+        : null;
+
       list.push({
         id,
         category: cat,
         categoryName: parsed.title,
         pilot,
         nickname,
+        unitKind,
         rawHeaders: parsed.headers,
         fields: r,
         verdict: r['視覺判定'] || INITIAL_REVIEWS[id]?.verdict || '',
         improvement: r['改善方向'] || INITIAL_REVIEWS[id]?.improvement || '',
         traits,
         imagePng: pngFile ? `/public/assets/mechs/${pngFile}` : null,
-        side: id.startsWith('t') ? 'STEEL' : (id.startsWith('s') ? 'SWARM' : 'SPEC')
+        side
       });
     }
   }
@@ -440,7 +467,7 @@ export async function getAllMechsData() {
 /** 寫回 Markdown 檔案（原子且精準更新特定列或加入新欄位） */
 export async function updateMechInMarkdown(mechId, updates = {}) {
   let targetCat = null;
-  for (const cat of ['robots', 'drones', 'morphers']) {
+  for (const cat of ['robots', 'drones', 'morphers', 'npc_units', 'npc_buildings']) {
     const parsed = await parseMarkdownFile(cat);
     if (parsed.rows.some(r => r._id === mechId)) {
       targetCat = cat;
@@ -497,9 +524,9 @@ export async function updateMechInMarkdown(mechId, updates = {}) {
       rowObj[parsed.headers[c]] = rawCells[c] || '';
     }
 
-    const idRaw = rowObj['機體編號'] || '';
-    const idMatch = idRaw.match(/[smt]\d{2}/i);
-    const rowId = idMatch ? idMatch[0].toLowerCase() : idRaw;
+    const idRaw = (rowObj['機體編號'] || '').replace(/[*`]/g, '').trim();
+    const idMatch = idRaw.match(/^[smt]\d{2}$/i);
+    const rowId = idMatch ? idMatch[0].toLowerCase() : idRaw.toLowerCase();
 
     // 若是目標機體，合併 updates
     if (rowId === mechId) {
@@ -1450,10 +1477,12 @@ function renderHtmlPage(localThree = false) {
   </div>
 
   <div class="filters-group">
-    <button class="btn-filter active" data-cat="all">全部 (32)</button>
+    <button class="btn-filter active" data-cat="all">全部</button>
     <button class="btn-filter" data-cat="robots">機甲 (12)</button>
     <button class="btn-filter" data-cat="drones">無人機 (12)</button>
     <button class="btn-filter" data-cat="morphers">變形者 (8)</button>
+    <button class="btn-filter" data-cat="npc_units">NPC戰鬥單位 (20)</button>
+    <button class="btn-filter" data-cat="npc_buildings">NPC戰鬥建築 (6)</button>
     <span style="width:1px;height:18px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
     <button class="btn-verdict-filter active" data-v="all">全狀態</button>
     <button class="btn-verdict-filter" data-v="通過">✅ 通過</button>
@@ -1520,7 +1549,7 @@ function renderHtmlPage(localThree = false) {
             <span style="font-size:11px;font-weight:700;color:var(--accent-cyan);">版本:</span>
             <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerCurrent" checked> 本專案</label>
             <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerSteel"> steel_v_swarm</label>
-            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerArgon"> argon blender vfx</label>
+            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerArgon"> <span id="lblVerArgon">argon blender vfx</span></label>
             <button class="btn-tool-sm" id="btnComplexity" style="margin-left:4px;color:#facc15;border-color:rgba(250,204,21,0.4);" title="陳列三版本建模組成複雜度">📊 建模複雜度</button>
           </div>
         </div>
@@ -2239,15 +2268,18 @@ async function syncCompareUnits() {
   if (activeList.length === 1) {
     positions[activeList[0]] = 0;
     preview3D.wantR = preview3D.fitR;
+    preview3D._auto = true;
   } else if (activeList.length === 2) {
     positions[activeList[0]] = -spacing * 0.65;
     positions[activeList[1]] = spacing * 0.65;
     preview3D.wantR = preview3D.fitR * 1.45;
+    preview3D._auto = true;
   } else if (activeList.length === 3) {
     positions['current'] = -spacing;
     positions['steel_v_swarm'] = 0;
     positions['argon_vfx'] = spacing;
     preview3D.wantR = preview3D.fitR * 2.1;
+    preview3D._auto = true;
   }
 
   // 1. 本專案模型位置與可見度
@@ -2268,6 +2300,7 @@ async function syncCompareUnits() {
 
   const curForm = preview3D.morphTarget > 0.5 ? 'flight' : 'ground';
   const curRun = preview3D.runMode === 'idle' ? 'idle' : 'run';
+  const isNpc = currentMech.category === 'npc_units' || currentMech.category === 'npc_buildings';
 
   for (const verKey of ['steel_v_swarm', 'argon_vfx']) {
     if (!activeList.includes(verKey)) continue;
@@ -2279,12 +2312,25 @@ async function syncCompareUnits() {
       activeExternalUnits.push(unit);
       if (preview3D) preview3D.externalUnits = activeExternalUnits;
       if (activeList.length > 1) {
-        const label = verKey === 'steel_v_swarm' ? '2. steel_v_swarm (Godot)' : '3. argon blender vfx (Blender)';
+        const isBuild = currentMech.category === 'npc_buildings';
+        const label = verKey === 'steel_v_swarm'
+          ? '2. steel_v_swarm (Godot)'
+          : (isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (Blender)'));
         compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
       }
       unit.playAction(curRun, { form: curForm, loop: true });
     } catch (err) {
       console.warn('載入比對模型失敗 (' + verKey + '):', err);
+      if (activeList.length > 1) {
+        if (verKey === 'argon_vfx' && isNpc) {
+          const isBuild = currentMech.category === 'npc_buildings';
+          const banner = isBuild ? '3. argon blender build (檔案待補)' : '3. argon blender npc (檔案待補)';
+          compareGroup.add(makeBannerSprite(banner, positions[verKey], H * 1.08));
+        } else {
+          const fallbackLbl = verKey === 'steel_v_swarm' ? '2. steel_v_swarm (無模型)' : '3. argon (無模型)';
+          compareGroup.add(makeBannerSprite(fallbackLbl, positions[verKey], H * 1.08));
+        }
+      }
     }
   }
 }
@@ -2344,6 +2390,29 @@ function updateStats() {
   const fix = allMechs.filter(m => m.verdict === '更正').length;
   const redraw = allMechs.filter(m => m.verdict === '重繪').length;
   document.getElementById('statsBadge').textContent = \`通過 \${pass} / 更正 \${fix} / 重繪 \${redraw} (共 \${total})\`;
+
+  const counts = {
+    all: total,
+    robots: allMechs.filter(m => m.category === 'robots').length,
+    drones: allMechs.filter(m => m.category === 'drones').length,
+    morphers: allMechs.filter(m => m.category === 'morphers').length,
+    npc_units: allMechs.filter(m => m.category === 'npc_units').length,
+    npc_buildings: allMechs.filter(m => m.category === 'npc_buildings').length,
+  };
+  const catNames = {
+    all: '全部',
+    robots: '機甲',
+    drones: '無人機',
+    morphers: '變形者',
+    npc_units: 'NPC戰鬥單位',
+    npc_buildings: 'NPC戰鬥建築'
+  };
+  document.querySelectorAll('.btn-filter').forEach(b => {
+    const cat = b.dataset.cat;
+    if (counts[cat] !== undefined) {
+      b.textContent = cat === 'all' ? \`全部 (\${counts.all})\` : \`\${catNames[cat]} (\${counts[cat]})\`;
+    }
+  });
 }
 
 function filterMechs() {
@@ -2416,6 +2485,13 @@ function selectMech(id) {
   currentMech = m;
   saveReviewSettings();
 
+  const isBuild = m.category === 'npc_buildings';
+  const isNpc = m.category === 'npc_units' || isBuild;
+  const lblArgon = document.getElementById('lblVerArgon');
+  if (lblArgon) {
+    lblArgon.textContent = isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender vfx');
+  }
+
   // 更新卡片選取態
   document.querySelectorAll('.mech-card-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.card-id').textContent === id.toUpperCase());
@@ -2472,17 +2548,36 @@ function update3DModel() {
     return;
   }
   try {
-    preview3D.setChar(currentMech.id, currentMech.side);
-    const authored = !!preview3D.unit?.userData.rig?.referenceMotion;
-    document.getElementById('referenceReviewLabel').style.display = authored ? '' : 'none';
-    for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnShieldToggle', 'btnRig']) {
-      const el = document.getElementById(id);
-      if (el) el.disabled = !authored;
+    const isNpc = currentMech.category === 'npc_units' || currentMech.category === 'npc_buildings';
+    if (isNpc) {
+      const unitRole = currentMech.unitKind || 'soldier';
+      preview3D.setUnit(unitRole, currentMech.side);
+      const refLabel = document.getElementById('referenceReviewLabel');
+      if (refLabel) refLabel.style.display = 'none';
+      for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnShieldToggle', 'btnRig']) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      }
+      const btnRig = document.getElementById('btnRig');
+      if (btnRig) btnRig.classList.remove('active');
+      preview3D.setRigVisible(false);
+      preview3D.setShield(false);
+      updateShieldButton();
+    } else {
+      preview3D.setChar(currentMech.id, currentMech.side);
+      const authored = !!preview3D.unit?.userData.rig?.referenceMotion;
+      const refLabel = document.getElementById('referenceReviewLabel');
+      if (refLabel) refLabel.style.display = authored ? '' : 'none';
+      for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnShieldToggle', 'btnRig']) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !authored;
+      }
+      const btnRig = document.getElementById('btnRig');
+      if (btnRig) btnRig.classList.remove('active');
+      preview3D.setRigVisible(false);
+      preview3D.setShield(false);
+      updateShieldButton();
     }
-    document.getElementById('btnRig').classList.remove('active');
-    preview3D.setRigVisible(false);
-    preview3D.setShield(false);
-    updateShieldButton();
     const selEnemy = document.getElementById('selEnemyPos');
     if (selEnemy) preview3D.setEnemyPos(selEnemy.value);
 
@@ -2977,26 +3072,46 @@ async function showComplexityModal() {
   const d = compCache[id];
   if (!d) return;
 
+  const isNpc = currentMech.category === 'npc_units' || currentMech.category === 'npc_buildings';
   const cur = d.current || {};
   const stl = d.steel_v_swarm || {};
   const arg = d.argon_vfx || {};
+  const isArgPending = arg.status === 'pending';
 
   const maxTri = Math.max(cur.triCount || 1, stl.triCount || 1, arg.triCount || 1);
   const wCur = Math.round(((cur.triCount || 0) / maxTri) * 100);
   const wStl = Math.round(((stl.triCount || 0) / maxTri) * 100);
-  const wArg = Math.round(((arg.triCount || 0) / maxTri) * 100);
+  const wArg = isArgPending ? 0 : Math.round(((arg.triCount || 0) / maxTri) * 100);
 
   const maxBytes = Math.max(cur.fileSize || 1, stl.fileSize || 1, arg.fileSize || 1);
   const sCur = Math.round(((cur.fileSize || 0) / maxBytes) * 100);
   const sStl = Math.round(((stl.fileSize || 0) / maxBytes) * 100);
-  const sArg = Math.round(((arg.fileSize || 0) / maxBytes) * 100);
+  const sArg = isArgPending ? 0 : Math.round(((arg.fileSize || 0) / maxBytes) * 100);
 
   const argAnims = arg.animations || [];
   const stlAnims = stl.animations || [];
   const curAnims = cur.animations || [];
 
-  const triRatio = ((arg.triCount || 0) / Math.max(1, stl.triCount || 1)).toFixed(1);
-  const sizeRatio = ((arg.fileSize || 0) / Math.max(1, stl.fileSize || 1)).toFixed(1);
+  const triRatio = isArgPending ? '—' : ((arg.triCount || 0) / Math.max(1, stl.triCount || 1)).toFixed(1);
+  const sizeRatio = isArgPending ? '—' : ((arg.fileSize || 0) / Math.max(1, stl.fileSize || 1)).toFixed(1);
+
+  const isBuild = currentMech.category === 'npc_buildings';
+  const col3Title = isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (高精)');
+  const arch1 = isNpc ? '程序具名零件 / 陣營戰鬥模組' : '程序具名零件 (JS Module)';
+  const arch2 = isNpc ? 'Godot 陣營/戰鬥 GLB' : '遊戲最佳化戰鬥 GLB';
+  const arch3 = isArgPending ? 'Blender 原生高精模型 (檔案待補)' : (isBuild ? 'Blender 原生高精 建築 GLB' : (isNpc ? 'Blender 原生高精 NPC GLB' : 'Blender 原生高精 VFX GLB'));
+
+  const argFileSizeStr = isArgPending ? '<span style="color:#fbbf24">待後續補上</span>' : \`\${fmtSize(arg.fileSize)} <small style="color:#94a3b8">(\${sizeRatio}x)</small>\`;
+  const argTriCountStr = isArgPending ? '<span style="color:#fbbf24">待後續補上</span>' : \`\${fmtNum(arg.triCount)} <small style="color:#94a3b8">(\${triRatio}x)</small>\`;
+  const argVertCountStr = isArgPending ? '—' : fmtNum(arg.vertCount);
+  const argMeshCountStr = isArgPending ? '—' : fmtNum(arg.meshCount);
+  const argPrimCountStr = isArgPending ? '—' : fmtNum(arg.primCount);
+  const argNodeCountStr = isArgPending ? '—' : fmtNum(arg.nodeCount);
+  const argMatCountStr = isArgPending ? '—' : fmtNum(arg.materialCount);
+  const argAnimStr = isArgPending ? '待補' : \`\${argAnims.length} 個 GLB 動作\`;
+
+  const argTriLabel = isArgPending ? 'argon: 待補 (0)' : \`argon: \${fmtNum(arg.triCount)} (\${wArg}%)\`;
+  const argSizeLabel = isArgPending ? 'argon: 待補' : \`argon: \${fmtSize(arg.fileSize)}\`;
 
   content.innerHTML = \`
     <table class="comp-table">
@@ -3005,63 +3120,63 @@ async function showComplexityModal() {
           <th style="width:25%;">比對維度</th>
           <th style="width:25%;color:#38bdf8;">1. 本專案 (steel_vs_swarm)</th>
           <th style="width:25%;color:#34d399;">2. steel_v_swarm (Godot)</th>
-          <th style="width:25%;color:#fbbf24;">3. argon blender vfx (高精)</th>
+          <th style="width:25%;color:#fbbf24;">\${col3Title}</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><b>架構定位</b></td>
-          <td>程序具名零件 (JS Module)</td>
-          <td>遊戲最佳化戰鬥 GLB</td>
-          <td>Blender 原生高精 VFX GLB</td>
+          <td>\${arch1}</td>
+          <td>\${arch2}</td>
+          <td>\${arch3}</td>
         </tr>
         <tr>
           <td><b>模型檔案大小</b></td>
           <td class="num">\${fmtSize(cur.fileSize)}</td>
           <td class="num">\${fmtSize(stl.fileSize)}</td>
-          <td class="num hl">\${fmtSize(arg.fileSize)} <small style="color:#94a3b8">(\${sizeRatio}x)</small></td>
+          <td class="num hl">\${argFileSizeStr}</td>
         </tr>
         <tr>
           <td><b>三角面數 (Tris)</b></td>
           <td class="num">\${fmtNum(cur.triCount)}</td>
           <td class="num">\${fmtNum(stl.triCount)}</td>
-          <td class="num hl">\${fmtNum(arg.triCount)} <small style="color:#94a3b8">(\${triRatio}x)</small></td>
+          <td class="num hl">\${argTriCountStr}</td>
         </tr>
         <tr>
           <td><b>頂點數量 (Verts)</b></td>
           <td class="num">\${fmtNum(cur.vertCount)}</td>
           <td class="num">\${fmtNum(stl.vertCount)}</td>
-          <td class="num hl">\${fmtNum(arg.vertCount)}</td>
+          <td class="num hl">\${argVertCountStr}</td>
         </tr>
         <tr>
           <td><b>網格組數 (Meshes)</b></td>
           <td class="num">\${fmtNum(cur.meshCount)}</td>
           <td class="num">\${fmtNum(stl.meshCount)}</td>
-          <td class="num">\${fmtNum(arg.meshCount)}</td>
+          <td class="num">\${argMeshCountStr}</td>
         </tr>
         <tr>
           <td><b>繪製批次 (Primitives)</b></td>
           <td class="num">\${fmtNum(cur.primCount)}</td>
           <td class="num">\${fmtNum(stl.primCount)}</td>
-          <td class="num">\${fmtNum(arg.primCount)}</td>
+          <td class="num">\${argPrimCountStr}</td>
         </tr>
         <tr>
           <td><b>階層節點數 (Nodes)</b></td>
           <td class="num">\${fmtNum(cur.nodeCount)}</td>
           <td class="num">\${fmtNum(stl.nodeCount)}</td>
-          <td class="num">\${fmtNum(arg.nodeCount)}</td>
+          <td class="num">\${argNodeCountStr}</td>
         </tr>
         <tr>
           <td><b>材質槽位數 (Materials)</b></td>
           <td class="num">\${fmtNum(cur.materialCount)}</td>
           <td class="num">\${fmtNum(stl.materialCount)}</td>
-          <td class="num">\${fmtNum(arg.materialCount)}</td>
+          <td class="num">\${argMatCountStr}</td>
         </tr>
         <tr>
           <td><b>動作剪輯數 (Actions)</b></td>
           <td class="num">\${curAnims.length} 個程序步態</td>
           <td class="num">\${stlAnims.length} 個 GLB 動作</td>
-          <td class="num">\${argAnims.length} 個 GLB 動作</td>
+          <td class="num">\${argAnimStr}</td>
         </tr>
       </tbody>
     </table>
@@ -3071,7 +3186,7 @@ async function showComplexityModal() {
       <div class="comp-bar-lb">
         <span style="color:#38bdf8;">本專案: \${fmtNum(cur.triCount)} (\${wCur}%)</span>
         <span style="color:#34d399;">steel_v_swarm: \${fmtNum(stl.triCount)} (\${wStl}%)</span>
-        <span style="color:#fbbf24;">argon vfx: \${fmtNum(arg.triCount)} (\${wArg}%)</span>
+        <span style="color:#fbbf24;">\${argTriLabel}</span>
       </div>
       <div class="comp-bar-bg" style="height:10px;"><div class="comp-bar-fill c1" style="width:\${wCur}%"></div></div>
       <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c2" style="width:\${wStl}%"></div></div>
@@ -3083,7 +3198,7 @@ async function showComplexityModal() {
       <div class="comp-bar-lb">
         <span style="color:#38bdf8;">本專案: \${fmtSize(cur.fileSize)}</span>
         <span style="color:#34d399;">steel_v_swarm: \${fmtSize(stl.fileSize)}</span>
-        <span style="color:#fbbf24;">argon vfx: \${fmtSize(arg.fileSize)}</span>
+        <span style="color:#fbbf24;">\${argSizeLabel}</span>
       </div>
       <div class="comp-bar-bg" style="height:10px;"><div class="comp-bar-fill c1" style="width:\${sCur}%"></div></div>
       <div class="comp-bar-bg" style="height:10px;margin-top:4px;"><div class="comp-bar-fill c2" style="width:\${sStl}%"></div></div>
@@ -3100,7 +3215,7 @@ async function showComplexityModal() {
     <div style="font-size:11px;color:#94a3b8;line-height:1.6;background:rgba(255,255,255,0.03);padding:10px;border-radius:6px;">
       <div><b>・本專案資源:</b> <code>\${escapeHtml(cur.path || 'public/js/forge/')}</code></div>
       <div><b>・steel_v_swarm 資源:</b> <code>\${escapeHtml(stl.path || 'app/steel_v_swarm/')}</code></div>
-      <div><b>・argon blender vfx 資源:</b> <code>\${escapeHtml(arg.path || 'tools/ai3d/argon blender vfx/')}</code></div>
+      <div><b>・\${isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender vfx')} 資源:</b> <code>\${escapeHtml(arg.path || (isBuild ? 'tools/ai3d/argon blender build/' : (isNpc ? 'tools/ai3d/argon blender npc/' : 'tools/ai3d/argon blender vfx/')))}</code> \${isArgPending ? '<span style="color:#fbbf24;font-weight:bold;">[已建立路徑連結，檔案待後續補上]</span>' : ''}</div>
     </div>
   \`;
 }

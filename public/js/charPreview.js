@@ -14,7 +14,7 @@ import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, cas
 import { makeUnit, heroTargetH, measureBox } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { fireUnitMotion, stepUnitSpinners, fireReferenceWeapon } from './unitMotion.js';
-import { buildBaseBattery } from './buildingUnitModels.js';
+import { buildBaseBattery, buildBuildingUnitTurret } from './buildingUnitModels.js';
 import { updateCelLight, disposeTree } from './toon.js';
 import { unitShotStyle, unitShotFx, starburst, shockRing, impactBurst, explosionBurst, beamLine, gundamBeam, ionBreath, projectileMesh, stepProjectileFx } from './vfx.js';
 import { SUMMON_BUILDERS } from './summonModels.js';
@@ -163,6 +163,7 @@ export class CharPreview {
     this.fitR = Math.max(1, this.size.length() / 2);
     this.viewR = this.wantR = this.fitR;
     this.dist = this._fitDist(this.fitR);
+    this._auto = true;
     this.holder.position.set(0, 0, 0);
     this.holder.rotation.set(0, 0, 0);
 
@@ -186,18 +187,29 @@ export class CharPreview {
     this.isUnit = true;
     this.unitKind = kind;
     this._unitMuzzleIndex = -1;
-    if (!UNITS[kind]) return;
-    const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}`
-      : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ'
-      : SUMMON_BUILDERS[`summon:${kind}`] ? `summon:${kind}` : `creep:${kind}`;
-    const { group, mixer } = makeUnit(mapKind, side, { ch: kind === 'civilian' ? prof : null });
-    if (kind === 'base') {
-      const bounds = new THREE.Box3().setFromObject(group);
-      const battery = buildBaseBattery(side, bounds.max.y - bounds.min.y);
-      battery.position.y += bounds.min.y;
-      group.add(battery);
-      group.userData.turretMuzzles = battery.userData.muzzles;
-      group.userData.rig.attacks = battery.userData.attacks;
+    let group = null;
+    let mixer = null;
+    if (kind === 'turret') {
+      group = buildBuildingUnitTurret(side);
+    } else if (kind === 'battery') {
+      group = buildBaseBattery(side, 0);
+    } else {
+      if (!UNITS[kind]) return;
+      const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}`
+        : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ'
+        : SUMMON_BUILDERS[`summon:${kind}`] ? `summon:${kind}` : `creep:${kind}`;
+      const res = makeUnit(mapKind, side, { ch: kind === 'civilian' ? prof : null });
+      group = res.group;
+      mixer = res.mixer;
+      if (kind === 'base') {
+        const bounds = new THREE.Box3().setFromObject(group);
+        const battery = buildBaseBattery(side, bounds.max.y - bounds.min.y);
+        battery.position.y += bounds.min.y;
+        group.add(battery);
+        group.userData.turretMuzzles = battery.userData.muzzles;
+        if (!group.userData.rig) group.userData.rig = {};
+        group.userData.rig.attacks = battery.userData?.attacks;
+      }
     }
     this.unit = group;
     this.unit.userData.side = side;
@@ -212,12 +224,13 @@ export class CharPreview {
     this.fitR = Math.max(1, this.size.length() / 2);
     this.viewR = this.wantR = this.fitR;
     this.dist = this._fitDist(this.fitR);
+    this._auto = true;
     this.holder.position.set(0, 0, 0);
     this.holder.rotation.set(0, 0, 0);
 
     // Preview consumes the same movement and attack rigs as the battlefield.
     this._ent = { id: kind, mesh: group, heroY: 0 };
-    this.topSpeed = UNITS[kind].speed || 0; this.moving = false; this.speed = 0; this.travel = 0;
+    this.topSpeed = UNITS[kind]?.speed || 0; this.moving = false; this.speed = 0; this.travel = 0;
     this._resetDemo();
     this._buildGround();
     this.onMove?.(false, 0);
@@ -429,7 +442,13 @@ export class CharPreview {
   // ---- 招式演出 ----
   /** @param {'light'|'heavy'|'def'|'atk'} slot */
   play(slot) {
-    if (!this.charId) return;
+    if (!this.charId) {
+      if (this.isUnit && this.unitKind) {
+        const w = UNITS[this.unitKind] || { name: '防衛火器', type: 'gun', rate: 4, mag: 6, dmg: 20, range: 100 };
+        this.playUnitWeapon(w);
+      }
+      return;
+    }
     const id = this.charId;
     const R = this.fitR;
     if (slot === 'light' || slot === 'heavy') {
