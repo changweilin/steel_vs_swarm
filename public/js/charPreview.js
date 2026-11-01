@@ -90,6 +90,7 @@ export class CharPreview {
 
     // 慢速播放:action 走自累加的模擬時鐘(慢速時走得慢),鏡頭/自轉仍吃真實 dt(操作手感不拖慢)
     this.timeScale = 1;
+    this.slowMotion = false;
     this.clockT = 0;
     // 鏡頭聚焦點:預設看機體中心,可暫時追蹤移動的砲彈(重武器演出)
     this.focus = new THREE.Vector3(0, this.targetY, 0);
@@ -243,6 +244,7 @@ export class CharPreview {
     this.trackObj = null;
     this._jump = null;
     this.timeScale = 1;
+    this.slowMotion = false;
     this.runMode = 'idle';
     this._hideTarget();
     this.focus.set(0, this.targetY, 0);
@@ -837,8 +839,11 @@ export class CharPreview {
 
   /** 跑步演示三態(展示台按鍵切換):'idle' 靜止 / 'slow' 慢速跑(0.3×)/ 'normal' 正常跑。
    *  慢速沿用 timeScale = action 時鐘減速(骨架步態放慢看細節);回傳設定後的 mode。 */
+  /** 跑步演示: 'idle' 靜止 / 'normal' 移動(遊戲實戰巡航速)。
+   *  保留 'slow' 相容轉向 normal。慢動作由 toggleSlow 統一管理(所有動作放慢)。 */
   setRun(mode) {
-    if (mode !== 'idle' && mode !== 'slow' && mode !== 'normal') return this.runMode;
+    if (mode === 'slow') mode = 'normal';
+    if (mode !== 'idle' && mode !== 'normal') return this.runMode;
     if (this.isUnit && !this.topSpeed) {
       this.runMode = 'idle';
       this.moving = false;
@@ -846,34 +851,32 @@ export class CharPreview {
       this.onMove?.(false, 0);
       return 'idle';
     }
-    const prev = this.runMode;
     this.runMode = mode;
     this.moving = mode !== 'idle';
-    // 慢速→靜止(反向循環):沿用慢速時鐘 0.3× ⇒「動作也反向」= 慢慢停,而非快速煞停。
-    // 停穩後 _stepLoco 立即把時鐘還原 1×(慢速只作用於減速過程本身,不滲進待機/招式演出)。
-    this.timeScale = (mode === 'slow' || (mode === 'idle' && prev === 'slow')) ? 0.3 : 1;
+    if (!this.slowMotion) {
+      this.timeScale = 1;
+    }
     this.idle = 0;
     this.onMove?.(this.moving, this.speed);
     return mode;
   }
 
-  /** 展示台循環三態:dir=+1 正向(靜止→慢速→正常→靜止),dir=-1 反向(靜止→正常→慢速→靜止);
-   *  沿用 setRun 這一個縫。點一下正向、點兩下反向。回傳切換後的 mode。 */
-  cycleRun(dir = 1) {
-    const nxt = dir < 0
-      ? { idle: 'normal', normal: 'slow', slow: 'idle' }
-      : { idle: 'slow', slow: 'normal', normal: 'idle' };
-    return this.setRun(nxt[this.runMode] || 'slow');
+  /** 展示台移動二態切換(靜止 ↔ 移動)。 */
+  cycleRun() {
+    return this.setRun(this.moving ? 'idle' : 'normal');
   }
 
-  /** 移動演示開關(雙擊機體 / W 鍵便捷鍵):靜止 ↔ 上次的跑速(預設正常);回傳切換後是否在移動 */
+  /** 移動演示開關(雙擊機體 / 便捷鍵):靜止 ↔ 移動 */
   toggleMove() {
-    this.setRun(this.moving ? 'idle' : (this.runMode === 'slow' ? 'slow' : 'normal'));
-    return this.moving;
+    return this.setRun(this.moving ? 'idle' : 'normal');
   }
 
-  /** 慢速播放切換(0.3×);回傳切換後是否為慢速 —— 保留相容,展示台改走 setRun 三態 */
-  toggleSlow() { this.timeScale = this.timeScale < 1 ? 1 : 0.3; return this.timeScale < 1; }
+  /** 慢動作切換(0.3×，所有動作/招式/跳躍/特效皆放慢);回傳切換後是否為慢動作 */
+  toggleSlow(force) {
+    this.slowMotion = force !== undefined ? !!force : !this.slowMotion;
+    this.timeScale = this.slowMotion ? 0.3 : 1;
+    return this.slowMotion;
+  }
 
   /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);
    *  變形者 = 蓄力跳彈射變形(對應遊戲的 Space)。 */
@@ -929,8 +932,7 @@ export class CharPreview {
     this.speed = want > this.speed
       ? Math.min(want, this.speed + top / MOVE.ACC_S * dt)
       : Math.max(want, this.speed - top / MOVE.DEC_S * dt);
-    // 慢速→靜止收尾:停穩(speed 歸零)後把時鐘還原 1×,慢慢停只作用於減速過程本身
-    if (!this.moving && this.speed <= 0 && this.timeScale < 1) this.timeScale = 1;
+    if (!this.slowMotion && !this.moving && this.speed <= 0 && this.timeScale < 1) this.timeScale = 1;
     this.travel += this.speed * dt;
     if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
 
@@ -1058,6 +1060,7 @@ export class CharPreview {
 
       for (const u of (this.externalUnits || [])) {
         if (!u?.group) continue;
+        u.update?.(adt);
         if (!this.anim) {
           u.group.rotation.y = 0;
           u.group.rotation.x += (0 - u.group.rotation.x) * Math.min(1, 8 * adt);

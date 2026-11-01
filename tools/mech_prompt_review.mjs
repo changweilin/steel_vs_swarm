@@ -1082,6 +1082,181 @@ function renderHtmlPage(localThree = false) {
     font-weight: 700;
   }
 
+  /* 3D 視口半透明虛擬鍵盤 HUD */
+  .virtual-action-hud {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 98%;
+    pointer-events: none;
+    z-index: 25;
+  }
+  .vk-chassis {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    justify-content: center;
+    padding: 7px 10px;
+    background: rgba(10, 16, 30, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 12px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .vk-keyboard-deck {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .vk-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+  }
+  .vk-chassis-sep {
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.35), transparent);
+    margin: 2px 1px;
+  }
+  .vk-mouse-deck {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .btn-virtual-action {
+    pointer-events: auto;
+    background: linear-gradient(180deg, rgba(22, 33, 54, 0.8) 0%, rgba(12, 19, 34, 0.9) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-bottom: 2px solid rgba(56, 189, 248, 0.5);
+    border-radius: 8px;
+    color: #f1f5f9;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    min-height: 38px;
+    cursor: pointer;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: all 0.12s ease;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    user-select: none;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .btn-virtual-action:hover {
+    background: linear-gradient(180deg, rgba(30, 48, 78, 0.9) 0%, rgba(18, 28, 48, 0.95) 100%);
+    border-color: rgba(56, 189, 248, 0.7);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.35), inset 0 0 8px rgba(56, 189, 248, 0.2);
+    transform: translateY(-1px);
+  }
+  .btn-virtual-action:active, .btn-virtual-action.active {
+    background: rgba(56, 189, 248, 0.32);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.6), 0 1px 3px rgba(0, 0, 0, 0.5);
+    transform: translateY(1px);
+  }
+  .btn-virtual-action:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .btn-virtual-action .key-badge, .btn-virtual-action .vk-cap {
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.22);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #38bdf8;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    line-height: 1.1;
+  }
+  .btn-virtual-action .btn-label, .btn-virtual-action .vk-sub {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+  .btn-virtual-action.active .btn-label, .btn-virtual-action:active .btn-label {
+    color: #e0f2fe;
+  }
+
+  .btn-virtual-action.vk-key-space {
+    flex-grow: 1;
+    min-width: 140px;
+  }
+  .btn-virtual-action.vk-key-wasd {
+    min-width: 76px;
+    padding: 3px 6px;
+  }
+  .vk-wasd-pad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    margin-bottom: 1px;
+  }
+  .vk-wasd-row {
+    display: flex;
+    gap: 2px;
+  }
+  .vk-cap-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(56, 189, 248, 0.16);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 3px;
+    color: #38bdf8;
+    transition: all 0.1s ease;
+  }
+  .vk-cap-mini.active {
+    background: #38bdf8;
+    color: #0b1120;
+    box-shadow: 0 0 6px #38bdf8;
+  }
+
+  .btn-virtual-action.vk-key-mouse {
+    min-width: 60px;
+    flex: 1;
+  }
+
+  .btn-virtual-action.btn-slow-motion.active {
+    background: rgba(245, 158, 11, 0.32);
+    border-color: #f59e0b;
+    color: #fbbf24;
+    box-shadow: inset 0 0 14px rgba(245, 158, 11, 0.6);
+  }
+  .btn-virtual-action.btn-slow-motion.active .key-badge,
+  .btn-virtual-action.btn-slow-motion.active .vk-cap {
+    background: rgba(245, 158, 11, 0.28);
+    border-color: rgba(245, 158, 11, 0.6);
+    color: #fbbf24;
+  }
+  .btn-virtual-action.btn-slow-motion.active .btn-label {
+    color: #fef3c7;
+  }
+
   /* 右側規格與寫回工作區 */
   .spec-workbench-pane {
     background: rgba(14, 20, 32, 0.98);
@@ -1554,15 +1729,6 @@ function renderHtmlPage(localThree = false) {
           </div>
         </div>
         <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-          <button class="btn-tool-sm" id="btnActionLight">輕射擊</button>
-          <button class="btn-tool-sm" id="btnActionAttack">重射擊</button>
-          <button class="btn-tool-sm" id="btnActionSkill">防守招式</button>
-          <button class="btn-tool-sm" id="btnActionUlt">攻擊招式</button>
-          <button class="btn-tool-sm" id="btnShieldToggle" disabled>展開護盾</button>
-          <button class="btn-tool-sm" id="btnActionJump">跳躍</button>
-          <button class="btn-tool-sm" id="btnActionHighJump">大跳躍</button>
-          <button class="btn-tool-sm" id="btnRunMode">🏃 運動：靜止</button>
-          <button class="btn-tool-sm" id="btnMorphToggle" style="display:none;color:#38bdf8;">🔄 切換飛行型</button>
           <label style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#94a3b8;margin-left:4px;">
             <span>🎯 敵人位置：</span>
             <select id="selEnemyPos" class="btn-tool-sm" style="padding:2px 4px;font-size:11px;background:#0f172a;color:#e2e8f0;cursor:pointer;">
@@ -1577,8 +1743,70 @@ function renderHtmlPage(localThree = false) {
           </label>
         </div>
       </div>
-      <div class="view-viewport" style="background:#151c2e;">
+      <div class="view-viewport" style="background:#151c2e;position:relative;">
         <canvas id="cv3d" class="canvas-3d"></canvas>
+        <!-- 半透明虛擬鍵盤 HUD -->
+        <div class="virtual-action-hud" id="virtualActionHud">
+          <div class="vk-chassis">
+            <div class="vk-keyboard-deck">
+              <div class="vk-row">
+                <button class="btn-virtual-action vk-key" id="btnActionSkill" title="防守招式 (快捷鍵: Q)">
+                  <span class="key-badge">Q</span>
+                  <span class="btn-label">防守招式</span>
+                </button>
+                <button class="btn-virtual-action vk-key vk-key-wasd" id="btnRunMode" title="移動 (快捷鍵: WASD / 方向鍵 / Shift)">
+                  <div class="vk-wasd-pad">
+                    <div class="vk-wasd-row"><span class="vk-cap-mini" data-key="KeyW">W</span></div>
+                    <div class="vk-wasd-row">
+                      <span class="vk-cap-mini" data-key="KeyA">A</span>
+                      <span class="vk-cap-mini" data-key="KeyS">S</span>
+                      <span class="vk-cap-mini" data-key="KeyD">D</span>
+                    </div>
+                  </div>
+                  <span class="btn-label">🏃 移動：靜止</span>
+                  <span class="key-badge">WASD</span>
+                </button>
+                <button class="btn-virtual-action vk-key" id="btnActionUlt" title="攻擊招式 (快捷鍵: E)">
+                  <span class="key-badge">E</span>
+                  <span class="btn-label">攻擊招式</span>
+                </button>
+                <button class="btn-virtual-action vk-key" id="btnShieldToggle" disabled title="展開/收起護盾 (快捷鍵: F)">
+                  <span class="key-badge">F</span>
+                  <span class="btn-label">展開護盾</span>
+                </button>
+                <button class="btn-virtual-action vk-key btn-slow-motion" id="btnSlowMotion" title="慢動作演示 (快捷鍵: T)">
+                  <span class="key-badge">T</span>
+                  <span class="btn-label">⏱ 慢動作</span>
+                </button>
+              </div>
+              <div class="vk-row">
+                <button class="btn-virtual-action vk-key" id="btnMorphToggle" style="display:none;color:#38bdf8;" title="型態切換 (快捷鍵: V)">
+                  <span class="key-badge">V</span>
+                  <span class="btn-label">🔄 切換飛行型</span>
+                </button>
+                <button class="btn-virtual-action vk-key" id="btnActionHighJump" title="機甲蓄力大跳躍 (快捷鍵: 長按 Space 放開)">
+                  <span class="key-badge">長按Space</span>
+                  <span class="btn-label">大跳躍</span>
+                </button>
+                <button class="btn-virtual-action vk-key vk-key-space" id="btnActionJump" title="跳躍 (快捷鍵: Space 輕按)">
+                  <span class="key-badge">Space</span>
+                  <span class="btn-label">跳躍</span>
+                </button>
+              </div>
+            </div>
+            <div class="vk-chassis-sep"></div>
+            <div class="vk-mouse-deck">
+              <button class="btn-virtual-action vk-key vk-key-mouse" id="btnActionLight" title="輕射擊 (快捷鍵: 滑鼠左鍵)">
+                <span class="key-badge">左鍵</span>
+                <span class="btn-label">輕射擊</span>
+              </button>
+              <button class="btn-virtual-action vk-key vk-key-mouse" id="btnActionAttack" title="重射擊 (快捷鍵: 滑鼠右鍵)">
+                <span class="key-badge">右鍵</span>
+                <span class="btn-label">重射擊</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="subpanel-controls">
         <button class="btn-tool-sm" id="btn3dReset">重置視角</button>
@@ -2151,6 +2379,7 @@ function saveReviewSettings() {
     const data = {
       enemyPos: document.getElementById('selEnemyPos')?.value || 'close',
       runMode: preview3D?.runMode || 'idle',
+      slowMotion: !!preview3D?.slowMotion,
       autoSpin: !!autoSpin,
       showGrid: !!showGrid,
       bg: document.getElementById('imgViewport')?.style.background || '',
@@ -2184,6 +2413,10 @@ function restoreReviewSettings() {
       preview3D.setRun(data.runMode);
       updateRunModeButton();
       syncExternalAction(data.runMode === 'idle' ? 'idle' : 'run');
+    }
+    if (typeof data.slowMotion === 'boolean' && preview3D) {
+      preview3D.toggleSlow(data.slowMotion);
+      updateSlowMotionButton();
     }
     if (typeof data.autoSpin === 'boolean') {
       autoSpin = data.autoSpin;
@@ -2596,63 +2829,7 @@ function update3DModel() {
     if (selEnemy) preview3D.setEnemyPos(selEnemy.value);
 
     // 動作按鈕呈現切換：
-    // npc 單位只有攻擊與移動兩個動作
-    // 建築單位只有攻擊
-    const isBuild = currentMech.category === 'npc_buildings';
-    const isNpcUnit = currentMech.category === 'npc_units';
-    const btnLight = document.getElementById('btnActionLight');
-    const btnAttack = document.getElementById('btnActionAttack');
-    const btnSkill = document.getElementById('btnActionSkill');
-    const btnUlt = document.getElementById('btnActionUlt');
-    const btnShield = document.getElementById('btnShieldToggle');
-    const btnJump = document.getElementById('btnActionJump');
-    const btnHighJump = document.getElementById('btnActionHighJump');
-    const btnRun = document.getElementById('btnRunMode');
-    const btnMorph = document.getElementById('btnMorphToggle');
-    const morphLabel = document.getElementById('morphPoseLabel');
-
-    if (isBuild) {
-      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '攻擊'; }
-      if (btnLight) btnLight.style.display = 'none';
-      if (btnSkill) btnSkill.style.display = 'none';
-      if (btnUlt) btnUlt.style.display = 'none';
-      if (btnShield) btnShield.style.display = 'none';
-      if (btnJump) btnJump.style.display = 'none';
-      if (btnHighJump) btnHighJump.style.display = 'none';
-      if (btnRun) btnRun.style.display = 'none';
-      if (btnMorph) btnMorph.style.display = 'none';
-      if (morphLabel) morphLabel.style.display = 'none';
-    } else if (isNpcUnit) {
-      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '攻擊'; }
-      if (btnRun) btnRun.style.display = 'inline-block';
-      if (btnLight) btnLight.style.display = 'none';
-      if (btnSkill) btnSkill.style.display = 'none';
-      if (btnUlt) btnUlt.style.display = 'none';
-      if (btnShield) btnShield.style.display = 'none';
-      if (btnJump) btnJump.style.display = 'none';
-      if (btnHighJump) btnHighJump.style.display = 'none';
-      if (btnMorph) btnMorph.style.display = 'none';
-      if (morphLabel) morphLabel.style.display = 'none';
-    } else {
-      if (btnLight) { btnLight.style.display = 'inline-block'; btnLight.textContent = '輕射擊'; }
-      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '重射擊'; }
-      if (btnSkill) { btnSkill.style.display = 'inline-block'; btnSkill.textContent = '防守招式'; }
-      if (btnUlt) { btnUlt.style.display = 'inline-block'; btnUlt.textContent = '攻擊招式'; }
-      if (btnShield) btnShield.style.display = 'inline-block';
-      if (btnJump) btnJump.style.display = 'inline-block';
-      if (btnHighJump) btnHighJump.style.display = 'inline-block';
-      if (btnRun) btnRun.style.display = 'inline-block';
-      const isMorpher = currentMech.category === 'morphers';
-      if (btnMorph) {
-        btnMorph.style.display = isMorpher ? 'inline-block' : 'none';
-        btnMorph.textContent = preview3D.morphM > 0.5 ? '🔄 切換地面型' : '🔄 切換飛行型';
-      }
-      if (morphLabel) {
-        morphLabel.style.display = isMorpher ? 'inline-block' : 'none';
-        morphLabel.textContent = preview3D.morphM > 0.5 ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
-      }
-    }
-    updateRunModeButton();
+    updateMechActionButtons();
 
     syncCompareUnits();
   } catch (err) {
@@ -2930,14 +3107,6 @@ document.getElementById('btnSaveMd').onclick = saveWorkbench;
 const btnSaveHeader = document.getElementById('btnSaveMdHeader');
 if (btnSaveHeader) btnSaveHeader.onclick = saveWorkbench;
 
-// 鍵盤快捷鍵
-window.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-    e.preventDefault();
-    saveWorkbench();
-  }
-});
-
 // 分類與狀態切換
 document.querySelectorAll('.btn-filter').forEach(btn => {
   btn.onclick = () => {
@@ -2990,43 +3159,204 @@ function syncExternalAction(slot, opts = {}) {
   }
 }
 
-// 3D 控制按鈕
-document.getElementById('btnMorphToggle').onclick = () => {
-  if (!preview3D) return;
-  preview3D.toggleMorph();
-  const isFlight = preview3D.morphTarget > 0.5;
-  document.getElementById('morphPoseLabel').textContent = isFlight ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
-  document.getElementById('btnMorphToggle').textContent = isFlight ? '🔄 切換地面型' : '🔄 切換飛行型';
-  syncExternalAction(isFlight ? 'to_flight' : 'to_ground');
-  updateRunModeButton();
-};
+// 3D 動作觸發與同步
+function triggerLightAttack() {
+  if (!preview3D || !currentMech) return;
+  preview3D.play('light');
+  syncExternalAction('light');
+}
 
-document.getElementById('btnActionAttack').onclick = () => {
+function triggerHeavyAttack() {
   if (!preview3D || !currentMech) return;
   preview3D.play('heavy');
   syncExternalAction('heavy');
-};
+}
 
-document.getElementById('btnActionLight').onclick = () => {
-  preview3D?.play('light');
-  syncExternalAction('light');
-};
-document.getElementById('btnActionSkill').onclick = () => {
-  preview3D?.play('def');
+function triggerDefSkill() {
+  if (!preview3D || !currentMech) return;
+  preview3D.play('def');
   syncExternalAction('skill');
-};
-document.getElementById('btnActionUlt').onclick = () => {
-  preview3D?.play('atk');
+}
+
+function triggerAtkUlt() {
+  if (!preview3D || !currentMech) return;
+  preview3D.play('atk');
   syncExternalAction('ult');
-};
-document.getElementById('btnActionJump').onclick = () => {
-  preview3D?.jump(false);
-  for (const u of activeExternalUnits) u.jump?.(false);
-};
-document.getElementById('btnActionHighJump').onclick = () => {
-  preview3D?.highJump();
-  for (const u of activeExternalUnits) u.highJump?.();
-};
+}
+
+function triggerShieldToggle() {
+  if (!preview3D || !currentMech) return;
+  const hasShield = !!(preview3D.unit?.userData.rig?.shield || preview3D.morphRig?.ground?.shield);
+  if (!hasShield) return;
+  const next = !preview3D._ent?.df;
+  preview3D.setShield(next);
+  syncExternalAction(next ? 'shield_deploy' : 'shield_retract');
+  updateShieldButton();
+}
+
+function triggerJump(high = false) {
+  if (!preview3D || !currentMech) return;
+  if (high) {
+    preview3D.highJump();
+    for (const u of activeExternalUnits) u.highJump?.();
+    syncExternalAction('jump');
+  } else {
+    preview3D.jump(false);
+    for (const u of activeExternalUnits) u.jump?.(false);
+    syncExternalAction('jump');
+  }
+}
+
+function triggerMorphToggle() {
+  if (!preview3D || currentMech?.category !== 'morphers') return;
+  preview3D.toggleMorph();
+  const isFlight = preview3D.morphTarget > 0.5;
+  syncExternalAction(isFlight ? 'to_flight' : 'to_ground');
+  updateMechActionButtons();
+  saveReviewSettings();
+}
+
+function setBtnContent(btn, text, badge) {
+  if (!btn) return;
+  const labelEl = btn.querySelector('.btn-label');
+  if (labelEl) {
+    labelEl.textContent = text;
+  } else {
+    btn.textContent = text;
+  }
+  if (badge !== undefined) {
+    const badgeEl = btn.querySelector('.key-badge');
+    if (badgeEl) badgeEl.textContent = badge;
+  }
+}
+
+function updateMechActionButtons() {
+  if (!currentMech) return;
+  const isBuild = currentMech.category === 'npc_buildings';
+  const isNpcUnit = currentMech.category === 'npc_units';
+  const isDrone = currentMech.category === 'drones';
+  const isRobot = currentMech.category === 'robots';
+  const isMorpher = currentMech.category === 'morphers';
+  const isFlight = isDrone || (isMorpher && preview3D?.morphTarget > 0.5);
+
+  const btnLight = document.getElementById('btnActionLight');
+  const btnAttack = document.getElementById('btnActionAttack');
+  const btnSkill = document.getElementById('btnActionSkill');
+  const btnUlt = document.getElementById('btnActionUlt');
+  const btnShield = document.getElementById('btnShieldToggle');
+  const btnJump = document.getElementById('btnActionJump');
+  const btnHighJump = document.getElementById('btnActionHighJump');
+  const btnRun = document.getElementById('btnRunMode');
+  const btnMorph = document.getElementById('btnMorphToggle');
+  const btnSlow = document.getElementById('btnSlowMotion');
+  const morphLabel = document.getElementById('morphPoseLabel');
+
+  const authored = !!(preview3D?.unit?.userData.rig?.referenceMotion || preview3D?.morphRig?.ground?.referenceMotion);
+  const hasShield = authored && !!(preview3D?.unit?.userData.rig?.shield || preview3D?.morphRig?.ground?.shield);
+
+  if (isBuild) {
+    if (btnAttack) { btnAttack.style.display = 'inline-flex'; setBtnContent(btnAttack, '攻擊'); btnAttack.title = '攻擊 (快捷鍵: 滑鼠右鍵)'; }
+    if (btnLight) btnLight.style.display = 'none';
+    if (btnSkill) btnSkill.style.display = 'none';
+    if (btnUlt) btnUlt.style.display = 'none';
+    if (btnShield) btnShield.style.display = 'none';
+    if (btnJump) btnJump.style.display = 'none';
+    if (btnHighJump) btnHighJump.style.display = 'none';
+    if (btnRun) btnRun.style.display = 'none';
+    if (btnMorph) btnMorph.style.display = 'none';
+    if (morphLabel) morphLabel.style.display = 'none';
+  } else if (isNpcUnit) {
+    if (btnAttack) { btnAttack.style.display = 'inline-flex'; setBtnContent(btnAttack, '攻擊'); btnAttack.title = '攻擊 (快捷鍵: 滑鼠右鍵)'; }
+    if (btnRun) { btnRun.style.display = 'inline-flex'; btnRun.title = '移動 (快捷鍵: Shift)'; }
+    if (btnLight) btnLight.style.display = 'none';
+    if (btnSkill) btnSkill.style.display = 'none';
+    if (btnUlt) btnUlt.style.display = 'none';
+    if (btnShield) btnShield.style.display = 'none';
+    if (btnJump) btnJump.style.display = 'none';
+    if (btnHighJump) btnHighJump.style.display = 'none';
+    if (btnMorph) btnMorph.style.display = 'none';
+    if (morphLabel) morphLabel.style.display = 'none';
+  } else {
+    // 英雄機體：只顯現該機體實際擁有的動作按鍵
+    if (btnLight) {
+      btnLight.style.display = 'inline-flex';
+      setBtnContent(btnLight, '輕射擊');
+      btnLight.title = '輕射擊 (快捷鍵: 滑鼠左鍵)';
+    }
+    if (btnAttack) {
+      btnAttack.style.display = 'inline-flex';
+      setBtnContent(btnAttack, '重射擊');
+      btnAttack.title = '重射擊 (快捷鍵: 滑鼠右鍵)';
+    }
+    if (btnSkill) {
+      btnSkill.style.display = 'inline-flex';
+      setBtnContent(btnSkill, '防守招式');
+      btnSkill.title = '防守招式 (快捷鍵: Q)';
+    }
+    if (btnUlt) {
+      btnUlt.style.display = 'inline-flex';
+      setBtnContent(btnUlt, '攻擊招式');
+      btnUlt.title = '攻擊招式 (快捷鍵: E)';
+    }
+
+    // 護盾動作按鍵：只在機體具備護盾時顯現
+    if (btnShield) {
+      btnShield.style.display = hasShield ? 'inline-flex' : 'none';
+      btnShield.disabled = !hasShield;
+      btnShield.title = '展開/收起護盾 (快捷鍵: F)';
+    }
+
+    // 跳躍動作按鍵：
+    // - 機甲 (robots)：具備跳躍與大跳躍 (CJUMP 蓄力跳)
+    // - 變形者 (morphers)：地面型態具備跳躍；長按 Space 為變形彈射；無大跳躍；飛行型態不跳
+    // - 無人機 (drones)：純空戰飛行，無跳躍
+    if (btnJump) {
+      const canJump = isRobot || (isMorpher && !isFlight);
+      btnJump.style.display = canJump ? 'inline-flex' : 'none';
+      setBtnContent(btnJump, '跳躍');
+      btnJump.title = '跳躍 (快捷鍵: Space 輕按)';
+    }
+    if (btnHighJump) {
+      const canHighJump = isRobot;
+      btnHighJump.style.display = canHighJump ? 'inline-flex' : 'none';
+      setBtnContent(btnHighJump, '大跳躍');
+      btnHighJump.title = '機甲蓄力大跳躍 (快捷鍵: 長按 Space 放開)';
+    }
+
+    if (btnRun) {
+      btnRun.style.display = 'inline-flex';
+      btnRun.title = '移動 (快捷鍵: WASD / 方向鍵 / Shift)';
+    }
+
+    if (btnMorph) {
+      btnMorph.style.display = isMorpher ? 'inline-flex' : 'none';
+      setBtnContent(btnMorph, isFlight ? '🔄 切換地面型' : '🔄 切換飛行型');
+      btnMorph.title = '型態切換 (快捷鍵: V 或長按 Space)';
+    }
+    if (morphLabel) {
+      morphLabel.style.display = isMorpher ? 'inline-block' : 'none';
+      morphLabel.textContent = isFlight ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
+    }
+  }
+
+  if (btnSlow) {
+    btnSlow.style.display = 'inline-flex';
+    btnSlow.title = '慢動作演示 (快捷鍵: T)';
+  }
+
+  updateShieldButton();
+  updateRunModeButton();
+  updateSlowMotionButton();
+}
+
+// 3D 控制按鈕
+document.getElementById('btnMorphToggle').onclick = triggerMorphToggle;
+document.getElementById('btnActionAttack').onclick = triggerHeavyAttack;
+document.getElementById('btnActionLight').onclick = triggerLightAttack;
+document.getElementById('btnActionSkill').onclick = triggerDefSkill;
+document.getElementById('btnActionUlt').onclick = triggerAtkUlt;
+document.getElementById('btnActionJump').onclick = () => triggerJump(false);
+document.getElementById('btnActionHighJump').onclick = () => triggerJump(true);
 
 const selEnemyPos = document.getElementById('selEnemyPos');
 if (selEnemyPos) {
@@ -3041,17 +3371,11 @@ function updateShieldButton() {
   const btn = document.getElementById('btnShieldToggle');
   if (!btn) return;
   const isDeployed = !!preview3D?._ent?.df;
-  btn.textContent = isDeployed ? '收起護盾' : '展開護盾';
+  setBtnContent(btn, isDeployed ? '收起護盾' : '展開護盾');
   btn.classList.toggle('active', isDeployed);
 }
 
-document.getElementById('btnShieldToggle').onclick = () => {
-  if (!preview3D) return;
-  const next = !preview3D._ent?.df;
-  preview3D.setShield(next);
-  syncExternalAction(next ? 'shield_deploy' : 'shield_retract');
-  updateShieldButton();
-};
+document.getElementById('btnShieldToggle').onclick = triggerShieldToggle;
 document.getElementById('btnShieldDeploy').onclick = () => {
   preview3D?.setShield(true);
   syncExternalAction('shield_deploy');
@@ -3067,6 +3391,29 @@ document.getElementById('btnRig').onclick = event => {
   preview3D?.setRigVisible(on);
 };
 
+function toggleSlowMotion(force) {
+  if (!preview3D) return;
+  const active = preview3D.toggleSlow(force);
+  for (const u of activeExternalUnits) {
+    if (u?.preview) u.preview.timeScale = active ? 0.3 : 1;
+  }
+  updateSlowMotionButton();
+  saveReviewSettings();
+}
+
+function updateSlowMotionButton() {
+  const btn = document.getElementById('btnSlowMotion');
+  if (!btn || !preview3D) return;
+  const isSlow = !!preview3D.slowMotion;
+  setBtnContent(btn, isSlow ? '⏱ 慢動作 (0.3×)' : '⏱ 慢動作');
+  btn.classList.toggle('active', isSlow);
+}
+
+const btnSlow = document.getElementById('btnSlowMotion');
+if (btnSlow) {
+  btnSlow.onclick = () => toggleSlowMotion();
+}
+
 function updateRunModeButton() {
   const btn = document.getElementById('btnRunMode');
   if (!btn || !preview3D) return;
@@ -3076,24 +3423,240 @@ function updateRunModeButton() {
     btn.style.display = 'none';
     return;
   }
-  const isFlight = preview3D.morphTarget > 0.5;
-  let label = '靜止';
-  if (preview3D.runMode === 'slow') {
-    label = isFlight ? '慢速飛翔' : (isNpcUnit ? '慢速' : '慢跑');
-  } else if (preview3D.runMode === 'normal') {
-    label = isFlight ? '快速飛翔' : (isNpcUnit ? '前進' : '衝刺');
-  }
-  btn.textContent = (isNpcUnit ? '🏃 移動：' : '🏃 運動：') + label;
+  btn.style.display = 'inline-flex';
+  const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+  const isMoving = preview3D.runMode === 'normal';
+  let label = isMoving ? (isFlight ? '飛行' : (isNpcUnit ? '前進' : '奔跑')) : '靜止';
+  setBtnContent(btn, '🏃 移動：' + label);
+  btn.classList.toggle('active', isMoving);
 }
 
 document.getElementById('btnRunMode').onclick = () => {
   if (!preview3D || !currentMech) return;
   if (currentMech.category === 'npc_buildings') return;
-  preview3D.cycleRun(1);
+  preview3D.cycleRun();
   updateRunModeButton();
   syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
   saveReviewSettings();
 };
+
+// 遊戲操作完全仿照：鍵盤快捷鍵 (WASD/方向鍵 移動, Q 守招, E 攻招, F 護盾, Space 輕按跳/長按大跳, V 變形, T 慢動作, Shift 衝刺) 與滑鼠左右鍵 (LMB 輕射, RMB 重射)
+let spaceDownAt = 0;
+const MOVE_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const activeMoveKeys = new Set();
+
+function pulseKey(btnOrEl) {
+  if (!btnOrEl) return;
+  btnOrEl.classList.add('active');
+  setTimeout(() => btnOrEl.classList.remove('active'), 180);
+}
+
+function isEditingText() {
+  const tag = document.activeElement?.tagName?.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || !!document.activeElement?.isContentEditable;
+}
+
+window.addEventListener('keydown', (e) => {
+  if (isEditingText()) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      saveWorkbench();
+    }
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveWorkbench();
+    return;
+  }
+
+  if (!preview3D || !currentMech) return;
+  const isBuild = currentMech.category === 'npc_buildings';
+  const isNpcUnit = currentMech.category === 'npc_units';
+  const isRobot = currentMech.category === 'robots';
+  const isMorpher = currentMech.category === 'morphers';
+  const isHero = !isBuild && !isNpcUnit;
+
+  // 移動鍵 (WASD / 方向鍵) 完全仿照遊戲操作：按住移動
+  if (MOVE_CODES.has(e.code)) {
+    if (!isBuild) {
+      e.preventDefault();
+      activeMoveKeys.add(e.code);
+      document.querySelectorAll('.vk-cap-mini[data-key="' + e.code + '"]').forEach(el => el.classList.add('active'));
+      if (preview3D.runMode !== 'normal') {
+        preview3D.setRun('normal');
+        updateRunModeButton();
+        syncExternalAction('run');
+        saveReviewSettings();
+      }
+    }
+    return;
+  }
+
+  if (isHero) {
+    // 守招 (KeyQ)
+    if (e.code === 'KeyQ') {
+      e.preventDefault();
+      pulseKey(document.getElementById('btnActionSkill'));
+      triggerDefSkill();
+      return;
+    }
+    // 攻招 / 絕招 (KeyE)
+    if (e.code === 'KeyE') {
+      e.preventDefault();
+      pulseKey(document.getElementById('btnActionUlt'));
+      triggerAtkUlt();
+      return;
+    }
+    // 防守姿態 / 護盾 (KeyF)
+    if (e.code === 'KeyF') {
+      const hasShield = !!(preview3D.unit?.userData.rig?.shield || preview3D.morphRig?.ground?.shield);
+      if (hasShield) {
+        e.preventDefault();
+        pulseKey(document.getElementById('btnShieldToggle'));
+        triggerShieldToggle();
+      }
+      return;
+    }
+    // 變形者型態切換 (KeyV)
+    if (e.code === 'KeyV' && isMorpher) {
+      e.preventDefault();
+      pulseKey(document.getElementById('btnMorphToggle'));
+      triggerMorphToggle();
+      return;
+    }
+    // Space 按下：若為可跳躍/蓄力機體，記錄起點
+    if (e.code === 'Space' && !e.repeat) {
+      const isFlight = preview3D.morphTarget > 0.5;
+      if (isRobot || (isMorpher && !isFlight)) {
+        e.preventDefault();
+        document.getElementById('btnActionJump')?.classList.add('active');
+        spaceDownAt = performance.now();
+      }
+      return;
+    }
+  }
+
+  // 慢動作演示切換 (KeyT)
+  if (e.code === 'KeyT') {
+    e.preventDefault();
+    pulseKey(document.getElementById('btnSlowMotion'));
+    toggleSlowMotion();
+    return;
+  }
+
+  // Shift: 衝刺 / 移動模式切換
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+    if (!isBuild) {
+      e.preventDefault();
+      preview3D.cycleRun();
+      updateRunModeButton();
+      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+      saveReviewSettings();
+    }
+    return;
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (isEditingText()) return;
+
+  // 移動鍵放開：若無任何移動鍵按住則停下
+  if (MOVE_CODES.has(e.code)) {
+    activeMoveKeys.delete(e.code);
+    document.querySelectorAll('.vk-cap-mini[data-key="' + e.code + '"]').forEach(el => el.classList.remove('active'));
+    const isBuild = currentMech?.category === 'npc_buildings';
+    if (!isBuild && activeMoveKeys.size === 0) {
+      e.preventDefault();
+      preview3D.setRun('idle');
+      updateRunModeButton();
+      syncExternalAction('idle');
+      saveReviewSettings();
+    }
+    return;
+  }
+
+  if (e.code === 'Space' && spaceDownAt > 0) {
+    e.preventDefault();
+    document.getElementById('btnActionJump')?.classList.remove('active');
+    const dur = (performance.now() - spaceDownAt) / 1000;
+    spaceDownAt = 0;
+    const isRobot = currentMech?.category === 'robots';
+    const isMorpher = currentMech?.category === 'morphers';
+    const isFlight = preview3D?.morphTarget > 0.5;
+
+    if (isRobot) {
+      // 機甲：長按 (>= 0.25s) 蓄力大跳躍 (CJUMP)，輕按普通跳躍
+      if (dur >= 0.25) {
+        pulseKey(document.getElementById('btnActionHighJump'));
+      }
+      triggerJump(dur >= 0.25);
+    } else if (isMorpher && !isFlight) {
+      // 變形者地面型：長按 (>= 0.25s) 蓄力彈射變形為飛行型，輕按普通跳躍
+      if (dur >= 0.25) {
+        pulseKey(document.getElementById('btnMorphToggle'));
+        triggerMorphToggle();
+      } else {
+        triggerJump(false);
+      }
+    }
+  }
+});
+
+window.addEventListener('blur', () => {
+  if (activeMoveKeys.size > 0) {
+    activeMoveKeys.clear();
+    document.querySelectorAll('.vk-cap-mini').forEach(el => el.classList.remove('active'));
+    if (preview3D && currentMech?.category !== 'npc_buildings') {
+      preview3D.setRun('idle');
+      updateRunModeButton();
+      syncExternalAction('idle');
+      saveReviewSettings();
+    }
+  }
+});
+
+// 3D 視口滑鼠左右鍵開火操作（完全仿照遊戲：左鍵輕射擊、右鍵重射擊；排除視角拖曳）
+const cv3dEl = document.getElementById('cv3d');
+if (cv3dEl) {
+  let cvDownPos = null;
+
+  cv3dEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+
+  cv3dEl.addEventListener('pointerdown', (e) => {
+    cvDownPos = { x: e.clientX, y: e.clientY, btn: e.button, t: performance.now() };
+    if (e.button === 0) document.getElementById('btnActionLight')?.classList.add('active');
+    if (e.button === 2) document.getElementById('btnActionAttack')?.classList.add('active');
+  });
+
+  cv3dEl.addEventListener('pointerup', (e) => {
+    document.getElementById('btnActionLight')?.classList.remove('active');
+    document.getElementById('btnActionAttack')?.classList.remove('active');
+    if (!cvDownPos || !preview3D || !currentMech) return;
+    const dx = e.clientX - cvDownPos.x;
+    const dy = e.clientY - cvDownPos.y;
+    const dt = performance.now() - cvDownPos.t;
+    const btn = cvDownPos.btn;
+    cvDownPos = null;
+
+    if (Math.hypot(dx, dy) < 6 && dt < 500) {
+      const isBuild = currentMech.category === 'npc_buildings';
+      const isNpcUnit = currentMech.category === 'npc_units';
+      if (isBuild || isNpcUnit) {
+        triggerHeavyAttack();
+      } else {
+        if (btn === 0) {
+          triggerLightAttack();
+        } else if (btn === 2) {
+          triggerHeavyAttack();
+        }
+      }
+    }
+  });
+}
 
 for (const id of ['chkVerCurrent', 'chkVerSteel', 'chkVerArgon']) {
   const el = document.getElementById(id);
@@ -3163,7 +3726,6 @@ async function showComplexityModal() {
 
   const isBuild = currentMech.category === 'npc_buildings';
   const isNpcUnit = currentMech.category === 'npc_units';
-  const isNpc = isNpcUnit || isBuild;
   const col3Title = isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (高精)');
   const arch1 = isNpc ? '程序具名零件 / 陣營戰鬥模組' : '程序具名零件 (JS Module)';
   const arch2 = isNpc ? 'Godot 陣營/戰鬥 GLB' : '遊戲最佳化戰鬥 GLB';
