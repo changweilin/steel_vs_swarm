@@ -59,6 +59,8 @@ export async function getComplexity(rawId) {
     argon_vfx: null,
   };
 
+  const isBuild = id.endsWith('_base') || id.endsWith('_tower') || id.endsWith('_bunker') || id.endsWith('_turret') || id.endsWith('_battery');
+
   // 1. 本專案 (steel_vs_swarm): forge 零件檔 (hero assets 或 factionAssets)
   try {
     let modPath = join(ROOT, 'public', 'js', 'forge', 'assets', `${id}.js`);
@@ -95,9 +97,11 @@ export async function getComplexity(rawId) {
         nodeCount: (asset.joints || []).length,
         jointCount: (asset.joints || []).length,
         materialCount: Object.keys(asset.materials || {}).length,
-        animations: isFaction
-          ? ['idle', 'walk', 'run', 'fire / aim (rig/weapon)']
-          : ['idle', 'walk', 'run', 'light', 'heavy', 'skill', 'ult', 'morph (locomotion.js)'],
+        animations: isBuild
+          ? ['攻擊 (fire / aim)']
+          : (isFaction
+            ? ['攻擊 (fire / aim)', '移動 (move / run)']
+            : ['idle', 'walk', 'run', 'light', 'heavy', 'skill', 'ult', 'morph (locomotion.js)']),
       };
     } else if (id.startsWith('guer_') || id.startsWith('mili_')) {
       res.current = {
@@ -113,7 +117,9 @@ export async function getComplexity(rawId) {
         nodeCount: 6,
         jointCount: 6,
         materialCount: 4,
-        animations: ['idle', 'walk', 'run', 'fire / aim'],
+        animations: isBuild
+          ? ['攻擊 (fire / aim)']
+          : ['攻擊 (fire / aim)', '移動 (move / run)'],
       };
     }
   } catch (err) {
@@ -129,6 +135,12 @@ export async function getComplexity(rawId) {
     if (p) {
       const buf = await readFile(p);
       const meta = parseGLB(buf);
+      if (isBuild && meta.animations) {
+        meta.animations = meta.animations.filter(a => ['aim', 'light', 'heavy', 'fire', 'attack'].includes(a));
+        if (meta.animations.length === 0) meta.animations = ['aim / fire'];
+      } else if ((id.includes('_') || existsSync(pFaction)) && meta.animations) {
+        meta.animations = meta.animations.filter(a => ['idle', 'walk', 'run', 'aim', 'light', 'heavy', 'fire', 'attack'].includes(a));
+      }
       res.steel_v_swarm = {
         name: 'steel_v_swarm (Godot)',
         arch: '遊戲最佳化 GLB 戰鬥模型',

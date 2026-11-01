@@ -2042,7 +2042,13 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   let currentAction = null;
   let activeSlot = 'idle';
 
+  const isBuild = currentMech?.category === 'npc_buildings';
+  const isNpc = currentMech?.category === 'npc_units' || isBuild;
+
   function playAction(slot, { form = 'ground', loop = true } = {}) {
+    if (isBuild && (slot === 'run' || slot === 'walk')) {
+      slot = 'idle';
+    }
     activeSlot = slot;
     let clipName = slot;
     if (form === 'flight') {
@@ -2054,6 +2060,11 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
       else if (slot === 'def' && clipsMap.has('skill')) clipName = 'skill';
       else if (slot === 'ult' && clipsMap.has('atk')) clipName = 'atk';
       else if (slot === 'atk' && clipsMap.has('ult')) clipName = 'ult';
+      else if (slot === 'attack' || slot === 'heavy' || slot === 'light') {
+        if (clipsMap.has('heavy')) clipName = 'heavy';
+        else if (clipsMap.has('light')) clipName = 'light';
+        else if (clipsMap.has('aim')) clipName = 'aim';
+      }
     }
     const clip = clipsMap.get(clipName) || clipsMap.get('idle');
     if (!clip) return null;
@@ -2063,7 +2074,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
       currentAction.fadeOut(0.12);
     }
     next.reset();
-    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'shield_deploy', 'shield_retract', 'jump', 'to_flight', 'to_ground'].includes(slot);
+    const isOneShot = !loop || ['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'attack', 'shield_deploy', 'shield_retract', 'jump', 'to_flight', 'to_ground'].includes(slot);
     if (isOneShot) {
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
@@ -2077,10 +2088,11 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   }
 
   mixer.addEventListener('finished', () => {
-    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
+    if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'attack', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
       const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
       const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? 'run' : 'idle';
-      playAction(curForm === 'flight' ? 'flight_idle' : curRun, { form: curForm, loop: true });
+      const returnAction = isBuild ? 'idle' : (curForm === 'flight' ? 'flight_idle' : curRun);
+      playAction(returnAction, { form: curForm, loop: true });
     }
   });
 
@@ -2088,6 +2100,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
 
   let jumpState = null;
   function jump(high = false) {
+    if (isBuild || isNpc) return false;
     if (jumpState) return false;
     const dur = high ? 2.0 : 0.95;
     const peak = high ? Math.max(5.2, (preview3D?.fitR || targetH * 0.5) * 1.35) : Math.max(1.8, (preview3D?.fitR || targetH * 0.5) * 0.55);
@@ -2318,7 +2331,8 @@ async function syncCompareUnits() {
           : (isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (Blender)'));
         compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
       }
-      unit.playAction(curRun, { form: curForm, loop: true });
+      const initialAction = isBuild ? 'idle' : curRun;
+      unit.playAction(initialAction, { form: curForm, loop: true });
     } catch (err) {
       console.warn('載入比對模型失敗 (' + verKey + '):', err);
       if (activeList.length > 1) {
@@ -2581,17 +2595,62 @@ function update3DModel() {
     const selEnemy = document.getElementById('selEnemyPos');
     if (selEnemy) preview3D.setEnemyPos(selEnemy.value);
 
-    const isMorpher = currentMech.category === 'morphers';
+    // 動作按鈕呈現切換：
+    // npc 單位只有攻擊與移動兩個動作
+    // 建築單位只有攻擊
+    const isBuild = currentMech.category === 'npc_buildings';
+    const isNpcUnit = currentMech.category === 'npc_units';
+    const btnLight = document.getElementById('btnActionLight');
+    const btnAttack = document.getElementById('btnActionAttack');
+    const btnSkill = document.getElementById('btnActionSkill');
+    const btnUlt = document.getElementById('btnActionUlt');
+    const btnShield = document.getElementById('btnShieldToggle');
+    const btnJump = document.getElementById('btnActionJump');
+    const btnHighJump = document.getElementById('btnActionHighJump');
+    const btnRun = document.getElementById('btnRunMode');
     const btnMorph = document.getElementById('btnMorphToggle');
     const morphLabel = document.getElementById('morphPoseLabel');
-    if (isMorpher) {
-      btnMorph.style.display = 'inline-block';
-      morphLabel.style.display = 'inline-block';
-      morphLabel.textContent = preview3D.morphM > 0.5 ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
-      btnMorph.textContent = preview3D.morphM > 0.5 ? '🔄 切換地面型' : '🔄 切換飛行型';
+
+    if (isBuild) {
+      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '攻擊'; }
+      if (btnLight) btnLight.style.display = 'none';
+      if (btnSkill) btnSkill.style.display = 'none';
+      if (btnUlt) btnUlt.style.display = 'none';
+      if (btnShield) btnShield.style.display = 'none';
+      if (btnJump) btnJump.style.display = 'none';
+      if (btnHighJump) btnHighJump.style.display = 'none';
+      if (btnRun) btnRun.style.display = 'none';
+      if (btnMorph) btnMorph.style.display = 'none';
+      if (morphLabel) morphLabel.style.display = 'none';
+    } else if (isNpcUnit) {
+      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '攻擊'; }
+      if (btnRun) btnRun.style.display = 'inline-block';
+      if (btnLight) btnLight.style.display = 'none';
+      if (btnSkill) btnSkill.style.display = 'none';
+      if (btnUlt) btnUlt.style.display = 'none';
+      if (btnShield) btnShield.style.display = 'none';
+      if (btnJump) btnJump.style.display = 'none';
+      if (btnHighJump) btnHighJump.style.display = 'none';
+      if (btnMorph) btnMorph.style.display = 'none';
+      if (morphLabel) morphLabel.style.display = 'none';
     } else {
-      btnMorph.style.display = 'none';
-      morphLabel.style.display = 'none';
+      if (btnLight) { btnLight.style.display = 'inline-block'; btnLight.textContent = '輕射擊'; }
+      if (btnAttack) { btnAttack.style.display = 'inline-block'; btnAttack.textContent = '重射擊'; }
+      if (btnSkill) { btnSkill.style.display = 'inline-block'; btnSkill.textContent = '防守招式'; }
+      if (btnUlt) { btnUlt.style.display = 'inline-block'; btnUlt.textContent = '攻擊招式'; }
+      if (btnShield) btnShield.style.display = 'inline-block';
+      if (btnJump) btnJump.style.display = 'inline-block';
+      if (btnHighJump) btnHighJump.style.display = 'inline-block';
+      if (btnRun) btnRun.style.display = 'inline-block';
+      const isMorpher = currentMech.category === 'morphers';
+      if (btnMorph) {
+        btnMorph.style.display = isMorpher ? 'inline-block' : 'none';
+        btnMorph.textContent = preview3D.morphM > 0.5 ? '🔄 切換地面型' : '🔄 切換飛行型';
+      }
+      if (morphLabel) {
+        morphLabel.style.display = isMorpher ? 'inline-block' : 'none';
+        morphLabel.textContent = preview3D.morphM > 0.5 ? '飛行型 (Pose 1)' : '地面型 (Pose 0)';
+      }
     }
     updateRunModeButton();
 
@@ -3011,18 +3070,25 @@ document.getElementById('btnRig').onclick = event => {
 function updateRunModeButton() {
   const btn = document.getElementById('btnRunMode');
   if (!btn || !preview3D) return;
+  const isBuild = currentMech?.category === 'npc_buildings';
+  const isNpcUnit = currentMech?.category === 'npc_units';
+  if (isBuild) {
+    btn.style.display = 'none';
+    return;
+  }
   const isFlight = preview3D.morphTarget > 0.5;
   let label = '靜止';
   if (preview3D.runMode === 'slow') {
-    label = isFlight ? '慢速飛翔' : '慢跑';
+    label = isFlight ? '慢速飛翔' : (isNpcUnit ? '慢速' : '慢跑');
   } else if (preview3D.runMode === 'normal') {
-    label = isFlight ? '快速飛翔' : '衝刺';
+    label = isFlight ? '快速飛翔' : (isNpcUnit ? '前進' : '衝刺');
   }
-  btn.textContent = '🏃 運動：' + label;
+  btn.textContent = (isNpcUnit ? '🏃 移動：' : '🏃 運動：') + label;
 }
 
 document.getElementById('btnRunMode').onclick = () => {
-  if (!preview3D) return;
+  if (!preview3D || !currentMech) return;
+  if (currentMech.category === 'npc_buildings') return;
   preview3D.cycleRun(1);
   updateRunModeButton();
   syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
@@ -3096,10 +3162,23 @@ async function showComplexityModal() {
   const sizeRatio = isArgPending ? '—' : ((arg.fileSize || 0) / Math.max(1, stl.fileSize || 1)).toFixed(1);
 
   const isBuild = currentMech.category === 'npc_buildings';
+  const isNpcUnit = currentMech.category === 'npc_units';
+  const isNpc = isNpcUnit || isBuild;
   const col3Title = isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (高精)');
   const arch1 = isNpc ? '程序具名零件 / 陣營戰鬥模組' : '程序具名零件 (JS Module)';
   const arch2 = isNpc ? 'Godot 陣營/戰鬥 GLB' : '遊戲最佳化戰鬥 GLB';
   const arch3 = isArgPending ? 'Blender 原生高精模型 (檔案待補)' : (isBuild ? 'Blender 原生高精 建築 GLB' : (isNpc ? 'Blender 原生高精 NPC GLB' : 'Blender 原生高精 VFX GLB'));
+
+  const curAnimDesc = isBuild
+    ? '1 個動作 (攻擊)'
+    : (isNpcUnit
+      ? '2 個動作 (攻擊、移動)'
+      : \`\${curAnims.length} 個程序動作\`);
+  const stlAnimDesc = isBuild
+    ? \`\${stlAnims.length} 個 GLB 動作 (僅攻擊)\`
+    : (isNpcUnit
+      ? \`\${stlAnims.length} 個 GLB 動作 (攻擊、移動)\`
+      : \`\${stlAnims.length} 個 GLB 動作\`);
 
   const argFileSizeStr = isArgPending ? '<span style="color:#fbbf24">待後續補上</span>' : \`\${fmtSize(arg.fileSize)} <small style="color:#94a3b8">(\${sizeRatio}x)</small>\`;
   const argTriCountStr = isArgPending ? '<span style="color:#fbbf24">待後續補上</span>' : \`\${fmtNum(arg.triCount)} <small style="color:#94a3b8">(\${triRatio}x)</small>\`;
@@ -3112,6 +3191,15 @@ async function showComplexityModal() {
 
   const argTriLabel = isArgPending ? 'argon: 待補 (0)' : \`argon: \${fmtNum(arg.triCount)} (\${wArg}%)\`;
   const argSizeLabel = isArgPending ? 'argon: 待補' : \`argon: \${fmtSize(arg.fileSize)}\`;
+
+  const displayAnims = (argAnims && argAnims.length > 0)
+    ? argAnims
+    : (curAnims && curAnims.length > 0 ? curAnims : stlAnims);
+  const animHeader = isBuild
+    ? \`🎬 動作清單 (共 \${displayAnims.length} 個・建築單位僅具備攻擊)\`
+    : (isNpcUnit
+      ? \`🎬 動作清單 (共 \${displayAnims.length} 個・NPC 單位僅具備攻擊與移動)\`
+      : \`🎬 動作清單 (共 \${displayAnims.length} 個，點擊 3D 工具列動作按鈕同步連動)\`);
 
   content.innerHTML = \`
     <table class="comp-table">
@@ -3174,8 +3262,8 @@ async function showComplexityModal() {
         </tr>
         <tr>
           <td><b>動作剪輯數 (Actions)</b></td>
-          <td class="num">\${curAnims.length} 個程序步態</td>
-          <td class="num">\${stlAnims.length} 個 GLB 動作</td>
+          <td class="num">\${curAnimDesc}</td>
+          <td class="num">\${stlAnimDesc}</td>
           <td class="num">\${argAnimStr}</td>
         </tr>
       </tbody>
@@ -3206,9 +3294,9 @@ async function showComplexityModal() {
     </div>
 
     <div>
-      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#f1f5f9;">🎬 動作清單 (共 \${argAnims.length} 個，點擊 3D 工具列動作按鈕同步連動)</div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#f1f5f9;">\${animHeader}</div>
       <div>
-        \${argAnims.map(a => '<span class="anim-tag">' + escapeHtml(a) + '</span>').join('')}
+        \${displayAnims.map(a => '<span class="anim-tag">' + escapeHtml(a) + '</span>').join('')}
       </div>
     </div>
 

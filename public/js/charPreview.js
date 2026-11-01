@@ -839,6 +839,13 @@ export class CharPreview {
    *  慢速沿用 timeScale = action 時鐘減速(骨架步態放慢看細節);回傳設定後的 mode。 */
   setRun(mode) {
     if (mode !== 'idle' && mode !== 'slow' && mode !== 'normal') return this.runMode;
+    if (this.isUnit && !this.topSpeed) {
+      this.runMode = 'idle';
+      this.moving = false;
+      this.speed = 0;
+      this.onMove?.(false, 0);
+      return 'idle';
+    }
     const prev = this.runMode;
     this.runMode = mode;
     this.moving = mode !== 'idle';
