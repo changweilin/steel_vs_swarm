@@ -819,12 +819,11 @@ export class CharPreview {
         }
         A.fired = 1;
       }
-      // 施放姿態:大招浮空 + 慢旋,小招輕彈跳
+      // 施放姿態:大招浮空,小招輕彈跳
       const f = Math.min(1, A.t / A.dur);
       const rise = Math.sin(f * Math.PI);
       for (const actor of actors) {
         actor.group.position.y = rise * R * (isUlt ? 0.25 : 0.08);
-        if (isUlt) actor.group.rotation.y += dt * 2.4 * rise;
       }
     }
 

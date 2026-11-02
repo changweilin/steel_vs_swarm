@@ -1758,7 +1758,8 @@ function stepCastPose(L, rig, ent, dt, now) {
   const p = (now - cf.t0) / dur;
   if (p >= 1 || p < 0) { ent.castFx = null; return; }
   const sig = rig.castSig || CAST_DEF[rig.kind] || CAST_DEF.biped;
-  const arch = cf.dir ? (sig.dir || 'jab') : (sig.omni || 'stomp');
+  let arch = cf.dir ? (sig.dir || 'jab') : (sig.omni || 'stomp');
+  if (cf.slot === 'atk' && arch === 'spin') arch = sig.dir || 'jab';
   const K = cf.slot === 'atk' ? 1 : 0.7;
   const env = Math.sin(Math.min(1, p * 1.15) * Math.PI) * K;      // 全向:緩起緩收
   const d0 = castDrive(p);
