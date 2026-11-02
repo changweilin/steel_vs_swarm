@@ -264,6 +264,83 @@ async function run() {
       throw new Error(`再次點擊應回到 idle，得到 ${runStopped.runMode}`);
     }
 
+    // 6. 驗證機甲/地面型 WSAD 移動前後左右方向對應
+    console.log('驗證機甲地面型態 WSAD 前後左右方向...');
+    await page.evaluate(() => window.__MECH_REVIEW.selectMech('s06'));
+    await page.waitForTimeout(300);
+
+    const testKeys = [
+      { key: 'KeyW', expectFwd: 1, expectRight: 0, label: '前進' },
+      { key: 'KeyS', expectFwd: -1, expectRight: 0, label: '後退' },
+      { key: 'KeyA', expectFwd: 0, expectRight: -1, label: '左移' },
+      { key: 'KeyD', expectFwd: 0, expectRight: 1, label: '右移' },
+    ];
+
+    for (const tk of testKeys) {
+      await page.keyboard.down(tk.key);
+      await page.waitForTimeout(60);
+      const st = await page.evaluate(() => {
+        const p = window.__MECH_REVIEW.preview;
+        return {
+          fwd: p.moveFwd,
+          right: p.moveRight,
+          text: document.getElementById('btnRunMode').textContent.trim()
+        };
+      });
+      console.log(`地面型 ${tk.key}:`, st);
+      if (Math.sign(st.fwd) !== tk.expectFwd || Math.sign(st.right) !== tk.expectRight) {
+        throw new Error(`地面型 ${tk.key} 方向向量錯誤: fwd=${st.fwd}, right=${st.right}`);
+      }
+      if (!st.text.includes(tk.label) || !st.text.includes('奔跑') || !st.text.includes('🏃')) {
+        throw new Error(`地面型 ${tk.key} 應顯示奔跑方向 ${tk.label}，得到: ${st.text}`);
+      }
+      await page.keyboard.up(tk.key);
+      await page.waitForTimeout(60);
+    }
+
+    // 7. 驗證變形機體在飛行型態時，WSAD 移動鍵是飛行移動，不顯示地面移動
+    console.log('驗證變形機體飛行型態 WSAD 飛行移動 (不顯示地面移動)...');
+    await page.evaluate(() => window.__MECH_REVIEW.selectMech('s03'));
+    await page.waitForTimeout(300);
+    // 切換至飛行型
+    await page.click('#btnMorphToggle');
+    await page.waitForTimeout(400);
+
+    const flightIdle = await page.evaluate(() => document.getElementById('btnRunMode').textContent.trim());
+    console.log('飛行型態靜止按鈕狀態:', flightIdle);
+    if (!flightIdle.includes('✈') || flightIdle.includes('🏃') || flightIdle.includes('奔跑')) {
+      throw new Error(`變形機體飛行型態不應顯示地面移動/奔跑圖示，得到: ${flightIdle}`);
+    }
+
+    for (const tk of testKeys) {
+      await page.keyboard.down(tk.key);
+      await page.waitForTimeout(60);
+      const st = await page.evaluate(() => {
+        const p = window.__MECH_REVIEW.preview;
+        return {
+          fwd: p.moveFwd,
+          right: p.moveRight,
+          isFlight: p.morphTarget > 0.5,
+          text: document.getElementById('btnRunMode').textContent.trim()
+        };
+      });
+      console.log(`飛行型態 ${tk.key}:`, st);
+      if (!st.isFlight) {
+        throw new Error(`變形機體應處於飛行型態！`);
+      }
+      if (Math.sign(st.fwd) !== tk.expectFwd || Math.sign(st.right) !== tk.expectRight) {
+        throw new Error(`飛行型態 ${tk.key} 方向向量錯誤: fwd=${st.fwd}, right=${st.right}`);
+      }
+      if (!st.text.includes(tk.label) || !st.text.includes('飛行') || !st.text.includes('✈')) {
+        throw new Error(`飛行型態 ${tk.key} 應顯示飛行方向 ${tk.label}，得到: ${st.text}`);
+      }
+      if (st.text.includes('奔跑') || st.text.includes('🏃')) {
+        throw new Error(`飛行型態 ${tk.key} 絕對不可顯示地面移動/奔跑！得到: ${st.text}`);
+      }
+      await page.keyboard.up(tk.key);
+      await page.waitForTimeout(60);
+    }
+
     if (pageErrors.length > 0) {
       throw new Error(`頁面發生未預期錯誤: ${pageErrors.join('; ')}`);
     }

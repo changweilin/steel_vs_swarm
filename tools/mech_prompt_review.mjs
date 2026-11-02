@@ -2008,7 +2008,8 @@ async function initPreview3D() {
     preview3D.scene.add(compareGroup);
     gltfLoader = new GLTFLoader();
     preview3D.onActionEnd = () => {
-      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+      const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
     };
     preview3D.start();
   } catch (err) {
@@ -2274,16 +2275,25 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   const isNpc = currentMech?.category === 'npc_units' || isBuild;
 
   function playAction(slot, { form = 'ground', loop = true } = {}) {
-    if (isBuild && (slot === 'run' || slot === 'walk')) {
+    if (isBuild && (slot === 'run' || slot === 'walk' || slot === 'flight_move')) {
       slot = 'idle';
     }
     activeSlot = slot;
     let clipName = slot;
     if (form === 'flight') {
-      if (clipsMap.has('flight_' + slot)) clipName = 'flight_' + slot;
+      if (slot === 'flight_move' || slot === 'run' || slot === 'walk') {
+        if (clipsMap.has('flight_run')) clipName = 'flight_run';
+        else if (clipsMap.has('flight_move')) clipName = 'flight_move';
+        else if (clipsMap.has('fly')) clipName = 'fly';
+        else if (clipsMap.has('flight')) clipName = 'flight';
+        else if (clipsMap.has('flight_idle')) clipName = 'flight_idle';
+        else clipName = 'idle';
+      } else if (clipsMap.has('flight_' + slot)) {
+        clipName = 'flight_' + slot;
+      }
     }
     if (!clipsMap.has(clipName)) {
-      if (slot === 'walk' && clipsMap.has('run')) clipName = 'run';
+      if (form !== 'flight' && slot === 'walk' && clipsMap.has('run')) clipName = 'run';
       else if (slot === 'skill' && clipsMap.has('def')) clipName = 'def';
       else if (slot === 'def' && clipsMap.has('skill')) clipName = 'skill';
       else if (slot === 'ult' && clipsMap.has('atk')) clipName = 'atk';
@@ -2294,7 +2304,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
         else if (clipsMap.has('aim')) clipName = 'aim';
       }
     }
-    const clip = clipsMap.get(clipName) || clipsMap.get('idle');
+    const clip = clipsMap.get(clipName) || (form === 'flight' ? (clipsMap.get('flight_idle') || clipsMap.get('idle')) : clipsMap.get('idle'));
     if (!clip) return null;
 
     const next = mixer.clipAction(clip);
@@ -2318,8 +2328,8 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   mixer.addEventListener('finished', () => {
     if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'attack', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
       const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
-      const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? 'run' : 'idle';
-      const returnAction = isBuild ? 'idle' : (curForm === 'flight' ? 'flight_idle' : curRun);
+      const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? (curForm === 'flight' ? 'flight_move' : 'run') : 'idle';
+      const returnAction = isBuild ? 'idle' : (curForm === 'flight' ? (curRun === 'flight_move' ? 'flight_move' : 'flight_idle') : curRun);
       playAction(returnAction, { form: curForm, loop: true });
     }
   });
@@ -2412,7 +2422,8 @@ function restoreReviewSettings() {
     if (data.runMode && preview3D) {
       preview3D.setRun(data.runMode);
       updateRunModeButton();
-      syncExternalAction(data.runMode === 'idle' ? 'idle' : 'run');
+      const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+      syncExternalAction(data.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
     }
     if (typeof data.slowMotion === 'boolean' && preview3D) {
       preview3D.toggleSlow(data.slowMotion);
@@ -2545,7 +2556,7 @@ async function syncCompareUnits() {
   }
 
   const curForm = preview3D.morphTarget > 0.5 ? 'flight' : 'ground';
-  const curRun = preview3D.runMode === 'idle' ? 'idle' : 'run';
+  const curRun = preview3D.runMode === 'idle' ? 'idle' : (curForm === 'flight' ? 'flight_move' : 'run');
   const isNpc = currentMech.category === 'npc_units' || currentMech.category === 'npc_buildings';
 
   for (const verKey of ['steel_v_swarm', 'argon_vfx']) {
@@ -3426,8 +3437,36 @@ function updateRunModeButton() {
   btn.style.display = 'inline-flex';
   const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
   const isMoving = preview3D.runMode === 'normal';
-  let label = isMoving ? (isFlight ? '飛行' : (isNpcUnit ? '前進' : '奔跑')) : '靜止';
-  setBtnContent(btn, '🏃 移動：' + label);
+
+  // 移動方向判定 (前後左右)
+  let dirLabel = '';
+  if (isMoving && preview3D.moveFwd !== undefined && preview3D.moveRight !== undefined) {
+    const f = preview3D.moveFwd;
+    const r = preview3D.moveRight;
+    if (f > 0.3 && Math.abs(r) <= 0.3) dirLabel = '前進';
+    else if (f < -0.3 && Math.abs(r) <= 0.3) dirLabel = '後退';
+    else if (r < -0.3 && Math.abs(f) <= 0.3) dirLabel = '左移';
+    else if (r > 0.3 && Math.abs(f) <= 0.3) dirLabel = '右移';
+    else if (f > 0.3 && r < -0.3) dirLabel = '左前';
+    else if (f > 0.3 && r > 0.3) dirLabel = '右前';
+    else if (f < -0.3 && r < -0.3) dirLabel = '左後';
+    else if (f < -0.3 && r > 0.3) dirLabel = '右後';
+  }
+
+  let label = '靜止';
+  if (isMoving) {
+    if (isFlight) {
+      label = dirLabel ? ('飛行（' + dirLabel + '）') : '飛行';
+    } else if (isNpcUnit) {
+      label = dirLabel || '前進';
+    } else {
+      label = dirLabel ? ('奔跑（' + dirLabel + '）') : '奔跑';
+    }
+  }
+
+  const icon = isFlight ? '✈' : '🏃';
+  setBtnContent(btn, icon + ' 移動：' + label);
+  btn.title = isFlight ? '飛行移動 (快捷鍵: WASD / 方向鍵 / Shift)' : '移動 (快捷鍵: WASD / 方向鍵 / Shift)';
   btn.classList.toggle('active', isMoving);
 }
 
@@ -3436,7 +3475,8 @@ document.getElementById('btnRunMode').onclick = () => {
   if (currentMech.category === 'npc_buildings') return;
   preview3D.cycleRun();
   updateRunModeButton();
-  syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+  const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+  syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
   saveReviewSettings();
 };
 
@@ -3444,6 +3484,31 @@ document.getElementById('btnRunMode').onclick = () => {
 let spaceDownAt = 0;
 const MOVE_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const activeMoveKeys = new Set();
+const KEY_MAP = { ArrowUp: 'KeyW', ArrowDown: 'KeyS', ArrowLeft: 'KeyA', ArrowRight: 'KeyD' };
+
+function updateMoveFromKeys() {
+  if (!preview3D || currentMech?.category === 'npc_buildings') return;
+  const isUp = activeMoveKeys.has('KeyW') || activeMoveKeys.has('ArrowUp');
+  const isDown = activeMoveKeys.has('KeyS') || activeMoveKeys.has('ArrowDown');
+  const isLeft = activeMoveKeys.has('KeyA') || activeMoveKeys.has('ArrowLeft');
+  const isRight = activeMoveKeys.has('KeyD') || activeMoveKeys.has('ArrowRight');
+
+  let fwd = (isUp ? 1 : 0) - (isDown ? 1 : 0);
+  let right = (isRight ? 1 : 0) - (isLeft ? 1 : 0);
+
+  if (activeMoveKeys.size > 0 && (fwd !== 0 || right !== 0)) {
+    preview3D.setMoveDir(fwd, right);
+    updateRunModeButton();
+    const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+    syncExternalAction(isFlight ? 'flight_move' : 'run');
+    saveReviewSettings();
+  } else {
+    preview3D.setMoveDir(0, 0);
+    updateRunModeButton();
+    syncExternalAction('idle');
+    saveReviewSettings();
+  }
+}
 
 function pulseKey(btnOrEl) {
   if (!btnOrEl) return;
@@ -3478,18 +3543,14 @@ window.addEventListener('keydown', (e) => {
   const isMorpher = currentMech.category === 'morphers';
   const isHero = !isBuild && !isNpcUnit;
 
-  // 移動鍵 (WASD / 方向鍵) 完全仿照遊戲操作：按住移動
+  // 移動鍵 (WASD / 方向鍵) 完全仿照遊戲操作：按住移動 (支援前後左右方向)
   if (MOVE_CODES.has(e.code)) {
     if (!isBuild) {
       e.preventDefault();
       activeMoveKeys.add(e.code);
-      document.querySelectorAll('.vk-cap-mini[data-key="' + e.code + '"]').forEach(el => el.classList.add('active'));
-      if (preview3D.runMode !== 'normal') {
-        preview3D.setRun('normal');
-        updateRunModeButton();
-        syncExternalAction('run');
-        saveReviewSettings();
-      }
+      const capKey = KEY_MAP[e.code] || e.code;
+      document.querySelectorAll('.vk-cap-mini[data-key="' + capKey + '"]').forEach(el => el.classList.add('active'));
+      updateMoveFromKeys();
     }
     return;
   }
@@ -3552,7 +3613,8 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       preview3D.cycleRun();
       updateRunModeButton();
-      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : 'run');
+      const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
       saveReviewSettings();
     }
     return;
@@ -3562,17 +3624,15 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
   if (isEditingText()) return;
 
-  // 移動鍵放開：若無任何移動鍵按住則停下
+  // 移動鍵放開：若無任何移動鍵按住則停下，否則更新其餘按鍵方向
   if (MOVE_CODES.has(e.code)) {
     activeMoveKeys.delete(e.code);
-    document.querySelectorAll('.vk-cap-mini[data-key="' + e.code + '"]').forEach(el => el.classList.remove('active'));
+    const capKey = KEY_MAP[e.code] || e.code;
+    document.querySelectorAll('.vk-cap-mini[data-key="' + capKey + '"]').forEach(el => el.classList.remove('active'));
     const isBuild = currentMech?.category === 'npc_buildings';
-    if (!isBuild && activeMoveKeys.size === 0) {
+    if (!isBuild) {
       e.preventDefault();
-      preview3D.setRun('idle');
-      updateRunModeButton();
-      syncExternalAction('idle');
-      saveReviewSettings();
+      updateMoveFromKeys();
     }
     return;
   }
@@ -3609,7 +3669,7 @@ window.addEventListener('blur', () => {
     activeMoveKeys.clear();
     document.querySelectorAll('.vk-cap-mini').forEach(el => el.classList.remove('active'));
     if (preview3D && currentMech?.category !== 'npc_buildings') {
-      preview3D.setRun('idle');
+      preview3D.setMoveDir(0, 0);
       updateRunModeButton();
       syncExternalAction('idle');
       saveReviewSettings();

@@ -68,7 +68,11 @@ export class CharPreview {
     this.runMode = 'idle';
     this.speed = 0;
     this.topSpeed = 0;
+    this.moveFwd = 0;
+    this.moveRight = 0;
     this.travel = 0;
+    this.travelX = 0;
+    this.travelZ = 0;
     this.ground = null;
     this.groundCell = 1;
     this._ent = null;
@@ -847,17 +851,59 @@ export class CharPreview {
       this.runMode = 'idle';
       this.moving = false;
       this.speed = 0;
+      this.moveFwd = 0;
+      this.moveRight = 0;
       this.onMove?.(false, 0);
       return 'idle';
     }
     this.runMode = mode;
     this.moving = mode !== 'idle';
+    if (this.moving) {
+      if (Math.hypot(this.moveFwd || 0, this.moveRight || 0) < 0.001) {
+        this.moveFwd = 1;
+        this.moveRight = 0;
+      }
+    } else {
+      this.moveFwd = 0;
+      this.moveRight = 0;
+    }
     if (!this.slowMotion) {
       this.timeScale = 1;
     }
     this.idle = 0;
     this.onMove?.(this.moving, this.speed);
     return mode;
+  }
+
+  /** 設定移動方向(fwd: +1 前 / -1 後; right: +1 右 / -1 左; WASD/方向鍵輸入)。 */
+  setMoveDir(fwd = 0, right = 0) {
+    if (this.isUnit && !this.topSpeed) {
+      this.runMode = 'idle';
+      this.moving = false;
+      this.speed = 0;
+      this.moveFwd = 0;
+      this.moveRight = 0;
+      this.onMove?.(false, 0);
+      return 'idle';
+    }
+    const mag = Math.hypot(fwd, right);
+    if (mag > 0.001) {
+      this.moveFwd = fwd / mag;
+      this.moveRight = right / mag;
+      this.runMode = 'normal';
+      this.moving = true;
+    } else {
+      this.moveFwd = 0;
+      this.moveRight = 0;
+      this.runMode = 'idle';
+      this.moving = false;
+    }
+    if (!this.slowMotion && this.moving) {
+      this.timeScale = 1;
+    }
+    this.idle = 0;
+    this.onMove?.(this.moving, this.speed);
+    return this.runMode;
   }
 
   /** 展示台移動二態切換(靜止 ↔ 移動)。 */
@@ -926,14 +972,27 @@ export class CharPreview {
    */
   _stepLoco(dt, now) {
     if (!this._ent) return;
-    const top = this.topSpeed;
+    const isFlight = (this.kind === 'drone') || (this.morphRig && this.morphTarget > 0.5);
+    const top = (this.isUnit || !this.charId)
+      ? this.topSpeed
+      : (heroMobility(charKind(this.charId), CHARACTERS[this.charId]?.mods, isFlight) || this.topSpeed || 10);
+    this.topSpeed = top;
     const want = this.moving ? top : 0;
     this.speed = want > this.speed
       ? Math.min(want, this.speed + top / MOVE.ACC_S * dt)
       : Math.max(want, this.speed - top / MOVE.DEC_S * dt);
     if (!this.slowMotion && !this.moving && this.speed <= 0 && this.timeScale < 1) this.timeScale = 1;
+
+    // 機體面朝 +z, 局部 +x 為右
+    const vx = (this.moveRight || 0) * this.speed;
+    const vz = (this.moveFwd !== undefined ? this.moveFwd : (this.moving ? 1 : 0)) * this.speed;
+    this.travelX = (this.travelX || 0) + vx * dt;
+    this.travelZ = (this.travelZ || 0) + vz * dt;
     this.travel += this.speed * dt;
-    if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
+    if (this.ground) {
+      this.ground.position.x = -(this.travelX % this.groundCell);
+      this.ground.position.z = -(this.travelZ % this.groundCell);
+    }
 
     // 變形者:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
     let hy = this.morphTarget > 0.5 ? 5 : 0;
@@ -954,7 +1013,7 @@ export class CharPreview {
     // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
     // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
     stepCombatFx(this._ent, now, dt);
-    stepLocomotion(this._ent, dt, now, 0, -this.speed * dt, 0);
+    stepLocomotion(this._ent, dt, now, -vx * dt, -vz * dt, 0);
     if (this.morphRig) {
       this.morphM = this.morphRig.m ?? 0;   // morphSwap 每幀寫回這一格(不再是 loco.morph)
       // 飛行型離地懸停(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
