@@ -2247,6 +2247,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   const url = '/api/compare/glb?ver=' + verKey + '&id=' + id;
   const gltf = await gltfLoader.loadAsync(url);
   const model = gltf.scene;
+  model.traverse((o) => { if (o.isSkinnedMesh || o.isMesh) o.frustumCulled = false; });
   const group = new THREE.Group();
   group.add(model);
 
@@ -2308,6 +2309,9 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
     if (!clip) return null;
 
     const next = mixer.clipAction(clip);
+    if (currentAction === next && next.isRunning()) {
+      return next;
+    }
     if (currentAction && currentAction !== next) {
       currentAction.fadeOut(0.12);
     }
@@ -3476,7 +3480,11 @@ document.getElementById('btnRunMode').onclick = () => {
   preview3D.cycleRun();
   updateRunModeButton();
   const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
-  syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
+  const slot = preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run');
+  lastMoveFwd = preview3D.moveFwd || 0;
+  lastMoveRight = preview3D.moveRight || 0;
+  lastMoveSlot = slot;
+  syncExternalAction(slot);
   saveReviewSettings();
 };
 
@@ -3485,6 +3493,9 @@ let spaceDownAt = 0;
 const MOVE_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const activeMoveKeys = new Set();
 const KEY_MAP = { ArrowUp: 'KeyW', ArrowDown: 'KeyS', ArrowLeft: 'KeyA', ArrowRight: 'KeyD' };
+let lastMoveFwd = 0;
+let lastMoveRight = 0;
+let lastMoveSlot = 'idle';
 
 function updateMoveFromKeys() {
   if (!preview3D || currentMech?.category === 'npc_buildings') return;
@@ -3497,16 +3508,27 @@ function updateMoveFromKeys() {
   let right = (isRight ? 1 : 0) - (isLeft ? 1 : 0);
 
   if (activeMoveKeys.size > 0 && (fwd !== 0 || right !== 0)) {
-    preview3D.setMoveDir(fwd, right);
-    updateRunModeButton();
     const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
-    syncExternalAction(isFlight ? 'flight_move' : 'run');
-    saveReviewSettings();
+    const slot = isFlight ? 'flight_move' : 'run';
+    if (fwd !== lastMoveFwd || right !== lastMoveRight || slot !== lastMoveSlot) {
+      lastMoveFwd = fwd;
+      lastMoveRight = right;
+      lastMoveSlot = slot;
+      preview3D.setMoveDir(fwd, right);
+      updateRunModeButton();
+      syncExternalAction(slot);
+      saveReviewSettings();
+    }
   } else {
-    preview3D.setMoveDir(0, 0);
-    updateRunModeButton();
-    syncExternalAction('idle');
-    saveReviewSettings();
+    if (lastMoveSlot !== 'idle' || lastMoveFwd !== 0 || lastMoveRight !== 0) {
+      lastMoveFwd = 0;
+      lastMoveRight = 0;
+      lastMoveSlot = 'idle';
+      preview3D.setMoveDir(0, 0);
+      updateRunModeButton();
+      syncExternalAction('idle');
+      saveReviewSettings();
+    }
   }
 }
 
@@ -3547,6 +3569,7 @@ window.addEventListener('keydown', (e) => {
   if (MOVE_CODES.has(e.code)) {
     if (!isBuild) {
       e.preventDefault();
+      if (e.repeat) return;
       activeMoveKeys.add(e.code);
       const capKey = KEY_MAP[e.code] || e.code;
       document.querySelectorAll('.vk-cap-mini[data-key="' + capKey + '"]').forEach(el => el.classList.add('active'));
@@ -3614,7 +3637,11 @@ window.addEventListener('keydown', (e) => {
       preview3D.cycleRun();
       updateRunModeButton();
       const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
-      syncExternalAction(preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run'));
+      const slot = preview3D.runMode === 'idle' ? 'idle' : (isFlight ? 'flight_move' : 'run');
+      lastMoveFwd = preview3D.moveFwd || 0;
+      lastMoveRight = preview3D.moveRight || 0;
+      lastMoveSlot = slot;
+      syncExternalAction(slot);
       saveReviewSettings();
     }
     return;

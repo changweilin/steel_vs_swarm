@@ -110,6 +110,9 @@ export async function loadGlbUnit(verKey, spec) {
     if (!clip) return null;
 
     const next = mixer.clipAction(clip);
+    if (currentAction === next && next.isRunning()) {
+      return next;
+    }
     if (currentAction && currentAction !== next) {
       currentAction.fadeOut(0.12);
     }

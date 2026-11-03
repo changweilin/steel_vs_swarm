@@ -893,8 +893,6 @@ export class CharPreview {
       this.runMode = 'normal';
       this.moving = true;
     } else {
-      this.moveFwd = 0;
-      this.moveRight = 0;
       this.runMode = 'idle';
       this.moving = false;
     }
@@ -972,7 +970,8 @@ export class CharPreview {
    */
   _stepLoco(dt, now) {
     if (!this._ent) return;
-    const isFlight = (this.kind === 'drone') || (this.morphRig && this.morphTarget > 0.5);
+    const isFlight = (this.isUnit ? this.unitKind === 'drone' : charKind(this.charId) === 'drone')
+      || (this.morphRig && this.morphTarget > 0.5);
     const top = (this.isUnit || !this.charId)
       ? this.topSpeed
       : (heroMobility(charKind(this.charId), CHARACTERS[this.charId]?.mods, isFlight) || this.topSpeed || 10);
@@ -982,6 +981,10 @@ export class CharPreview {
       ? Math.min(want, this.speed + top / MOVE.ACC_S * dt)
       : Math.max(want, this.speed - top / MOVE.DEC_S * dt);
     if (!this.slowMotion && !this.moving && this.speed <= 0 && this.timeScale < 1) this.timeScale = 1;
+    if (!this.moving && this.speed <= 0.001) {
+      this.moveFwd = 0;
+      this.moveRight = 0;
+    }
 
     // 機體面朝 +z, 局部 +x 為右
     const vx = (this.moveRight || 0) * this.speed;
@@ -990,8 +993,9 @@ export class CharPreview {
     this.travelZ = (this.travelZ || 0) + vz * dt;
     this.travel += this.speed * dt;
     if (this.ground) {
-      this.ground.position.x = -(this.travelX % this.groundCell);
-      this.ground.position.z = -(this.travelZ % this.groundCell);
+      const cell = this.groundCell;
+      this.ground.position.x = -(((this.travelX % cell) + cell) % cell);
+      this.ground.position.z = -(((this.travelZ % cell) + cell) % cell);
     }
 
     // 變形者:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
@@ -1114,7 +1118,9 @@ export class CharPreview {
         this.holder.rotation.x += (0 - this.holder.rotation.x) * Math.min(1, 8 * adt);
       }
       this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * adt);
-      if (!this.anim && !this._jump) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * adt);
+      if (!this.anim && !this._jump && !(this.morphRig && this.morphTarget > 0.5)) {
+        this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * adt);
+      }
 
       for (const u of (this.externalUnits || [])) {
         if (!u?.group) continue;

@@ -275,7 +275,7 @@ async function run() {
 
     // 展開 Prompt 規格工作台
     await page.evaluate(() => window.__MECH_REVIEW.toggleWorkbench(true));
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(380);
     const initWbWidth = await page.evaluate(() => {
       return document.querySelector('.spec-workbench-pane').getBoundingClientRect().width;
     });
