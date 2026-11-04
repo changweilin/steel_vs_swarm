@@ -1725,7 +1725,7 @@ function renderHtmlPage(localThree = false) {
             <span style="font-size:11px;font-weight:700;color:var(--accent-cyan);">版本:</span>
             <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerCurrent" checked> 本專案</label>
             <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerSteel"> steel_v_swarm</label>
-            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerArgon"> <span id="lblVerArgon">argon blender vfx</span></label>
+            <label style="font-size:11px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;"><input type="checkbox" id="chkVerArgon"> <span id="lblVerArgon">argon blender hero</span></label>
             <button class="btn-tool-sm" id="btnComplexity" style="margin-left:4px;color:#facc15;border-color:rgba(250,204,21,0.4);" title="陳列三版本建模組成複雜度">📊 建模複雜度</button>
           </div>
         </div>
@@ -2616,7 +2616,7 @@ async function syncCompareUnits() {
         const isBuild = currentMech.category === 'npc_buildings';
         const label = verKey === 'steel_v_swarm'
           ? '2. steel_v_swarm (Godot)'
-          : (isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (Blender)'));
+          : (isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender hero (Blender)'));
         compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
       }
       const initialAction = isBuild ? 'idle' : curRun;
@@ -2804,7 +2804,7 @@ function selectMech(id) {
   const isNpc = m.category === 'npc_units' || isBuild;
   const lblArgon = document.getElementById('lblVerArgon');
   if (lblArgon) {
-    lblArgon.textContent = isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender vfx');
+    lblArgon.textContent = isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender hero');
   }
 
   // 更新卡片選取態
@@ -3921,10 +3921,10 @@ async function showComplexityModal() {
 
   const isBuild = currentMech.category === 'npc_buildings';
   const isNpcUnit = currentMech.category === 'npc_units';
-  const col3Title = isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender vfx (高精)');
+  const col3Title = isBuild ? '3. argon blender build' : (isNpc ? '3. argon blender npc' : '3. argon blender hero (高精)');
   const arch1 = isNpc ? '程序具名零件 / 陣營戰鬥模組' : '程序具名零件 (JS Module)';
   const arch2 = isNpc ? 'Godot 陣營/戰鬥 GLB' : '遊戲最佳化戰鬥 GLB';
-  const arch3 = isArgPending ? 'Blender 原生高精模型 (檔案待補)' : (isBuild ? 'Blender 原生高精 建築 GLB' : (isNpc ? 'Blender 原生高精 NPC GLB' : 'Blender 原生高精 VFX GLB'));
+  const arch3 = isArgPending ? 'Blender 原生高精模型 (檔案待補)' : (isBuild ? 'Blender 原生高精 建築 GLB' : (isNpc ? 'Blender 原生高精 NPC GLB' : 'Blender 原生高精 Hero GLB'));
 
   const curAnimDesc = isBuild
     ? '1 個動作 (攻擊)'
@@ -4060,7 +4060,7 @@ async function showComplexityModal() {
     <div style="font-size:11px;color:#94a3b8;line-height:1.6;background:rgba(255,255,255,0.03);padding:10px;border-radius:6px;">
       <div><b>・本專案資源:</b> <code>\${escapeHtml(cur.path || 'public/js/forge/')}</code></div>
       <div><b>・steel_v_swarm 資源:</b> <code>\${escapeHtml(stl.path || 'app/steel_v_swarm/')}</code></div>
-      <div><b>・\${isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender vfx')} 資源:</b> <code>\${escapeHtml(arg.path || (isBuild ? 'tools/ai3d/argon blender build/' : (isNpc ? 'tools/ai3d/argon blender npc/' : 'tools/ai3d/argon blender vfx/')))}</code> \${isArgPending ? '<span style="color:#fbbf24;font-weight:bold;">[已建立路徑連結，檔案待後續補上]</span>' : ''}</div>
+      <div><b>・\${isBuild ? 'argon blender build' : (isNpc ? 'argon blender npc' : 'argon blender hero')} 資源:</b> <code>\${escapeHtml(arg.path || (isBuild ? 'tools/ai3d/argon blender build/' : (isNpc ? 'tools/ai3d/argon blender npc/' : 'tools/ai3d/argon blender hero/')))}</code> \${isArgPending ? '<span style="color:#fbbf24;font-weight:bold;">[已建立路徑連結，檔案待後續補上]</span>' : ''}</div>
     </div>
   \`;
 }

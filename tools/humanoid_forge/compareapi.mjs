@@ -1,5 +1,5 @@
 // ============ 機體三版本比對與複雜度 API (dev-only) ============
-// 支援本專案 (steel_vs_swarm)、steel_v_swarm (Godot)、argon blender vfx (Blender 高精) 三版本比對。
+// 支援本專案 (steel_vs_swarm)、steel_v_swarm (Godot)、argon blender hero (Blender 高精) 三版本比對。
 //
 // 契約:
 //   GET /api/compare/complexity?id=<id>  回傳三版本的建模組成複雜度統計 (JSON)
@@ -12,7 +12,8 @@ import { ROOT } from '../audit_src.mjs';
 export const PATHS = {
   current: ROOT,
   steel_v_swarm: 'C:\\Users\\user\\Documents\\app\\steel_v_swarm',
-  argon_vfx: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender vfx',
+  argon_hero: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender hero',
+  argon_vfx: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender hero',
   argon_npc: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender npc',
   argon_build: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender build',
 };
@@ -167,18 +168,18 @@ export async function getComplexity(rawId) {
     res.steel_v_swarm = { error: String(err?.message || err) };
   }
 
-  // 3. argon blender (Blender 高精 VFX / NPC / 建築 模型)
+  // 3. argon blender (Blender 高精 Hero / NPC / 建築 模型)
   try {
     const pBuild = join(PATHS.argon_build, `${id}.glb`);
     const pNpc = join(PATHS.argon_npc, `${id}.glb`);
-    const pVfx = join(PATHS.argon_vfx, `${id}.glb`);
+    const pHero = join(PATHS.argon_hero, `${id}.glb`);
     const isBuild = existsSync(pBuild) || id.endsWith('_base') || id.endsWith('_tower') || id.endsWith('_bunker');
     const isNpcPath = isBuild || existsSync(pNpc) || id.includes('_');
-    const p = existsSync(pBuild) ? pBuild : (existsSync(pNpc) ? pNpc : (existsSync(pVfx) ? pVfx : null));
-    const targetName = isBuild ? 'argon blender build' : (isNpcPath ? 'argon blender npc' : 'argon blender vfx');
+    const p = existsSync(pBuild) ? pBuild : (existsSync(pNpc) ? pNpc : (existsSync(pHero) ? pHero : null));
+    const targetName = isBuild ? 'argon blender build' : (isNpcPath ? 'argon blender npc' : 'argon blender hero');
     const targetRelPath = isBuild
       ? `tools/ai3d/argon blender build/${id}.glb`
-      : (isNpcPath ? `tools/ai3d/argon blender npc/${id}.glb` : `tools/ai3d/argon blender vfx/${id}.glb`);
+      : (isNpcPath ? `tools/ai3d/argon blender npc/${id}.glb` : `tools/ai3d/argon blender hero/${id}.glb`);
     if (p) {
       const buf = await readFile(p);
       const meta = parseGLB(buf);
@@ -191,7 +192,7 @@ export async function getComplexity(rawId) {
     } else {
       res.argon_vfx = {
         name: targetName,
-        arch: isNpcPath ? 'Blender 原生高精模型 (GLB - 檔案待後續補上)' : 'Blender 原生高精 VFX 模型 (GLB)',
+        arch: isNpcPath ? 'Blender 原生高精模型 (GLB - 檔案待後續補上)' : 'Blender 原生高精 Hero 模型 (GLB)',
         path: targetRelPath,
         status: 'pending',
       };
@@ -214,11 +215,11 @@ export async function getGLB(verKey, rawId) {
     const pCombat = join(PATHS.steel_v_swarm, 'assets', 'models', 'combat', `${id}.glb`);
     const pRef = join(PATHS.steel_v_swarm, 'assets', 'models', 'reference', `${id}.glb`);
     filePath = existsSync(pFaction) ? pFaction : (existsSync(pCombat) ? pCombat : (existsSync(pRef) ? pRef : null));
-  } else if (verKey === 'argon_vfx' || verKey === 'argon_npc' || verKey === 'argon_build') {
+  } else if (verKey === 'argon_vfx' || verKey === 'argon_hero' || verKey === 'argon_npc' || verKey === 'argon_build') {
     const pBuild = join(PATHS.argon_build, `${id}.glb`);
     const pNpc = join(PATHS.argon_npc, `${id}.glb`);
-    const pVfx = join(PATHS.argon_vfx, `${id}.glb`);
-    filePath = existsSync(pBuild) ? pBuild : (existsSync(pNpc) ? pNpc : (existsSync(pVfx) ? pVfx : null));
+    const pHero = join(PATHS.argon_hero, `${id}.glb`);
+    filePath = existsSync(pBuild) ? pBuild : (existsSync(pNpc) ? pNpc : (existsSync(pHero) ? pHero : null));
   } else if (verKey === 'current_combat') {
     filePath = join(PATHS.current, 'public', 'assets', 'models', 'combat', `${id}.glb`);
   }

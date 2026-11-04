@@ -444,7 +444,7 @@ editor.mount($('dollPanel'));
 
 setSpec(SPECS[0]);
 
-// ---- 建模複雜度比較 (本專案 / steel_v_swarm / argon blender vfx) ----
+// ---- 建模複雜度比較 (本專案 / steel_v_swarm / argon blender hero) ----
 let compCache = {};
 function fmtNum(n) {
   return n != null ? Number(n).toLocaleString() : '—';
@@ -479,7 +479,7 @@ function renderComplexityHTML(d, s) {
     <div class="comp-btn-row">
       <button class="segb" onclick="window.__setStageVersion('forge')">本專案</button>
       <button class="segb" onclick="window.__setStageVersion('steel_v_swarm')">steel_v_swarm</button>
-      <button class="segb" onclick="window.__setStageVersion('argon_vfx')">argon vfx</button>
+      <button class="segb" onclick="window.__setStageVersion('argon_vfx')">argon hero</button>
       <button class="segb hl" onclick="window.__setStageVersion('compare')">⚔️ 三版並排比對</button>
     </div>
 
@@ -490,7 +490,7 @@ function renderComplexityHTML(d, s) {
           <th>維度 / 指標</th>
           <th style="color:#6ea8ff">1. 本專案</th>
           <th style="color:#8fd8a0">2. steel_v_swarm</th>
-          <th style="color:#ffd479">3. argon vfx</th>
+          <th style="color:#ffd479">3. argon hero</th>
         </tr>
       </thead>
       <tbody>
@@ -579,7 +579,7 @@ function renderComplexityHTML(d, s) {
     <div class="note" style="line-height:1.6;">
       ・<b>本專案 (steel_vs_swarm)</b>: <code>${esc(cur.path || 'public/js/forge/')}</code><br>
       ・<b>steel_v_swarm</b>: <code>${esc(stl.path || 'app/steel_v_swarm/')}</code><br>
-      ・<b>argon blender vfx</b>: <code>${esc(arg.path || 'tools/ai3d/argon blender vfx/')}</code>
+      ・<b>argon blender hero</b>: <code>${esc(arg.path || 'tools/ai3d/argon blender hero/')}</code>
     </div>
   `;
 }

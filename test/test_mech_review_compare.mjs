@@ -131,7 +131,7 @@ async function run() {
     console.log('開始測試三版本多選...');
     // 勾選 steel_v_swarm
     await page.click('#chkVerSteel');
-    // 勾選 argon blender vfx
+    // 勾選 argon blender hero
     await page.click('#chkVerArgon');
 
     // 等待所有模型異步載入完成

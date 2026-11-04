@@ -1,5 +1,5 @@
 // ============ 建模版本註冊表(機體展示台唯一縫;dev-only)============
-// 支援本專案 (steel_vs_swarm)、steel_v_swarm (Godot)、argon blender vfx (Blender 高精) 三版本比對。
+// 支援本專案 (steel_vs_swarm)、steel_v_swarm (Godot)、argon blender hero (Blender 高精) 三版本比對。
 //
 // 版本收成**一張表**:一列 = 一個版本(標籤 + 能力旗標 + 怎麼建 + 結構欄怎麼印),
 // 展示台只認下面這份「台上單位」契約,一行 `if (版本 === …)` 都沒有。
@@ -207,7 +207,7 @@ export async function compareBuild(spec, ctx) {
 
   group.add(makeBannerSprite('1. 本專案 (程序零件)', -spacing, H * 1.05));
   group.add(makeBannerSprite('2. steel_v_swarm (Godot)', 0, H * 1.05));
-  group.add(makeBannerSprite('3. argon blender vfx (高精)', spacing, H * 1.05));
+  group.add(makeBannerSprite('3. argon blender hero (高精)', spacing, H * 1.05));
 
   function playAction(slot, opts = {}) {
     uSteel.playAction?.(slot, opts);
@@ -280,7 +280,7 @@ function forgeRigLines(unit, spec) {
 }
 
 function glbRigLines(unit, spec, verKey) {
-  const name = verKey === 'argon_vfx' ? 'argon blender vfx (高精)' : 'steel_v_swarm (Godot)';
+  const name = verKey === 'argon_vfx' ? 'argon blender hero (高精)' : 'steel_v_swarm (Godot)';
   const clips = unit?.clips || [];
   return [
     [`模型來源: ${name}`, true],
@@ -297,7 +297,7 @@ function compareRigLines() {
   return [
     ['【1】本專案: public/js/forge/ 程序零件樹 (locomotion.js 步態驅動)', true],
     ['【2】steel_v_swarm: app/steel_v_swarm 戰鬥 GLB (Godot 動作驅動)', true],
-    ['【3】argon blender vfx: tools/ai3d 高精 VFX GLB (Blender 動作驅動)', true],
+    ['【3】argon blender hero: tools/ai3d 高精 Hero GLB (Blender 動作驅動)', true],
     ['動作同步連動: 點擊巡航/全速/射擊/招式按鈕，三版本機體同步演出', true],
     ['全角度比對: 可按住滑鼠旋轉軌道鏡頭，零死角觀察動態細節差異', true],
   ];
@@ -326,15 +326,15 @@ export const STAGE_VERSIONS = [
     rigLines: (unit, spec) => glbRigLines(unit, spec, 'steel_v_swarm'),
   },
   {
-    key: 'argon_vfx', label: 'argon blender vfx', icon: 'verArgon',
-    tip: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender vfx (Blender 高精 VFX 模型)',
+    key: 'argon_vfx', label: 'argon blender hero', icon: 'verArgon',
+    tip: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\argon blender hero (Blender 高精 Hero 模型)',
     caps: { edit: false, wpn: false, joints: false }, pair: false,
     build: (spec, ctx) => loadGlbUnit('argon_vfx', spec, ctx),
     rigLines: (unit, spec) => glbRigLines(unit, spec, 'argon_vfx'),
   },
   {
     key: 'compare', label: '三版並排', icon: 'verCompare',
-    tip: '本專案 / steel_v_swarm / argon blender vfx 三版本並排同步對照每個動作',
+    tip: '本專案 / steel_v_swarm / argon blender hero 三版本並排同步對照每個動作',
     caps: { edit: false, wpn: false, joints: false }, pair: false,
     build: compareBuild,
     rigLines: compareRigLines,
