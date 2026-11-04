@@ -1057,23 +1057,15 @@ export class CharPreview {
       this.ground.position.z = -(((this.travelZ % cell) + cell) % cell);
     }
 
-    const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-    const targetYaw = this.moving
-      ? Math.atan2(-(this.moveRight || 0), (this.moveFwd !== undefined ? this.moveFwd : 1))
-      : 0;
-    this.bodyYaw = (this.bodyYaw !== undefined) ? this.bodyYaw : 0;
-    const prevYaw = this.bodyYaw;
-    if (this.moving) {
-      this.bodyYaw += wrapA(targetYaw - this.bodyYaw) * Math.min(1, 14 * dt);
-    } else {
-      this.bodyYaw += wrapA(0 - this.bodyYaw) * Math.min(1, 10 * dt);
-    }
+    // 移動時維持前方朝向(A/D 為左右側向橫移，不旋轉掉頭；後退為倒退步態)
+    this.bodyYaw = 0;
+    const prevYaw = 0;
     if (!this.anim) {
-      this.holder.rotation.y = this.bodyYaw;
+      this.holder.rotation.y = 0;
     }
     for (const u of (this.externalUnits || [])) {
       if (u?.group && !this.anim) {
-        u.group.rotation.y = this.bodyYaw;
+        u.group.rotation.y = 0;
       }
     }
 

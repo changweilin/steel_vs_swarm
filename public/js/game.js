@@ -2431,17 +2431,9 @@ export class BattleClient {
     return this._moveAxis().mag > 0.02;
   }
 
-  /** 第三人稱的機體朝向:移動時面向移動方向,瞄準/開火/防守時面向相機視線。 */
+  /** 第三人稱的機體朝向:面向相機視線(維持準星對齊，AD 側向移動不掉頭)。 */
   _stepThirdPersonBody(dt, move) {
-    if (this.viewMode !== 'tps' || this.defending) {
-      this.bodyYaw = this.yaw;
-      return;
-    }
-    const moving = move.lengthSq() > 0.0004;
-    const target = this.aiming || this.firing
-      ? this.yaw
-      : (moving ? Math.atan2(-move.x, -move.z) : null);
-    if (target != null) this.bodyYaw = camAngleStep(this.bodyYaw, target, PLAYER_TPS.BODY_TURN_K, dt);
+    this.bodyYaw = this.yaw;
   }
 
   /**

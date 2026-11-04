@@ -91,9 +91,9 @@ async function run() {
     await page.keyboard.up('KeyD');
     await page.waitForTimeout(200);
 
-    // D 鍵：moveRight=1, bodyYaw 應為負值 (約 -Math.PI / 2 ≈ -1.57rad), 地網位移應往左滾動讓機體向右跑
-    if (dMoveState.bodyYaw >= -0.5 || dMoveState.holderRotY >= -0.5) {
-      throw new Error(`D 鍵右移時機體未轉向右方！bodyYaw: ${dMoveState.bodyYaw}`);
+    // D 鍵：moveRight=1, 左右側向移動不掉頭 (bodyYaw 維持 0), 地網位移應往左滾動讓機體向右跑
+    if (dMoveState.moveRight !== 1 || Math.abs(dMoveState.bodyYaw) > 0.1 || Math.abs(dMoveState.holderRotY) > 0.1) {
+      throw new Error(`D 鍵右移應為側向移動不掉頭！bodyYaw: ${dMoveState.bodyYaw}, right: ${dMoveState.moveRight}`);
     }
 
     // 2.2 測試 A 鍵 (左移)
@@ -112,9 +112,9 @@ async function run() {
     await page.keyboard.up('KeyA');
     await page.waitForTimeout(200);
 
-    // A 鍵：moveRight=-1, bodyYaw 應為正值 (約 Math.PI / 2 ≈ +1.57rad)
-    if (aMoveState.bodyYaw <= 0.5 || aMoveState.holderRotY <= 0.5) {
-      throw new Error(`A 鍵左移時機體未轉向左方！bodyYaw: ${aMoveState.bodyYaw}`);
+    // A 鍵：moveRight=-1, 左右側向移動不掉頭 (bodyYaw 維持 0)
+    if (aMoveState.moveRight !== -1 || Math.abs(aMoveState.bodyYaw) > 0.1 || Math.abs(aMoveState.holderRotY) > 0.1) {
+      throw new Error(`A 鍵左移應為側向移動不掉頭！bodyYaw: ${aMoveState.bodyYaw}, right: ${aMoveState.moveRight}`);
     }
 
     // 2.3 測試 S 鍵 (後退)
@@ -133,9 +133,9 @@ async function run() {
     await page.keyboard.up('KeyS');
     await page.waitForTimeout(200);
 
-    // S 鍵：moveFwd=-1, bodyYaw 應接近 Math.PI (約 ±3.14rad)
-    if (Math.abs(sMoveState.bodyYaw) < 2.5) {
-      throw new Error(`S 鍵後退時機體未調轉面向後退方向！bodyYaw: ${sMoveState.bodyYaw}`);
+    // S 鍵：moveFwd=-1, 倒退步態不掉頭 (bodyYaw 維持 0)
+    if (sMoveState.moveFwd !== -1 || Math.abs(sMoveState.bodyYaw) > 0.1 || Math.abs(sMoveState.holderRotY) > 0.1) {
+      throw new Error(`S 鍵後退應為倒退移動不掉頭！bodyYaw: ${sMoveState.bodyYaw}, fwd: ${sMoveState.moveFwd}`);
     }
 
     // 2.4 放開鍵盤靜止後應平滑回正 (bodyYaw 回到 0)
