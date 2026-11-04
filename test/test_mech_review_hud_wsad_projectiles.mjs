@@ -186,7 +186,7 @@ async function run() {
     await page.waitForTimeout(300);
 
     await page.click('#btnActionAttack');
-    await page.waitForTimeout(650);
+    await page.waitForFunction(() => window.__MECH_REVIEW.preview.effects.some(e => e.obj?.userData?.authoredProjectile), { timeout: 4000 });
 
     const s10HeavyProj = await page.evaluate(() => {
       const p = window.__MECH_REVIEW.preview;

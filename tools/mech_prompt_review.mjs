@@ -2273,25 +2273,48 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   let currentAction = null;
   let activeSlot = 'idle';
 
+  const isDrone = currentMech?.category === 'drones';
   const isBuild = currentMech?.category === 'npc_buildings';
   const isNpc = currentMech?.category === 'npc_units' || isBuild;
 
-  function playAction(slot, { form = 'ground', loop = true } = {}) {
+  function playAction(slot, { form = 'ground', loop = true, fwd = undefined, right = undefined } = {}) {
     if (isBuild && (slot === 'run' || slot === 'walk' || slot === 'flight_move')) {
       slot = 'idle';
     }
     activeSlot = slot;
     let clipName = slot;
+    const moveF = fwd !== undefined ? fwd : (lastMoveFwd || 0);
+    const moveR = right !== undefined ? right : (lastMoveRight || 0);
     if (form === 'flight') {
       if (slot === 'flight_move' || slot === 'run' || slot === 'walk') {
-        if (clipsMap.has('flight_run')) clipName = 'flight_run';
+        if (moveF < -0.3 && (clipsMap.has('flight_backward') || clipsMap.has('move_backward'))) {
+          clipName = clipsMap.has('flight_backward') ? 'flight_backward' : 'move_backward';
+        } else if (moveR < -0.3 && (clipsMap.has('flight_left') || clipsMap.has('strafe_left'))) {
+          clipName = clipsMap.has('flight_left') ? 'flight_left' : 'strafe_left';
+        } else if (moveR > 0.3 && (clipsMap.has('flight_right') || clipsMap.has('strafe_right'))) {
+          clipName = clipsMap.has('flight_right') ? 'flight_right' : 'strafe_right';
+        } else if (clipsMap.has('flight_run')) clipName = 'flight_run';
         else if (clipsMap.has('flight_move')) clipName = 'flight_move';
+        else if (clipsMap.has('flight_cruise')) clipName = 'flight_cruise';
         else if (clipsMap.has('fly')) clipName = 'fly';
         else if (clipsMap.has('flight')) clipName = 'flight';
+        else if (clipsMap.has('run')) clipName = 'run';
         else if (clipsMap.has('flight_idle')) clipName = 'flight_idle';
         else clipName = 'idle';
       } else if (clipsMap.has('flight_' + slot)) {
         clipName = 'flight_' + slot;
+      }
+    } else {
+      if (slot === 'run' || slot === 'walk') {
+        if (moveF < -0.3 && clipsMap.has('move_backward')) {
+          clipName = 'move_backward';
+        } else if (moveR < -0.3 && clipsMap.has('strafe_left')) {
+          clipName = 'strafe_left';
+        } else if (moveR > 0.3 && clipsMap.has('strafe_right')) {
+          clipName = 'strafe_right';
+        } else if (clipsMap.has('run')) clipName = 'run';
+        else if (clipsMap.has('walk')) clipName = 'walk';
+        else clipName = 'idle';
       }
     }
     if (!clipsMap.has(clipName)) {
@@ -2332,14 +2355,16 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
 
   mixer.addEventListener('finished', () => {
     if (['light', 'heavy', 'skill', 'def', 'ult', 'atk', 'attack', 'jump', 'to_flight', 'to_ground'].includes(activeSlot)) {
-      const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
+      const isFlight = (currentMech?.category === 'drones') || (preview3D && preview3D.morphTarget > 0.5);
+      const curForm = isFlight ? 'flight' : 'ground';
       const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? (curForm === 'flight' ? 'flight_move' : 'run') : 'idle';
       const returnAction = isBuild ? 'idle' : (curForm === 'flight' ? (curRun === 'flight_move' ? 'flight_move' : 'flight_idle') : curRun);
-      playAction(returnAction, { form: curForm, loop: true });
+      playAction(returnAction, { form: curForm, loop: true, fwd: lastMoveFwd, right: lastMoveRight });
     }
   });
 
-  playAction('idle', { form: 'ground', loop: true });
+  const initForm = (isDrone || (preview3D && preview3D.morphTarget > 0.5)) ? 'flight' : 'ground';
+  playAction(initForm === 'flight' ? 'flight_idle' : 'idle', { form: initForm, loop: true });
 
   let jumpState = null;
   function jump(high = false) {
@@ -2362,6 +2387,8 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
     group,
     mixer,
     playAction,
+    getActiveSlot: () => activeSlot,
+    getCurrentClip: () => currentAction?.getClip()?.name || null,
     jump,
     highJump: () => jump(true),
     crouch: (amt) => {
@@ -2381,9 +2408,11 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
           jumpState = null;
           unitObj._jump = null;
           group.position.y = 0;
-          const curForm = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
-          const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? 'run' : 'idle';
-          playAction(curForm === 'flight' ? 'flight_idle' : curRun, { form: curForm, loop: true });
+          const isFlight = (currentMech?.category === 'drones') || (preview3D && preview3D.morphTarget > 0.5);
+          const curForm = isFlight ? 'flight' : 'ground';
+          const curRun = (preview3D?.runMode && preview3D.runMode !== 'idle') ? (curForm === 'flight' ? 'flight_move' : 'run') : 'idle';
+          const returnAction = isBuild ? 'idle' : (curForm === 'flight' ? (curRun === 'flight_move' ? 'flight_move' : 'flight_idle') : curRun);
+          playAction(returnAction, { form: curForm, loop: true, fwd: lastMoveFwd, right: lastMoveRight });
         } else {
           group.position.y = Math.sin(f * Math.PI) * jumpState.peak;
         }
@@ -2569,7 +2598,8 @@ async function syncCompareUnits() {
     compareGroup.add(makeBannerSprite('1. 本專案 (steel_vs_swarm)', positions['current'], H * 1.08));
   }
 
-  const curForm = preview3D.morphTarget > 0.5 ? 'flight' : 'ground';
+  const isFlight = (currentMech?.category === 'drones') || (preview3D.morphTarget > 0.5);
+  const curForm = isFlight ? 'flight' : 'ground';
   const curRun = preview3D.runMode === 'idle' ? 'idle' : (curForm === 'flight' ? 'flight_move' : 'run');
   const isNpc = currentMech.category === 'npc_units' || currentMech.category === 'npc_buildings';
 
@@ -2590,7 +2620,7 @@ async function syncCompareUnits() {
         compareGroup.add(makeBannerSprite(label, positions[verKey], H * 1.08));
       }
       const initialAction = isBuild ? 'idle' : curRun;
-      unit.playAction(initialAction, { form: curForm, loop: true });
+      unit.playAction(initialAction, { form: curForm, loop: true, fwd: lastMoveFwd, right: lastMoveRight });
     } catch (err) {
       console.warn('載入比對模型失敗 (' + verKey + '):', err);
       if (activeList.length > 1) {
@@ -3191,7 +3221,8 @@ document.getElementById('btnResetZoom').onclick = () => {
 };
 
 function syncExternalAction(slot, opts = {}) {
-  const form = (preview3D && preview3D.morphTarget > 0.5) ? 'flight' : 'ground';
+  const isFlight = (currentMech?.category === 'drones') || (preview3D && preview3D.morphTarget > 0.5);
+  const form = isFlight ? 'flight' : 'ground';
   for (const u of activeExternalUnits) {
     u.playAction?.(slot, { form, ...opts });
   }
@@ -3576,7 +3607,7 @@ document.getElementById('btnRunMode').onclick = () => {
   lastMoveFwd = preview3D.moveFwd || 0;
   lastMoveRight = preview3D.moveRight || 0;
   lastMoveSlot = slot;
-  syncExternalAction(slot);
+  syncExternalAction(slot, { fwd: lastMoveFwd, right: lastMoveRight });
   saveReviewSettings();
 };
 
@@ -3607,7 +3638,7 @@ function updateMoveFromKeys() {
       lastMoveSlot = slot;
       preview3D.setMoveDir(fwd, right);
       updateRunModeButton();
-      syncExternalAction(slot);
+      syncExternalAction(slot, { fwd, right });
       saveReviewSettings();
     }
   } else {
@@ -3731,7 +3762,7 @@ window.addEventListener('keydown', (e) => {
       lastMoveFwd = preview3D.moveFwd || 0;
       lastMoveRight = preview3D.moveRight || 0;
       lastMoveSlot = slot;
-      syncExternalAction(slot);
+      syncExternalAction(slot, { fwd: lastMoveFwd, right: lastMoveRight });
       saveReviewSettings();
     }
     return;

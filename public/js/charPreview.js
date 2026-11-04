@@ -1029,7 +1029,7 @@ export class CharPreview {
    */
   _stepLoco(dt, now) {
     if (!this._ent) return;
-    const isFlight = (this.isUnit ? this.unitKind === 'drone' : charKind(this.charId) === 'drone')
+    const isFlight = (this.isUnit ? (this.unitKind === 'drone' || !!UNITS[this.unitKind]?.fly) : charKind(this.charId) === 'drone')
       || (this.morphRig && this.morphTarget > 0.5);
     const top = (this.isUnit || !this.charId)
       ? this.topSpeed
@@ -1097,7 +1097,9 @@ export class CharPreview {
     // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
     // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
     stepCombatFx(this._ent, now, dt);
+    if (this._ent.mesh) this._ent.mesh.rotation.y = this.bodyYaw;
     stepLocomotion(this._ent, dt, now, -vx * dt, -vz * dt, prevYaw);
+    if (this._ent.mesh) this._ent.mesh.rotation.y = 0;
     if (this.morphRig) {
       this.morphM = this.morphRig.m ?? 0;   // morphSwap 每幀寫回這一格(不再是 loco.morph)
       // 飛行型離地懸停(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
@@ -1202,6 +1204,9 @@ export class CharPreview {
         this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * adt);
       }
 
+      const isLoopFlight = (this.isUnit ? (this.unitKind === 'drone' || !!UNITS[this.unitKind]?.fly) : charKind(this.charId) === 'drone')
+        || (this.morphRig && this.morphTarget > 0.5);
+
       for (const u of (this.externalUnits || [])) {
         if (!u?.group) continue;
         u.update?.(adt);
@@ -1210,7 +1215,8 @@ export class CharPreview {
           u.group.rotation.x += (0 - u.group.rotation.x) * Math.min(1, 8 * adt);
         }
         u.group.position.z += (0 - u.group.position.z) * Math.min(1, 9 * adt);
-        if (!this.anim && !u._jump) u.group.position.y += (0 - u.group.position.y) * Math.min(1, 9 * adt);
+        const targetUy = (isLoopFlight && !u._jump) ? this.holder.position.y : 0;
+        if (!this.anim && !u._jump) u.group.position.y += (targetUy - u.group.position.y) * Math.min(1, 9 * adt);
       }
 
       this._stepLoco(adt, this.clockT);
