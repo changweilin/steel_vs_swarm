@@ -157,7 +157,7 @@ async function run() {
 
     // 點擊重射擊
     await page.click('#btnActionAttack');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => window.__MECH_REVIEW.preview.effects.some(e => e.obj?.userData?.authoredProjectile), { timeout: 4000 });
 
     const s01HeavyProj = await page.evaluate(() => {
       const p = window.__MECH_REVIEW.preview;

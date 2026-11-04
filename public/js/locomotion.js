@@ -1943,7 +1943,8 @@ function stepJumpPose(L, rig, ent, dt) {
   L.rawY = y;
   L.landK = damp(L.landK ?? 0, 0, 5.5, dt);
   const landK = L.landK;
-  if (airF < 0.02 && landK < 0.02) return;
+  const cr = clamp(ent.crouch ?? 0, 0, 1);
+  if (airF < 0.02 && landK < 0.02 && cr < 0.02) return;
   const rise = clamp(vy * 0.18, -1, 1);
   const up = Math.max(0, rise) * airF;                   // 蹬伸相
   const fall = Math.max(0, -rise) * airF;                // 下墜相(前收 brace)
@@ -1970,41 +1971,41 @@ function stepJumpPose(L, rig, ent, dt) {
       R(rig.legHL, 'x', 0.5 * up - 0.2 * fall);
       R(rig.legHR, 'x', 0.45 * up - 0.25 * fall);
     }
-    R(rig.spine, 'x', -0.09 * up + 0.06 * fall + 0.1 * landK);
-    if (rig.spine) rig.spine.position.y -= 0.2 * landK;
+    R(rig.spine, 'x', -0.09 * up + 0.06 * fall + 0.1 * landK + 0.14 * cr);
+    if (rig.spine) rig.spine.position.y -= (0.2 * landK + 0.35 * cr);
     if (rig.chFL) {                                       // 分節:頂點收肢、下墜收爪、落地載荷屈曲
       for (const ch of [rig.chFL, rig.chFR, rig.chHL, rig.chHR]) {
-        if (ch?.[0]) ch[0].g.rotation[ch[0].axis || 'x'] += ch[0].k * (0.5 * fall + 0.55 * landK + 0.6 * floatF);
+        if (ch?.[0]) ch[0].g.rotation[ch[0].axis || 'x'] += ch[0].k * (0.5 * fall + 0.55 * landK + 0.6 * floatF + 0.65 * cr);
       }
     }
-    if (rig.tailSegs && !rig.cephalopod) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall) * (1 + i * 0.2); });
+    if (rig.tailSegs && !rig.cephalopod) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall - 0.12 * cr) * (1 + i * 0.2); });
   } else {
     // 雙足 / morph 地面型:蹬伸腿後直 → **頂點收腿抱團(floatF)** → 下墜雙腿前收屈膝、
     // 雙臂揚起平衡 → 落地深蹲緩衝。收腿是大跳與小跳的分水嶺:小跳幾乎沒有滯空可收,
     // 大跳(蓄力跳 + 低重力)有將近一秒的滯空,腿不收就是「站著飛過去」。
     const tuck = 0.35 * up - (0.5 * fall) - 0.55 * floatF;
-    R(rig.legL, 'x', tuck * 1.1);
-    R(rig.legR, 'x', tuck * 0.85);
+    R(rig.legL, 'x', tuck * 1.1 - 0.45 * cr);
+    R(rig.legR, 'x', tuck * 0.85 - 0.45 * cr);
     if (rig.legChainL?.[0]) {
-      rig.legChainL[0].g.rotation.x += 0.55 * fall + 0.35 * up + 0.75 * landK + 0.85 * floatF;
-      rig.legChainR[0].g.rotation.x += 0.6 * fall + 0.3 * up + 0.7 * landK + 0.8 * floatF;
+      rig.legChainL[0].g.rotation.x += 0.55 * fall + 0.35 * up + 0.75 * landK + 0.85 * floatF + 0.85 * cr;
+      rig.legChainR[0].g.rotation.x += 0.6 * fall + 0.3 * up + 0.7 * landK + 0.8 * floatF + 0.85 * cr;
       // 踝:蹬伸繃腳背、落地回折吸震(踝取反號慣例)
-      if (rig.legChainL[1]) rig.legChainL[1].g.rotation.x -= 0.3 * up + 0.25 * landK;
-      if (rig.legChainR[1]) rig.legChainR[1].g.rotation.x -= 0.28 * up + 0.25 * landK;
+      if (rig.legChainL[1]) rig.legChainL[1].g.rotation.x -= 0.3 * up + 0.25 * landK + 0.38 * cr;
+      if (rig.legChainR[1]) rig.legChainR[1].g.rotation.x -= 0.28 * up + 0.25 * landK + 0.38 * cr;
     }
-    R(rig.kneeL, 'x', 0.5 * fall + 0.3 * up + 0.65 * landK);   // morph 分節腿
-    R(rig.kneeR, 'x', 0.55 * fall + 0.25 * up + 0.6 * landK);
-    R(rig.ankleL, 'x', -(0.25 * up + 0.2 * landK));
-    R(rig.ankleR, 'x', -(0.23 * up + 0.2 * landK));
+    R(rig.kneeL, 'x', 0.5 * fall + 0.3 * up + 0.65 * landK + 0.75 * cr);   // morph 分節腿
+    R(rig.kneeR, 'x', 0.55 * fall + 0.25 * up + 0.6 * landK + 0.75 * cr);
+    R(rig.ankleL, 'x', -(0.25 * up + 0.2 * landK + 0.32 * cr));
+    R(rig.ankleR, 'x', -(0.23 * up + 0.2 * landK + 0.32 * cr));
     if (!rig.tinyArms && !rig.tuckArms) {                 // 雙臂:下墜揚起找平衡(持械手收斂)
-      R(rig.armL, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF));
-      R(rig.armR, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF) * (rig.gunArm ? 0.35 : 1));
+      R(rig.armL, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF) + 0.22 * cr);
+      R(rig.armR, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF) * (rig.gunArm ? 0.35 : 1) + 0.22 * cr * (rig.gunArm ? 0.35 : 1));
     }
-    R(rig.hips, 'x', 0.1 * up - 0.08 * fall + 0.1 * landK);
-    R(rig.chest, 'x', 0.08 * fall + 0.14 * landK);
-    if (!((L.morph ?? 0) > 0.35)) R(rig.torso, 'x', 0.06 * fall + 0.12 * landK);
-    if (rig.hips) rig.hips.position.y -= 0.3 * landK;
-    if (rig.torso) rig.torso.position.y -= 0.22 * landK;
-    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.12 * up - 0.08 * fall) * (1 + i * 0.2); });
+    R(rig.hips, 'x', 0.1 * up - 0.08 * fall + 0.1 * landK + 0.16 * cr);
+    R(rig.chest, 'x', 0.08 * fall + 0.14 * landK + 0.2 * cr);
+    if (!((L.morph ?? 0) > 0.35)) R(rig.torso, 'x', 0.06 * fall + 0.12 * landK + 0.16 * cr);
+    if (rig.hips) rig.hips.position.y -= (0.3 * landK + 0.38 * cr);
+    if (rig.torso) rig.torso.position.y -= (0.22 * landK + 0.28 * cr);
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.12 * up - 0.08 * fall - 0.14 * cr) * (1 + i * 0.2); });
   }
 }

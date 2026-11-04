@@ -977,6 +977,7 @@ export class CharPreview {
     if (this.morphRig && this.morphTarget > 0.5) return false; // 飛行型態不跳
     const dur = high ? 2.0 : 0.95;
     const peak = high ? Math.max(5.2, this.fitR * 1.35) : Math.max(1.8, this.fitR * 0.55);
+    this._crouch = 0;
     this._jump = { t: 0, dur, peak, high: !!high };
     if (high) this.wantR = Math.max(this.wantR, this.fitR * 1.35);
     this.idle = 0;
@@ -986,6 +987,18 @@ export class CharPreview {
   /** 大跳躍演示 (高空頂點滯空 + 深蹲緩衝) */
   highJump() {
     return this.jump(true);
+  }
+
+  /** 設定下蹲幅度 (0..1) */
+  setCrouch(c) {
+    this._crouch = Math.max(0, Math.min(1, c || 0));
+    for (const u of (this.externalUnits || [])) {
+      u.crouch?.(this._crouch);
+    }
+  }
+
+  getCrouch() {
+    return this._crouch || 0;
   }
 
   /** NPC / 攻擊建築武器演出:w = 整形後武器 {name,type,dmg,r,rate,mag,range}。
@@ -1080,6 +1093,7 @@ export class CharPreview {
       }
     }
     this._ent.heroY = hy;
+    this._ent.crouch = this._crouch || 0;
     // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
     // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
     stepCombatFx(this._ent, now, dt);

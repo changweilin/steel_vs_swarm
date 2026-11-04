@@ -2345,6 +2345,7 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
   function jump(high = false) {
     if (isBuild || isNpc) return false;
     if (jumpState) return false;
+    group.position.y = 0;
     const dur = high ? 2.0 : 0.95;
     const peak = high ? Math.max(5.2, (preview3D?.fitR || targetH * 0.5) * 1.35) : Math.max(1.8, (preview3D?.fitR || targetH * 0.5) * 0.55);
     jumpState = { t: 0, dur, peak, high: !!high };
@@ -2363,6 +2364,14 @@ async function loadGlbUnit(verKey, id, targetH = 6.0) {
     playAction,
     jump,
     highJump: () => jump(true),
+    crouch: (amt) => {
+      if (jumpState) return;
+      if (clipsMap.has('crouch')) {
+        playAction(amt > 0.05 ? 'crouch' : 'idle', { loop: true });
+      } else {
+        group.position.y = -Math.max(0, Math.min(1, amt || 0)) * 0.45;
+      }
+    },
     update: (dt) => {
       mixer.update(dt);
       if (jumpState) {
@@ -2604,6 +2613,12 @@ function animCompareLoop() {
   const now = performance.now();
   const dt = Math.min(0.05, (now - lastAnimT) / 1000) * (preview3D?.timeScale ?? 1);
   lastAnimT = now;
+  if (jumpHoldAt > 0) {
+    const elapsed = (now - jumpHoldAt) / 1000;
+    const crouchAmt = Math.min(1, elapsed / 0.25);
+    preview3D?.setCrouch?.(crouchAmt);
+    for (const u of activeExternalUnits) u.crouch?.(crouchAmt);
+  }
   for (const u of activeExternalUnits) {
     u.update?.(dt);
   }
@@ -2743,6 +2758,13 @@ function renderRoster() {
 }
 
 function selectMech(id) {
+  if (jumpHoldAt > 0) {
+    jumpHoldAt = 0;
+    jumpHoldPointer = false;
+    document.getElementById('btnActionJump')?.classList.remove('active');
+    preview3D?.setCrouch?.(0);
+    for (const u of activeExternalUnits) u.crouch?.(0);
+  }
   const m = allMechs.find(x => x.id === id);
   if (!m) return;
   currentMech = m;
@@ -3210,8 +3232,14 @@ function triggerShieldToggle() {
   updateShieldButton();
 }
 
+let lastJumpTriggerT = 0;
 function triggerJump(high = false) {
   if (!preview3D || !currentMech) return;
+  const now = performance.now();
+  if (now - lastJumpTriggerT < 80) return;
+  lastJumpTriggerT = now;
+  preview3D.setCrouch?.(0);
+  for (const u of activeExternalUnits) u.crouch?.(0);
   if (high) {
     preview3D.highJump();
     for (const u of activeExternalUnits) u.highJump?.();
@@ -3220,6 +3248,50 @@ function triggerJump(high = false) {
     preview3D.jump(false);
     for (const u of activeExternalUnits) u.jump?.(false);
     syncExternalAction('jump');
+  }
+}
+
+let jumpHoldAt = 0;
+let jumpHoldPointer = false;
+
+function startJumpHold() {
+  if (jumpHoldAt > 0) return;
+  const isFlight = preview3D?.morphTarget > 0.5;
+  const isRobot = currentMech?.category === 'robots';
+  const isMorpher = currentMech?.category === 'morphers';
+  if (!isRobot && (!isMorpher || isFlight)) return;
+  jumpHoldAt = performance.now();
+  document.getElementById('btnActionJump')?.classList.add('active');
+  preview3D?.setCrouch?.(0);
+}
+
+function releaseJumpHold() {
+  if (jumpHoldAt <= 0) return;
+  const dur = (performance.now() - jumpHoldAt) / 1000;
+  jumpHoldAt = 0;
+  jumpHoldPointer = false;
+  document.getElementById('btnActionJump')?.classList.remove('active');
+  preview3D?.setCrouch?.(0);
+  for (const u of activeExternalUnits) u.crouch?.(0);
+
+  const isRobot = currentMech?.category === 'robots';
+  const isMorpher = currentMech?.category === 'morphers';
+  const isFlight = preview3D?.morphTarget > 0.5;
+
+  if (isRobot) {
+    // 機甲：長按 (>= 0.25s) 蓄力大跳躍 (CJUMP)，輕按普通跳躍
+    if (dur >= 0.25) {
+      pulseKey(document.getElementById('btnActionHighJump'));
+    }
+    triggerJump(dur >= 0.25);
+  } else if (isMorpher && !isFlight) {
+    // 變形者地面型：長按 (>= 0.25s) 蓄力彈射變形為飛行型，輕按普通跳躍
+    if (dur >= 0.25) {
+      pulseKey(document.getElementById('btnMorphToggle'));
+      triggerMorphToggle();
+    } else {
+      triggerJump(false);
+    }
   }
 }
 
@@ -3374,6 +3446,25 @@ document.getElementById('btnActionUlt').onclick = triggerAtkUlt;
 document.getElementById('btnActionJump').onclick = () => triggerJump(false);
 document.getElementById('btnActionHighJump').onclick = () => triggerJump(true);
 
+const btnJumpEl = document.getElementById('btnActionJump');
+if (btnJumpEl) {
+  btnJumpEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    jumpHoldPointer = true;
+    startJumpHold();
+  });
+}
+window.addEventListener('pointerup', () => {
+  if (jumpHoldPointer) {
+    releaseJumpHold();
+  }
+});
+window.addEventListener('pointercancel', () => {
+  if (jumpHoldPointer) {
+    releaseJumpHold();
+  }
+});
+
 const selEnemyPos = document.getElementById('selEnemyPos');
 if (selEnemyPos) {
   selEnemyPos.onchange = (e) => {
@@ -3490,7 +3581,6 @@ document.getElementById('btnRunMode').onclick = () => {
 };
 
 // 遊戲操作完全仿照：鍵盤快捷鍵 (WASD/方向鍵 移動, Q 守招, E 攻招, F 護盾, Space 輕按跳/長按大跳, V 變形, T 慢動作, Shift 衝刺) 與滑鼠左右鍵 (LMB 輕射, RMB 重射)
-let spaceDownAt = 0;
 const MOVE_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const activeMoveKeys = new Set();
 const KEY_MAP = { ArrowUp: 'KeyW', ArrowDown: 'KeyS', ArrowLeft: 'KeyA', ArrowRight: 'KeyD' };
@@ -3611,13 +3701,12 @@ window.addEventListener('keydown', (e) => {
       triggerMorphToggle();
       return;
     }
-    // Space 按下：若為可跳躍/蓄力機體，記錄起點
+    // Space 按下：若為可跳躍/蓄力機體，記錄起點並開始蓄力下蹲
     if (e.code === 'Space' && !e.repeat) {
       const isFlight = preview3D.morphTarget > 0.5;
       if (isRobot || (isMorpher && !isFlight)) {
         e.preventDefault();
-        document.getElementById('btnActionJump')?.classList.add('active');
-        spaceDownAt = performance.now();
+        startJumpHold();
       }
       return;
     }
@@ -3665,34 +3754,21 @@ window.addEventListener('keyup', (e) => {
     return;
   }
 
-  if (e.code === 'Space' && spaceDownAt > 0) {
+  if (e.code === 'Space' && jumpHoldAt > 0) {
     e.preventDefault();
-    document.getElementById('btnActionJump')?.classList.remove('active');
-    const dur = (performance.now() - spaceDownAt) / 1000;
-    spaceDownAt = 0;
-    const isRobot = currentMech?.category === 'robots';
-    const isMorpher = currentMech?.category === 'morphers';
-    const isFlight = preview3D?.morphTarget > 0.5;
-
-    if (isRobot) {
-      // 機甲：長按 (>= 0.25s) 蓄力大跳躍 (CJUMP)，輕按普通跳躍
-      if (dur >= 0.25) {
-        pulseKey(document.getElementById('btnActionHighJump'));
-      }
-      triggerJump(dur >= 0.25);
-    } else if (isMorpher && !isFlight) {
-      // 變形者地面型：長按 (>= 0.25s) 蓄力彈射變形為飛行型，輕按普通跳躍
-      if (dur >= 0.25) {
-        pulseKey(document.getElementById('btnMorphToggle'));
-        triggerMorphToggle();
-      } else {
-        triggerJump(false);
-      }
-    }
+    releaseJumpHold();
+    return;
   }
 });
 
 window.addEventListener('blur', () => {
+  if (jumpHoldAt > 0) {
+    jumpHoldAt = 0;
+    jumpHoldPointer = false;
+    document.getElementById('btnActionJump')?.classList.remove('active');
+    preview3D?.setCrouch?.(0);
+    for (const u of activeExternalUnits) u.crouch?.(0);
+  }
   if (activeMoveKeys.size > 0) {
     activeMoveKeys.clear();
     document.querySelectorAll('.vk-cap-mini').forEach(el => el.classList.remove('active'));
@@ -4120,7 +4196,10 @@ window.__MECH_REVIEW = {
   saveVersionCheckboxes,
   restoreVersionCheckboxes,
   saveReviewSettings,
-  restoreReviewSettings
+  restoreReviewSettings,
+  startJumpHold,
+  releaseJumpHold,
+  triggerJump
 };
 </script>
 </body>
