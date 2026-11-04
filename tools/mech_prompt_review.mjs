@@ -1057,6 +1057,7 @@ function renderHtmlPage(localThree = false) {
     gap: 6px;
     justify-content: center;
     pointer-events: none;
+    z-index: 30;
   }
   .subpanel-controls > * {
     pointer-events: auto;
@@ -1082,10 +1083,10 @@ function renderHtmlPage(localThree = false) {
     font-weight: 700;
   }
 
-  /* 3D 視口半透明虛擬鍵盤 HUD */
+  /* 3D 視口半透明虛擬鍵盤 HUD：置於底欄控制按鍵上方，避免遮擋底欄操作鈕 */
   .virtual-action-hud {
     position: absolute;
-    bottom: 12px;
+    bottom: 52px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;

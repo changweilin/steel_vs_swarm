@@ -619,12 +619,35 @@ export class CharPreview {
         if (chg >= 1) {
           lanceDischarge(this.scene, this.effects, m, aim, w, hue);
           starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
+          const proj = projectileMesh(w, { col: hue, hue, heavy: true });
+          if (proj.userData.authoredProjectile) {
+            const v = aim.clone().sub(m);
+            const dir = v.clone().normalize();
+            proj.position.copy(m);
+            proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+            this.scene.add(proj);
+            if (actor.isPrimary || !this.trackObj) {
+              this.trackObj = proj;
+              this.wantR = R * (A.wide || 2.6);
+            }
+            const T = 0.55;
+            this.effects.push({
+              obj: proj, ttl: T,
+              fade: (o, f) => {
+                o.position.copy(m).lerp(aim, 1 - f);
+                stepProjectileFx(o, (1 - f) * T, w.mv || 1200);
+              },
+              dispose: () => {
+                if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; }
+                disposeTree(proj);
+              }
+            });
+          } else if (actor.isPrimary || !this.trackObj) {
+            this._followShell(m, aim, 0.55);                              // 鏡頭追極速彈
+          }
           actor.group.position.z -= R * 0.2;                            // 極速彈的重後座
           actor.group.rotation.x -= 0.14;
           actor.cue?.(true);
-          if (actor.isPrimary || !this.trackObj) {
-            this._followShell(m, aim, 0.55);                              // 鏡頭追極速彈
-          }
         }
       }
       if (A.t >= (A.spark || 0)) A.spark = A.t + 0.12;
@@ -683,10 +706,13 @@ export class CharPreview {
           const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
           const boomPos = aim.clone();
           const v = boomPos.clone().sub(m);
+          const dir = v.clone().normalize();
           const side = fwd.clone().cross(up).normalize();
           const proj = projectileMesh(w, { col: hue, hue, heavy: true });
-          proj.scale.setScalar(R * 0.09);
-          proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd);
+          if (!proj.userData.authoredProjectile) {
+            proj.scale.setScalar(R * 0.09);
+          }
+          proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
           proj.position.copy(m);
           this.scene.add(proj);
           if (actor.isPrimary || !this.trackObj) {
@@ -698,8 +724,10 @@ export class CharPreview {
             fade: (o, f, dt2) => {
               const u = 1 - f;                                          // 0→1 沿彈道
               const env = Math.sin(Math.min(1, u) * Math.PI);          // 頭尾貼合直線的擺動包絡
-              o.position.copy(m).addScaledVector(v, u)
-                .addScaledVector(weaving ? side : up, (weaving ? Math.sin(u * 6 * Math.PI) * 0.5 : 0.45) * R * env);
+              o.position.copy(m).addScaledVector(v, u);
+              if (weaving) {
+                o.position.addScaledVector(side, Math.sin(u * 6 * Math.PI) * 0.5 * R * env);
+              }
               stepProjectileFx(o, u * T, v.length() / T);
             },
             dispose: () => {
@@ -710,14 +738,6 @@ export class CharPreview {
           if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
           actor.group.position.z -= R * 0.06;
           actor.cue?.(true);
-          if (!weaving && actor.isPrimary) {
-            const rig = this.unit?.userData?.rig;
-            const gp = rig?.weap?.heavy === 'L' ? rig?.gunL : rig?.gunR;
-            if (gp) {
-              gp.aim0 ??= gp.aim;
-              gp.aim = gp.aim0 - Math.atan2(v.y + 0.45 * R * Math.PI, Math.hypot(v.x, v.z) || 1);
-            }
-          }
           A.boomList.push(boomPos);
         }
         A.boomAt = A.t + T;
@@ -738,10 +758,35 @@ export class CharPreview {
         impactBurst(this.scene, this.effects, aim,
           { r: w.r || 0, color: 0xffd27a, core: 0xfff2b8, heavy: true });
         lanceDischarge(this.scene, this.effects, m, aim, w, hue);
+        const proj = projectileMesh(w, { col: hue, hue, heavy: true });
+        if (proj.userData.authoredProjectile) {
+          const v = aim.clone().sub(m);
+          const dir = v.clone().normalize();
+          proj.position.copy(m);
+          proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+          this.scene.add(proj);
+          if (actor.isPrimary || !this.trackObj) {
+            this.trackObj = proj;
+            this.wantR = R * (A.wide || 2.4);
+          }
+          const T = 0.5;
+          this.effects.push({
+            obj: proj, ttl: T,
+            fade: (o, f) => {
+              o.position.copy(m).lerp(aim, 1 - f);
+              stepProjectileFx(o, (1 - f) * T, w.mv || 800);
+            },
+            dispose: () => {
+              if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; }
+              disposeTree(proj);
+            }
+          });
+        } else if (actor.isPrimary || !this.trackObj) {
+          this._followShell(m, aim, 0.5);
+        }
         actor.group.position.z -= R * 0.12;
         actor.group.rotation.x -= 0.10;
         actor.cue?.(true);
-        if (actor.isPrimary || !this.trackObj) this._followShell(m, aim, 0.5);
       }
       A.fired = 1;
     } else if (A.fired === 0) {
@@ -785,8 +830,9 @@ export class CharPreview {
             else if (A.w.type === 'beam') gundamBeam(this.scene, this.effects, m, end,
               CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a, { r: Math.min(lanceR(A.w), this.height * .035), ttl: .18, def: A.w });
             else {
-              const projectile = projectileMesh(A.w);
-              const duration = Math.min(.35, Math.max(.08, A.w.range / (A.w.mv || 600)));
+              const hue = CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a;
+              const projectile = projectileMesh(A.w, { col: hue, hue, heavy: false });
+              const duration = Math.min(.4, Math.max(.22, A.w.range / (A.w.mv || 600)));
               projectile.position.copy(m);
               projectile.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
               this.scene.add(projectile);
@@ -986,8 +1032,8 @@ export class CharPreview {
       this.moveRight = 0;
     }
 
-    // 機體面朝 +z, 局部 +x 為右
-    const vx = (this.moveRight || 0) * this.speed;
+    // 機體面朝 +z, 視角預設為後視(+z 為前、-x 為右、+x 為左)
+    const vx = -(this.moveRight || 0) * this.speed;
     const vz = (this.moveFwd !== undefined ? this.moveFwd : (this.moving ? 1 : 0)) * this.speed;
     this.travelX = (this.travelX || 0) + vx * dt;
     this.travelZ = (this.travelZ || 0) + vz * dt;
@@ -996,6 +1042,26 @@ export class CharPreview {
       const cell = this.groundCell;
       this.ground.position.x = -(((this.travelX % cell) + cell) % cell);
       this.ground.position.z = -(((this.travelZ % cell) + cell) % cell);
+    }
+
+    const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    const targetYaw = this.moving
+      ? Math.atan2(-(this.moveRight || 0), (this.moveFwd !== undefined ? this.moveFwd : 1))
+      : 0;
+    this.bodyYaw = (this.bodyYaw !== undefined) ? this.bodyYaw : 0;
+    const prevYaw = this.bodyYaw;
+    if (this.moving) {
+      this.bodyYaw += wrapA(targetYaw - this.bodyYaw) * Math.min(1, 14 * dt);
+    } else {
+      this.bodyYaw += wrapA(0 - this.bodyYaw) * Math.min(1, 10 * dt);
+    }
+    if (!this.anim) {
+      this.holder.rotation.y = this.bodyYaw;
+    }
+    for (const u of (this.externalUnits || [])) {
+      if (u?.group && !this.anim) {
+        u.group.rotation.y = this.bodyYaw;
+      }
     }
 
     // 變形者:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
@@ -1017,7 +1083,7 @@ export class CharPreview {
     // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
     // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
     stepCombatFx(this._ent, now, dt);
-    stepLocomotion(this._ent, dt, now, -vx * dt, -vz * dt, 0);
+    stepLocomotion(this._ent, dt, now, -vx * dt, -vz * dt, prevYaw);
     if (this.morphRig) {
       this.morphM = this.morphRig.m ?? 0;   // morphSwap 每幀寫回這一格(不再是 loco.morph)
       // 飛行型離地懸停(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
@@ -1114,7 +1180,7 @@ export class CharPreview {
       if (wasAnim && !this.anim && !this.trackObj) this.wantR = this.fitR;
       // 後座/姿態阻尼回正(招式結束後自然歸位)
       if (!this.anim) {
-        this.holder.rotation.y = 0;
+        this.holder.rotation.y = this.bodyYaw || 0;
         this.holder.rotation.x += (0 - this.holder.rotation.x) * Math.min(1, 8 * adt);
       }
       this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * adt);
@@ -1126,7 +1192,7 @@ export class CharPreview {
         if (!u?.group) continue;
         u.update?.(adt);
         if (!this.anim) {
-          u.group.rotation.y = 0;
+          u.group.rotation.y = this.bodyYaw || 0;
           u.group.rotation.x += (0 - u.group.rotation.x) * Math.min(1, 8 * adt);
         }
         u.group.position.z += (0 - u.group.position.z) * Math.min(1, 9 * adt);

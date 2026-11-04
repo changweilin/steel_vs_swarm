@@ -348,8 +348,14 @@ export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false, 
   const ty = def?.type || 'gun';
   const authored = COMBAT_ASSETS[def?.ch];
   const slot = def?.slot || (heavy ? 'heavy' : 'light');
-  const parent = `fx_${slot}_${ty === 'missile' || ty === 'launcher' ? 'rocket' : 'bullet'}`;
-  const parts = authored?.meshes.filter(part => part.parent === parent);
+  const prefParent = `fx_${slot}_${ty === 'missile' || ty === 'launcher' ? 'rocket' : (ty === 'plasma' || ty === 'beam' ? 'ion' : 'bullet')}`;
+  let parts = authored?.meshes.filter(part => part.parent === prefParent);
+  if ((!parts || parts.length === 0) && authored?.meshes) {
+    parts = authored.meshes.filter(part =>
+      part.parent && part.parent.startsWith(`fx_${slot}_`) &&
+      (part.parent.endsWith('_bullet') || part.parent.endsWith('_rocket') || part.parent.endsWith('_ion') || part.parent.endsWith('_shell'))
+    );
+  }
   if (parts?.length && ty !== 'beam' && ty !== 'plasma') {
     const group = new THREE.Group();
     const size = ty === 'missile' || ty === 'launcher' ? 1.4 : heavy ? 2.2 : 1.4;
